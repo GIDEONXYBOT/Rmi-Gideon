@@ -1,0 +1,15 @@
+{
+  "name": "rmi-teller-report",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "cd frontend && npm run build",
+    "start": "cd backend && npm start",
+    "dev": "start start-dev.bat",
+    "prod": "npm run build && npm start",
+    "production": "npm run build && npm start"
+  },
+  "dependencies": {
+    "axios": "^1.13.2",
+    "cheerio": "^1.1.2"
+  }
+}

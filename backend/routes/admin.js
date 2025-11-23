@@ -1,0 +1,233 @@
+import express from "express";
+import User from "../models/User.js";
+import TellerReport from "../models/TellerReport.js";
+import Payroll from "../models/Payroll.js";
+import bcrypt from "bcrypt";
+
+const router = express.Router();
+
+/* ========================================================
+   👑 ADMIN USER MANAGEMENT ROUTES
+======================================================== */
+
+router.get("/users", async (req, res) => {
+  try {
+    const users = await User.find().sort({ createdAt: -1 }).lean();
+    res.json(users);
+  } catch (err) {
+    console.error("❌ Error fetching users:", err);
+    res.status(500).json({ message: "Failed to fetch users" });
+  }
+});
+
+router.put("/approve-user/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { active = true, role } = req.body;
+
+    const user = await User.findById(id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (active !== undefined) user.active = active;
+    if (role) user.role = role;
+    user.status = active ? "approved" : "pending";
+
+    await user.save();
+
+    if (global.io)
+      global.io.emit("userUpdated", { userId: user._id, status: user.status });
+
+    res.json({
+      success: true,
+      message: `${user.name || user.username} ${active ? "approved" : "deactivated"} successfully.`,
+      user,
+    });
+  } catch (err) {
+    console.error("❌ Error approving user:", err);
+    res.status(500).json({ message: "Failed to approve user" });
+  }
+});
+
+router.delete("/user/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    await User.findByIdAndDelete(id);
+    if (global.io) global.io.emit("userDeleted", id);
+    res.json({ message: "🗑️ User deleted successfully" });
+  } catch (err) {
+    console.error("❌ Error deleting user:", err);
+    res.status(500).json({ message: "Failed to delete user" });
+  }
+});
+
+router.put("/update-user/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { role, name, username, password, baseSalary } = req.body;
+
+    const updateData = { role, name, username };
+    if (password) {
+      const hashedPassword = await bcrypt.hash(password, 10); // ✅ Hash the password
+      updateData.password = hashedPassword;
+      updateData.plainTextPassword = password; // ✅ Store plain text for admin
+    }
+    if (baseSalary !== undefined) {
+      updateData.baseSalary = Number(baseSalary) || 0;
+    }
+
+    const updated = await User.findByIdAndUpdate(id, updateData, { new: true });
+    if (!updated) return res.status(404).json({ message: "User not found" });
+
+    if (global.io) global.io.emit("userUpdated", updated);
+    res.json({ message: "✅ User updated successfully", user: updated });
+  } catch (err) {
+    console.error("❌ Error updating user:", err);
+    res.status(500).json({ message: "Failed to update user" });
+  }
+});
+
+router.get("/pending-count", async (req, res) => {
+  try {
+    const count = await User.countDocuments({
+      $or: [{ status: "pending" }, { active: false }],
+    });
+    res.json({ pendingCount: count });
+  } catch (err) {
+    console.error("❌ Error getting pending count:", err);
+    res.status(500).json({ message: "Failed to fetch pending count" });
+  }
+});
+
+/* ========================================================
+   💼 PAYROLL SUMMARY (Admin Dashboard)
+======================================================== */
+router.get("/payroll-summary", async (req, res) => {
+  try {
+    const { filter, date } = req.query; // filter: 'daily', 'weekly', 'monthly', 'overall'
+    let payrolls = await Payroll.find().lean();
+
+    // Apply date filtering based on filter type
+    if (filter && filter !== 'overall' && date) {
+      const filterDate = new Date(date);
+      
+      if (filter === 'daily') {
+        // Filter for specific day
+        payrolls = payrolls.filter(p => {
+          const pDate = new Date(p.createdAt || p.date);
+          return pDate.getFullYear() === filterDate.getFullYear() &&
+                 pDate.getMonth() === filterDate.getMonth() &&
+                 pDate.getDate() === filterDate.getDate();
+        });
+      } else if (filter === 'weekly') {
+        // Filter for week containing the date
+        const dayOfWeek = filterDate.getDay();
+        const monday = new Date(filterDate);
+        monday.setDate(filterDate.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+        monday.setHours(0, 0, 0, 0);
+        
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+        sunday.setHours(23, 59, 59, 999);
+        
+        payrolls = payrolls.filter(p => {
+          const pDate = new Date(p.createdAt || p.date);
+          return pDate >= monday && pDate <= sunday;
+        });
+      } else if (filter === 'monthly') {
+        // Filter for specific month
+        payrolls = payrolls.filter(p => {
+          const pDate = new Date(p.createdAt || p.date);
+          return pDate.getFullYear() === filterDate.getFullYear() &&
+                 pDate.getMonth() === filterDate.getMonth();
+        });
+      }
+    }
+
+    const totalPayrolls = payrolls.length;
+    const approvedCount = payrolls.filter((p) => p.approved).length;
+    const pendingCount = payrolls.filter((p) => !p.approved).length;
+    const totalPayout = payrolls
+      .filter((p) => p.approved)
+      .reduce((sum, p) => sum + (p.totalSalary || 0), 0);
+
+    res.json({ totalPayrolls, approvedCount, pendingCount, totalPayout });
+  } catch (err) {
+    console.error("❌ Error fetching payroll summary:", err);
+    res.status(500).json({ message: "Failed to fetch payroll summary" });
+  }
+});
+
+/* ========================================================
+   🔑 CHANGE USER PASSWORD (ADMIN ONLY)
+======================================================== */
+router.put("/users/:id/password", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { password } = req.body;
+
+    if (!password || password.length < 4) {
+      return res.status(400).json({ error: "Password must be at least 4 characters long" });
+    }
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(password, 10);
+    user.password = hashedPassword;
+    await user.save();
+
+    console.log(`✅ Password changed for user: ${user.name || user.username}`);
+
+    res.json({
+      success: true,
+      message: "Password changed successfully"
+    });
+  } catch (err) {
+    console.error("❌ Error changing password:", err);
+    res.status(500).json({ error: "Failed to change password" });
+  }
+});
+
+// Update user theme preferences
+router.put("/users/:id/theme", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { theme } = req.body;
+
+    if (!theme) {
+      return res.status(400).json({ error: "Theme data is required" });
+    }
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Update theme preferences
+    user.theme = {
+      mode: theme.mode || user.theme?.mode || "light",
+      lightFont: theme.lightFont || user.theme?.lightFont || "#1f2937",
+      darkFont: theme.darkFont || user.theme?.darkFont || "#f9fafb",
+      lightBg: theme.lightBg || user.theme?.lightBg || "#ffffff",
+      darkBg: theme.darkBg || user.theme?.darkBg || "#1e3a8a",
+    };
+
+    await user.save();
+
+    console.log(`✅ Theme updated for user: ${user.name || user.username}`);
+
+    res.json({
+      success: true,
+      message: "Theme updated successfully",
+      theme: user.theme
+    });
+  } catch (err) {
+    console.error("❌ Error updating theme:", err);
+    res.status(500).json({ error: "Failed to update theme" });
+  }
+});
+
+export default router;

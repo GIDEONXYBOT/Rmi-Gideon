@@ -1,0 +1,336 @@
+import React, { useContext } from "react";
+import ReactDOM from "react-dom/client";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import "./index.css";
+
+// Context
+import { SettingsProvider, SettingsContext } from "./context/SettingsContext.jsx";
+import { ToastProvider } from "./context/ToastContext.jsx";
+
+// Layout
+import SidebarLayout from "./components/SidebarLayout.jsx";
+import ErrorBoundary from "./components/ErrorBoundary.jsx";
+
+// Auth Pages
+import LoginPage from "./pages/LoginPage.jsx";
+import RegisterPage from "./pages/RegisterPage.jsx";
+import MobileDebugPage from "./pages/MobileDebugPage.jsx";
+
+// Shared Pages
+import Dashboard from "./pages/Dashboard.jsx";
+import TellerReports from "./pages/TellerReports.jsx";
+import TellerReportsViewer from "./pages/TellerReportsViewer.jsx";
+import TellerReportsHistory from "./pages/TellerReportsHistory.jsx";
+import TellerOfMonth from "./pages/TellerOfMonth.jsx";
+import Payroll from "./pages/Payroll.jsx";
+import SupervisorReports from "./pages/SupervisorReports.jsx";
+import TellerManagement from "./pages/TellerManagement.jsx";
+
+// Admin Pages
+import AdminSalaryOver from "./pages/AdminSalaryOver.jsx";
+import AdminReport from "./pages/AdminReport.jsx";
+import AdminAssistantAdmin from "./pages/AdminAssistantAdmin.jsx";
+import AdminCashflow from "./pages/AdminCashFlow.jsx";
+import AdminUserApproval from "./pages/AdminUserApproval.jsx";
+import AdminTellerOverview from "./pages/AdminTellerOverview.jsx";
+import AdminHistory from "./pages/AdminHistory.jsx";
+import AdminSettings from "./pages/AdminSettings.jsx";
+import AdminEmployees from "./pages/AdminEmployees.jsx";
+import PayrollManagement from "./pages/PayrollManagement.jsx";
+import WithdrawalApprovals from "./pages/WithdrawalApprovals.jsx";
+import AdminMapEditor from "./pages/AdminMapEditor.jsx";
+import TellerBettingData from "./pages/TellerBettingData.jsx";
+import ManageBettingData from "./pages/ManageBettingData.jsx";
+import BettingAnalytics from "./pages/BettingAnalytics.jsx";
+import AdvancedTellerAssignment from "./pages/AdvancedTellerAssignment.jsx";
+import NotificationCenter from "./pages/NotificationCenter.jsx";
+import BettingEventReport from "./pages/BettingEventReport.jsx";
+import KeyPerformanceIndicator from "./pages/KeyPerformanceIndicator.jsx";
+import TellerMappings from "./pages/TellerMappings.jsx";
+
+// Supervisor Pages
+import SupervisorHistory from "./pages/SupervisorHistory.jsx";
+import SupervisorStaffPerformance from "./pages/SupervisorStaffPerformance.jsx";
+import MyShift from "./pages/MyShift.jsx";
+
+// ✅ Added for real-time schedule rotation
+import ScheduleRotation from "./pages/ScheduleRotation.jsx";
+import AttendanceScheduler from "./pages/AttendanceScheduler.jsx";
+
+// Declarator Pages
+import DeclaratorDashboard from "./pages/DeclaratorDashboardFixed.jsx";
+import TellerDeployments from "./pages/TellerDeployments.jsx";
+import SuperAdminSidebarControl from './pages/SuperAdminSidebarControl.jsx';
+import SuperAdminMenuConfig from './pages/SuperAdminMenuConfig.jsx';
+// MapEditor import removed (using unified AdminMapEditor for map editing)
+// import MapEditor from './pages/MapEditor.jsx';
+
+// Fallback Page
+const NotFound = () => (
+  <div className="p-8 text-center text-gray-500">404 — Page Not Found</div>
+);
+
+/** 🔒 Role-based Protected Route Component */
+function ProtectedRoute({ role, allowedRoles, children }) {
+  const { user } = useContext(SettingsContext);
+  const token = localStorage.getItem("token");
+
+  if (!token) return <Navigate to="/login" replace />;
+
+  // Determine allowed roles for this route
+  const roles = Array.isArray(allowedRoles) && allowedRoles.length > 0 ? allowedRoles : (role ? [role] : []);
+
+  // If user role not in allowed list, handle hybrid supervisor_teller
+  const urole = user?.role;
+  const isSuperAdminUsername = (user?.username === 'admin');
+  const isSuperAdminRole = (urole === 'super_admin');
+  const ok = (
+    roles.includes(urole) ||
+    (urole === "supervisor_teller" && (roles.includes("teller") || roles.includes("supervisor"))) ||
+    ((isSuperAdminUsername || isSuperAdminRole) && roles.includes('super_admin')) ||
+    ((isSuperAdminUsername || isSuperAdminRole) && roles.includes('admin'))
+  );
+
+  if (!ok) return <Navigate to={`/${urole || ""}/dashboard`} replace />;
+
+  return children;
+}
+
+function App() {
+  return (
+    <ErrorBoundary>
+      <SettingsProvider>
+        <ToastProvider>
+          <BrowserRouter>
+            <Routes>
+            {/* Redirect root to login */}
+            <Route path="/" element={<Navigate to="/login" />} />
+
+            {/* Auth Pages */}
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/mobile-debug" element={<MobileDebugPage />} />
+            <Route
+              path="/forgot-password"
+              element={
+                <div className="text-center p-8 text-gray-700">
+                  Forgot Password Page (Coming Soon)
+                </div>
+              }
+            />
+
+            {/* ================= ADMIN ================= */}
+            <Route
+              path="/admin/*"
+              element={
+                <ProtectedRoute role="admin">
+                  <SidebarLayout role="admin">
+                    <Routes>
+                      <Route index element={<Navigate to="dashboard" />} />
+                      <Route path="dashboard" element={<Dashboard overrideRole="admin" />} />
+                      <Route path="supervisor-report" element={<SupervisorReports userRole="admin" />} />
+                      <Route path="teller-reports" element={<TellerReports userRole="admin" />} />
+                      <Route path="teller-reports/viewer" element={<TellerReportsViewer userRole="admin" />} />
+                      <Route path="teller-management" element={<TellerManagement userRole="admin" />} />
+                      <Route path="teller-overview" element={<AdminTellerOverview />} />
+                      <Route path="report" element={<AdminReport />} />
+                      <Route path="cashflow" element={<AdminCashflow />} />
+                      <Route path="user-approval" element={<AdminUserApproval />} />
+                      <Route path="salary" element={<Payroll />} />
+                      {/* Unified: /admin/payroll shows management UI (alias for payroll-management) */}
+                      <Route path="payroll" element={<PayrollManagement />} />
+                      <Route path="payroll-management" element={<PayrollManagement />} />
+                      <Route path="withdrawals" element={<WithdrawalApprovals />} />
+                      <Route path="assistant" element={<AdminAssistantAdmin />} />
+                      <Route path="deployments" element={<DeclaratorDashboard />} />
+                      <Route path="employees" element={<AdminEmployees />} />
+                      <Route path="history" element={<AdminHistory />} />
+                      <Route path="settings" element={<AdminSettings />} />
+                      <Route path="teller-month" element={<TellerOfMonth userRole="admin" />} />
+                      
+                      {/* ✅ Added: Suggested Schedule (real-time) */}
+                      <Route path="suggested-schedule" element={<ScheduleRotation />} />
+                      
+                      {/* 🤖 Added: AI Attendance-Based Scheduler */}
+                      <Route path="attendance-scheduler" element={<AttendanceScheduler />} />
+                      
+                      {/* 🔐 Super Admin Only: Menu Permissions Manager */}
+                      <Route path="menu-config" element={<SuperAdminMenuConfig />} />
+                      {/* Super Admin Sidebar Control accessible under admin for primary admin account */}
+                      <Route path="manage-sidebars" element={<SuperAdminSidebarControl />} />
+                      <Route path="live-map" element={<AdminMapEditor />} />
+                      <Route path="map-editor" element={<AdminMapEditor />} />
+                      <Route path="teller-betting" element={<TellerBettingData />} />
+                      <Route path="manage-betting" element={<ManageBettingData />} />
+                      <Route path="betting-analytics" element={<BettingAnalytics />} />
+                      <Route path="teller-assignment" element={<AdvancedTellerAssignment />} />
+                      <Route path="notifications" element={<NotificationCenter />} />
+                      <Route path="key-performance-indicator" element={<KeyPerformanceIndicator />} />
+                      
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </SidebarLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* ================= SUPERVISOR ================= */}
+            <Route
+              path="/supervisor/*"
+              element={
+                <ProtectedRoute allowedRoles={["supervisor", "supervisor_teller"]}>
+                  <SidebarLayout role="supervisor">
+                    <Routes>
+                      <Route index element={<Navigate to="dashboard" />} />
+                      <Route path="dashboard" element={<Dashboard overrideRole="supervisor" />} />
+                      <Route path="supervisor-report" element={<SupervisorReports userRole="supervisor" />} />
+                      <Route path="teller-reports" element={<TellerReports userRole="supervisor" />} />
+                      <Route path="teller-reports/viewer" element={<TellerReportsViewer userRole="supervisor" />} />
+                      <Route path="teller-management" element={<TellerManagement userRole="supervisor" />} />
+                      <Route path="staff-performance" element={<SupervisorStaffPerformance />} />
+                      <Route path="payroll" element={<Payroll />} />
+                      <Route path="my-shift" element={<MyShift />} />
+                      <Route path="teller-month" element={<TellerOfMonth userRole="supervisor" />} />
+                      <Route path="history" element={<SupervisorHistory />} />
+                      <Route path="settings" element={<AdminSettings />} />
+                      <Route path="deployments" element={<DeclaratorDashboard viewOnly={true} />} />
+                      
+                      {/* ✅ Added: Suggested Schedule (real-time) */}
+                      <Route path="suggested-schedule" element={<ScheduleRotation />} />
+                      
+                      {/* 🤖 Added: AI Attendance-Based Scheduler */}
+                      <Route path="attendance-scheduler" element={<AttendanceScheduler />} />
+                      <Route path="live-map" element={<AdminMapEditor />} />
+                      <Route path="map-editor" element={<AdminMapEditor />} />
+                      <Route path="key-performance-indicator" element={<KeyPerformanceIndicator />} />
+                      
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </SidebarLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* ================= TELLER ================= */}
+            <Route
+              path="/teller/*"
+              element={
+                <ProtectedRoute allowedRoles={["teller", "supervisor_teller"]}>
+                  <SidebarLayout role="teller">
+                    <Routes>
+                      <Route index element={<Navigate to="dashboard" />} />
+                      <Route path="dashboard" element={<Dashboard overrideRole="teller" />} />
+                      <Route path="teller-reports" element={<TellerReports userRole="teller" />} />
+                      <Route path="teller-reports/viewer" element={<TellerReportsViewer userRole="teller" />} />
+                      <Route path="reports-history" element={<TellerReportsHistory />} />
+                      <Route path="payroll" element={<Payroll />} />
+                      <Route path="teller-month" element={<TellerOfMonth userRole="teller" />} />
+                      <Route path="history" element={<TellerReportsHistory />} />
+                      <Route path="settings" element={<AdminSettings />} />
+                      <Route path="deployments" element={<TellerDeployments />} />
+                      
+                      {/* ✅ Added: Suggested Schedule (real-time) */}
+                      <Route path="suggested-schedule" element={<ScheduleRotation />} />
+                      
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </SidebarLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* ================= DECLARATOR ================= */}
+            <Route
+              path="/declarator/*"
+              element={
+                <ProtectedRoute role="declarator">
+                  <SidebarLayout role="declarator">
+                    <Routes>
+                      <Route index element={<Navigate to="deployments" />} />
+                      <Route path="dashboard" element={<Navigate to="deployments" />} />
+                      <Route path="deployments" element={<DeclaratorDashboard />} />
+                      <Route path="payroll" element={<Payroll />} />
+                      <Route path="live-map" element={<AdminMapEditor />} />
+                      <Route path="map-editor" element={<AdminMapEditor />} />
+                      <Route path="settings" element={<AdminSettings />} />
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </SidebarLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* ================= SUPER ADMIN ================= */}
+            <Route
+              path="/super_admin/*"
+              element={
+                <ProtectedRoute role="super_admin">
+                  <SidebarLayout role="super_admin">
+                    <Routes>
+                      <Route index element={<Navigate to="dashboard" />} />
+                      <Route path="dashboard" element={<Dashboard overrideRole="super_admin" />} />
+                      <Route path="supervisor-report" element={<SupervisorReports userRole="super_admin" />} />
+                      <Route path="teller-reports" element={<TellerReports userRole="super_admin" />} />
+                      <Route path="teller-reports/viewer" element={<TellerReportsViewer userRole="super_admin" />} />
+                      <Route path="teller-management" element={<TellerManagement userRole="super_admin" />} />
+                      <Route path="teller-overview" element={<AdminTellerOverview />} />
+                      <Route path="report" element={<AdminReport />} />
+                      <Route path="cashflow" element={<AdminCashflow />} />
+                      <Route path="user-approval" element={<AdminUserApproval />} />
+                      <Route path="salary" element={<Payroll />} />
+                      {/* Unified: /admin/payroll shows management UI (alias for payroll-management) */}
+                      <Route path="payroll" element={<PayrollManagement />} />
+                      <Route path="payroll-management" element={<PayrollManagement />} />
+                      <Route path="withdrawals" element={<WithdrawalApprovals />} />
+                      <Route path="assistant" element={<AdminAssistantAdmin />} />
+                      <Route path="deployments" element={<DeclaratorDashboard />} />
+                      <Route path="history" element={<AdminHistory />} />
+                      <Route path="settings" element={<AdminSettings />} />
+                      <Route path="teller-month" element={<TellerOfMonth userRole="super_admin" />} />
+                      
+                      {/* ✅ Added: Suggested Schedule (real-time) */}
+                      <Route path="suggested-schedule" element={<ScheduleRotation />} />
+                      
+                      {/* 🤖 Added: AI Attendance-Based Scheduler */}
+                      <Route path="attendance-scheduler" element={<AttendanceScheduler />} />
+                      <Route path="live-map" element={<AdminMapEditor />} />
+                      <Route path="map-editor" element={<AdminMapEditor />} />
+                      <Route path="teller-betting" element={<TellerBettingData />} />
+                      <Route path="manage-betting" element={<ManageBettingData />} />
+                      <Route path="betting-analytics" element={<BettingAnalytics />} />
+                      <Route path="teller-assignment" element={<AdvancedTellerAssignment />} />
+                      <Route path="notifications" element={<NotificationCenter />} />
+                      
+                      {/* 🎯 Betting Event Report */}
+                      <Route path="betting-event-report" element={<BettingEventReport />} />
+                      <Route path="key-performance-indicator" element={<KeyPerformanceIndicator />} />
+                      <Route path="teller-mappings" element={<TellerMappings />} />
+                      
+                      {/* New route for SuperAdminSidebarControl (relative path) */}
+                      <Route path="manage-sidebars" element={<SuperAdminSidebarControl />} />
+                      <Route path="menu-config" element={<SuperAdminMenuConfig />} />
+                      
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </SidebarLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Default Redirects */}
+            <Route path="/admin" element={<Navigate to="/admin/dashboard" />} />
+            <Route path="/supervisor" element={<Navigate to="/supervisor/dashboard" />} />
+            <Route path="/teller" element={<Navigate to="/teller/dashboard" />} />
+            <Route path="/declarator" element={<Navigate to="/declarator/deployments" />} />
+
+            {/* Catch-all */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </ToastProvider>
+    </SettingsProvider>
+    </ErrorBoundary>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
