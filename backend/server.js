@@ -116,8 +116,15 @@ mongoose
 // import adminRoutes from "./routes/admin.js";
 // import adminTellerOverviewRoutes from "./routes/adminTellerOverview.js"; // ✅ new admin teller overview
 // import userRoutes from "./routes/users.js";
-// import settingsRoutes from "./routes/settings.js";
-// import systemSettingsRoutes from "./routes/systemSettings.js";
+import settingsRoutes from "./routes/settings.js";
+import systemSettingsRoutes from "./routes/systemSettings.js";
+import usersRoutes from "./routes/users.js";
+import cashflowRoutes from "./routes/cashflow.js";
+import payrollRoutes from "./routes/payroll.js";
+import tellerReportsRoutes from "./routes/tellerReports.js";
+import chatRoutes from "./routes/chat.js";
+import adminRoutes from "./routes/admin.js";
+import menuPermissionsRoutes from "./routes/menuPermissions.js";
 // import cashflowRoutes from "./routes/cashflow.js";
 // import reportRoutes from "./routes/reports.js";
 // import schedulerRoutes from "./routes/schedulerRoutes.js";
@@ -151,8 +158,15 @@ import assetsRoutes from "./routes/assets.js"; // ✅ asset management
 // app.use("/api/teller-zones", tellerZonesRoutes); // ✅ teller zones routes
 // app.use("/api/notifications", notificationsRoutes); // ✅ notifications & alerts routes
 // app.use("/api/users", userRoutes);
-// app.use("/api/settings", settingsRoutes);
-// app.use("/api/system-settings", systemSettingsRoutes);
+app.use("/api/settings", settingsRoutes);
+app.use("/api/system-settings", systemSettingsRoutes);
+app.use("/api/users", usersRoutes);
+app.use("/api/cashflow", cashflowRoutes);
+app.use("/api/payroll", payrollRoutes);
+app.use("/api/teller-reports", tellerReportsRoutes);
+app.use("/api/chat", chatRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/menu-permissions", menuPermissionsRoutes); // used by frontend sidebar
 // app.use("/api/cashflow", cashflowRoutes);
 // app.use("/api/reports", reportRoutes); // Re-enabled
 // app.use("/api/scheduler", schedulerRoutes);
