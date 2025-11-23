@@ -124,6 +124,7 @@ import payrollRoutes from "./routes/payroll.js";
 import tellerReportsRoutes from "./routes/tellerReports.js";
 import chatRoutes from "./routes/chat.js";
 import adminRoutes from "./routes/admin.js";
+import adminTellerOverviewRoutes from "./routes/adminTellerOverview.js"; // admin teller overview endpoints
 import menuPermissionsRoutes from "./routes/menuPermissions.js";
 // import cashflowRoutes from "./routes/cashflow.js";
 // import reportRoutes from "./routes/reports.js";
@@ -166,6 +167,7 @@ app.use("/api/payroll", payrollRoutes);
 app.use("/api/teller-reports", tellerReportsRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/admin", adminTellerOverviewRoutes); // add Teller Overview api
 app.use("/api/menu-permissions", menuPermissionsRoutes); // used by frontend sidebar
 // app.use("/api/cashflow", cashflowRoutes);
 // app.use("/api/reports", reportRoutes); // Re-enabled
