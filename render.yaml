@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: rmi-backend
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm start
+    rootDir: backend
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        sync: false  # Set this in Render dashboard or via secret
+      - key: JWT_SECRET
+        generateValue: true
+      - key: VITE_API_URL
+        fromSecret: VITE_API_URL  # If using secret for frontend URL
+    healthCheckPath: /api/health
+    plan: free  # Or starter/paid as needed
