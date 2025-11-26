@@ -9,10 +9,6 @@ services:
       - key: NODE_ENV
         value: production
       - key: MONGO_URI
-        sync: false  # Set this in Render dashboard or via secret
-      - key: JWT_SECRET
-        generateValue: true
-      - key: VITE_API_URL
-        fromSecret: VITE_API_URL  # If using secret for frontend URL
+        sync: false
     healthCheckPath: /api/health
-    plan: free  # Or starter/paid as needed
+    plan: free
