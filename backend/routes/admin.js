@@ -1,16 +1,20 @@
 import express from "express";
+import { requireAuth, requireRole } from '../middleware/auth.js';
+import { requirePermission } from '../middleware/permission.js';
 import User from "../models/User.js";
 import TellerReport from "../models/TellerReport.js";
 import Payroll from "../models/Payroll.js";
 import bcrypt from "bcrypt";
 
 const router = express.Router();
+// ensure admin routes are authenticated
+router.use(requireAuth);
 
 /* ========================================================
    👑 ADMIN USER MANAGEMENT ROUTES
 ======================================================== */
 
-router.get("/users", async (req, res) => {
+router.get("/users", requirePermission('employees'), async (req, res) => {
   try {
     const users = await User.find().sort({ createdAt: -1 }).lean();
     res.json(users);
@@ -20,7 +24,7 @@ router.get("/users", async (req, res) => {
   }
 });
 
-router.put("/approve-user/:id", async (req, res) => {
+router.put("/approve-user/:id", requirePermission('employees'), async (req, res) => {
   try {
     const { id } = req.params;
     const { active = true, role } = req.body;
@@ -48,7 +52,7 @@ router.put("/approve-user/:id", async (req, res) => {
   }
 });
 
-router.delete("/user/:id", async (req, res) => {
+router.delete("/user/:id", requirePermission('employees'), async (req, res) => {
   try {
     const { id } = req.params;
     await User.findByIdAndDelete(id);
@@ -60,7 +64,7 @@ router.delete("/user/:id", async (req, res) => {
   }
 });
 
-router.put("/update-user/:id", async (req, res) => {
+router.put("/update-user/:id", requirePermission('employees'), async (req, res) => {
   try {
     const { id } = req.params;
     const { role, name, username, password, baseSalary } = req.body;
@@ -86,7 +90,27 @@ router.put("/update-user/:id", async (req, res) => {
   }
 });
 
-router.get("/pending-count", async (req, res) => {
+// ✅ Remove penalty (clear skipUntil and lastAbsentReason)
+router.put('/users/:id/remove-penalty', requireAuth, requireRole(['super_admin','admin','supervisor']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findById(id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    user.skipUntil = null;
+    user.lastAbsentReason = '';
+    await user.save();
+
+    if (global.io) global.io.emit('userPenaltyCleared', { userId: user._id });
+
+    res.json({ success: true, message: 'Penalty removed', user });
+  } catch (err) {
+    console.error('❌ Failed to remove penalty:', err);
+    res.status(500).json({ message: 'Failed to remove penalty' });
+  }
+});
+
+router.get("/pending-count", requirePermission('employees'), async (req, res) => {
   try {
     const count = await User.countDocuments({
       $or: [{ status: "pending" }, { active: false }],
@@ -160,7 +184,7 @@ router.get("/payroll-summary", async (req, res) => {
 /* ========================================================
    🔑 CHANGE USER PASSWORD (ADMIN ONLY)
 ======================================================== */
-router.put("/users/:id/password", async (req, res) => {
+router.put("/users/:id/password", requirePermission('employees'), async (req, res) => {
   try {
     const { id } = req.params;
     const { password } = req.body;
@@ -192,7 +216,7 @@ router.put("/users/:id/password", async (req, res) => {
 });
 
 // Update user theme preferences
-router.put("/users/:id/theme", async (req, res) => {
+router.put("/users/:id/theme", requirePermission('employees'), async (req, res) => {
   try {
     const { id } = req.params;
     const { theme } = req.body;

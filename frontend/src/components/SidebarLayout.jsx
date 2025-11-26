@@ -23,14 +23,19 @@ import {
   Shield,
   CheckSquare,
   MapPin,
+  Link,
+  Camera,
   TrendingUp,
 } from "lucide-react";
 
 import FloatingChat from "../pages/ChatRoom.jsx"; // ✅ floating chat import
 import SuperAdminSidebarControl from '../pages/SuperAdminSidebarControl.jsx';
+import AvatarEditor from './AvatarEditor.jsx';
 
 export default function SidebarLayout({ role, children }) {
-  const { user, settings } = useContext(SettingsContext);
+  const { user, settings, setUser } = useContext(SettingsContext);
+  // If caller didn't supply a role prop, fallback to the current user's role (keeps routes safe)
+  const resolvedRole = role || user?.role || 'teller';
   const { showToast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
@@ -42,6 +47,11 @@ export default function SidebarLayout({ role, children }) {
   const [payrollLoading, setPayrollLoading] = useState(false);
   // Removed collapsible sub-menus for teller sections; keep simple flat nav
   const [pendingCount, setPendingCount] = useState(0);
+  const fileInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
+  const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [showAvatarEditor, setShowAvatarEditor] = useState(false);
 
   const sidebarRef = useRef(null);
 
@@ -80,9 +90,18 @@ export default function SidebarLayout({ role, children }) {
   const fetchPendingCount = async () => {
     try {
       const API = getApiUrl(); // Get fresh API URL
-      const res = await axios.get(`${API}/api/admin/pending-count`);
+      const token = localStorage.getItem('token');
+      const opts = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+      const res = await axios.get(`${API}/api/admin/pending-count`, opts);
       setPendingCount(res.data?.pendingCount || 0);
-    } catch {
+    } catch (err) {
+      // If unauthorized or missing permissions, don't block the sidebar — show 0 and continue.
+      if (err?.response?.status === 401) {
+        console.warn('Pending count fetch unauthorized (401) — showing 0');
+        setPendingCount(0);
+        return;
+      }
+      console.debug('Failed to fetch pending count:', err?.message || err);
       setPendingCount(0);
     }
   };
@@ -106,6 +125,89 @@ export default function SidebarLayout({ role, children }) {
       }
     };
   }, [user?._id]);
+
+  // Profile picture upload handler
+  const handleAvatarClick = (e) => {
+    // open a small menu offering camera vs gallery
+    e?.stopPropagation?.();
+    setAvatarMenuOpen(prev => !prev);
+  };
+
+  const handleAvatarSelected = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Limit file size to 2MB for safety
+    const MAX = 2 * 1024 * 1024;
+    if (file.size > MAX) {
+      showToast({ type: 'error', message: 'Profile picture must be <= 2MB' });
+      return;
+    }
+
+    // Read as data URL and open editor (crop/compress UI)
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const dataUrl = reader.result;
+
+      // quick client-side validation for min dimensions and file size
+      const img = new Image();
+      img.onload = () => {
+        const MIN_W = 128;
+        const MIN_H = 128;
+        const MIN_BYTES = 8 * 1024; // 8KB
+
+        if (img.width < MIN_W || img.height < MIN_H) {
+          showToast({ type: 'error', message: `Image too small — requires at least ${MIN_W}×${MIN_H}px` });
+          return;
+        }
+
+        // approximate size from base64 length
+        const approxBytes = Math.ceil((dataUrl.length - dataUrl.indexOf(',') - 1) * 3 / 4);
+        if (approxBytes < MIN_BYTES) {
+          showToast({ type: 'error', message: `Image file too small — must be at least ${MIN_BYTES} bytes` });
+          return;
+        }
+
+        setSelectedImage(dataUrl);
+        setAvatarMenuOpen(false);
+        setShowAvatarEditor(true);
+      };
+      img.onerror = () => {
+        showToast({ type: 'error', message: 'Invalid image file' });
+      };
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleAvatarSaved = (result) => {
+    // server returned updated user in result.user
+    const updatedUser = result?.user;
+    if (updatedUser) {
+      setUser(updatedUser);
+      showToast({ type: 'success', message: 'Profile picture updated' });
+    }
+  };
+
+  // helpers to trigger specific inputs
+  const pickFromGallery = (e) => {
+    e?.stopPropagation?.();
+    setAvatarMenuOpen(false);
+    try { fileInputRef.current?.click(); } catch (e) {}
+  };
+
+  const takePhoto = (e) => {
+    e?.stopPropagation?.();
+    setAvatarMenuOpen(false);
+    try { cameraInputRef.current?.click(); } catch (e) {}
+  };
+
+  // Close the avatar menu on outside clicks
+  useEffect(() => {
+    if (!avatarMenuOpen) return;
+    const handler = () => setAvatarMenuOpen(false);
+    document.addEventListener('click', handler);
+    return () => document.removeEventListener('click', handler);
+  }, [avatarMenuOpen]);
 
   // ✅ Swipe gestures for mobile sidebar - DISABLED to prevent form interference
   // useEffect(() => {
@@ -166,6 +268,7 @@ export default function SidebarLayout({ role, children }) {
     'suggested-schedule': { to: r => `/${r}/suggested-schedule`, icon: <Calendar size={18} />, text: 'Suggested Schedule' },
     history: { to: r => `/${r}/history`, icon: <History size={18} />, text: 'History' },
     'teller-month': { to: r => `/${r}/teller-month`, icon: <Award size={18} />, text: 'Teller of Month' },
+    users: { to: r => `/users`, icon: <Users size={18} />, text: 'People', roles: ['admin','super_admin','supervisor','teller','declarator','supervisor_teller'] },
     deployments: { to: r => `/${r}/deployments`, icon: <Package size={18} />, text: 'Deployment Management', roles: ['declarator','admin','super_admin','supervisor','supervisor_teller','teller'] },
     settings: { to: r => `/${r}/settings`, icon: <Settings size={18} />, text: 'Settings' },
     'menu-config': { to: r => `/${r}/menu-config`, icon: <Shield size={18} />, text: 'Menu Permissions', roles: ['admin','super_admin'] },
@@ -174,12 +277,14 @@ export default function SidebarLayout({ role, children }) {
     'map-editor': { to: r => `/${r}/map-editor`, icon: <Settings size={18} />, text: 'Map Editor', roles: ['admin','super_admin','declarator'] },
     'teller-betting': { to: r => `/${r}/teller-betting`, icon: <TrendingUp size={18} />, text: 'Teller Betting Data', roles: ['admin','super_admin'] },
     'manage-betting': { to: r => `/${r}/manage-betting`, icon: <Settings size={18} />, text: 'Manage Betting Data', roles: ['admin','super_admin'] },
+    'teller-mappings': { to: r => `/${r}/teller-mappings`, icon: <Link size={18} />, text: 'Teller Mappings', roles: ['super_admin'] },
     'betting-analytics': { to: r => `/${r}/betting-analytics`, icon: <BarChart3 size={18} />, text: 'Betting Analytics', roles: ['admin','super_admin'] },
-    'betting-event-report': { to: r => `/${r}/betting-event-report`, icon: <TrendingUp size={18} />, text: 'Betting Event Report', roles: ['super_admin'] },
+    'betting-event-report': { to: r => `/${r}/betting-event-report`, icon: <TrendingUp size={18} />, text: 'Betting Event Report', roles: ['super_admin','admin'] },
     'key-performance-indicator': { to: r => `/${r}/key-performance-indicator`, icon: <BarChart3 size={18} />, text: 'Key Performance Indicator', roles: ['admin','super_admin','supervisor'] },
+    upload: { to: r => `/upload`, icon: <Camera size={18} />, text: 'Upload', roles: ['admin','super_admin','supervisor','teller','declarator','supervisor_teller'] },
+    feed: { to: r => `/feed`, icon: <FileText size={18} />, text: 'Feed', roles: ['admin','super_admin','supervisor','teller','declarator','supervisor_teller'] },
     // Extra items that appear in config but not previously mapped
     chat: { to: r => `/${r}/chat`, icon: <FileText size={18} />, text: 'Chat/Messages' },
-    approvals: { to: r => `/${r}/user-approval`, icon: <CheckSquare size={18} />, text: 'Approvals', dynamicBadge: true, roles: ['admin','super_admin'] },
     // Mark experimental/unstable items disabled by default (hidden in sidebar)
     'attendance-scheduler': { to: r => `/${r}/attendance-scheduler`, icon: <Calendar size={18} />, text: 'Attendance Scheduler', roles: ['admin','super_admin','supervisor'] },
     assistant: { to: r => `/${r}/assistant`, icon: <Users size={18} />, text: 'Admin Assistant', roles: ['admin','super_admin'] },
@@ -193,19 +298,19 @@ export default function SidebarLayout({ role, children }) {
     'schedule': 'suggested-schedule',
     'teller-of-month': 'teller-month',
     'users': 'user-approval',
-    'approvals': 'approvals',
+    'approvals': 'user-approval',
   };
 
   // Fallback default item IDs per role (used if DB not yet initialized)
   const FALLBACK_ROLE_ITEMS = {
     super_admin: [
-      'dashboard','supervisor-report','teller-reports','teller-reports-viewer','teller-management','teller-overview','report','cashflow','user-approval','withdrawals','employees','salary','payroll','history','teller-month','suggested-schedule','attendance-scheduler','deployments','assistant','menu-config','manage-sidebars','live-map','map-editor','teller-betting','manage-betting','betting-analytics','betting-event-report','key-performance-indicator','settings','approvals'
+      'dashboard','upload','feed','users','supervisor-report','teller-reports','teller-reports-viewer','teller-management','teller-overview','report','cashflow','user-approval','withdrawals','employees','salary','payroll','history','teller-month','suggested-schedule','attendance-scheduler','deployments','assistant','menu-config','manage-sidebars','live-map','map-editor','teller-betting','manage-betting','betting-analytics','betting-event-report','key-performance-indicator','settings'
     ],
-    admin: ['dashboard','supervisor-report','teller-reports','teller-reports-viewer','teller-management','teller-overview','report','cashflow','payroll','withdrawals','employees','user-approval','salary','history','teller-month','suggested-schedule','attendance-scheduler','deployments','assistant','map-editor','teller-betting','manage-betting','menu-config','manage-sidebars','key-performance-indicator','settings'],
-    supervisor: ['dashboard','supervisor-report','teller-reports','teller-reports-viewer','teller-management','staff-performance','teller-month','history','payroll','suggested-schedule','key-performance-indicator','deployments','live-map'],
-    supervisor_teller: ['dashboard','supervisor-report','teller-reports','teller-reports-viewer','teller-management','staff-performance','teller-month','history','payroll','suggested-schedule','deployments','live-map'],
-    teller: ['dashboard','teller-reports','history','payroll','teller-month','suggested-schedule','deployments','live-map'],
-    declarator: ['deployments','settings','live-map','map-editor'],
+    admin: ['dashboard','upload','feed','users','supervisor-report','teller-reports','teller-reports-viewer','teller-management','teller-overview','report','cashflow','payroll','withdrawals','employees','user-approval','salary','history','teller-month','suggested-schedule','attendance-scheduler','deployments','assistant','map-editor','teller-betting','manage-betting','menu-config','manage-sidebars','key-performance-indicator','settings','betting-event-report'],
+    supervisor: ['dashboard','upload','feed','users','supervisor-report','teller-reports','teller-reports-viewer','teller-management','staff-performance','teller-month','history','payroll','suggested-schedule','key-performance-indicator','deployments','live-map'],
+    supervisor_teller: ['dashboard','upload','feed','users','supervisor-report','teller-reports','teller-reports-viewer','teller-management','staff-performance','teller-month','history','payroll','suggested-schedule','deployments','live-map'],
+    teller: ['dashboard','upload','feed','users','teller-reports','history','payroll','teller-month','suggested-schedule','deployments','live-map'],
+    declarator: ['deployments','upload','feed','users','settings','live-map','map-editor'],
   };
 
   const [permissionsLoaded, setPermissionsLoaded] = useState(false);
@@ -263,10 +368,40 @@ export default function SidebarLayout({ role, children }) {
         <div className="px-4 pt-4 pb-3 border-b dark:border-gray-700 flex-shrink-0">
           <div 
             className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition"
-            onClick={() => navigate(`/${role}/dashboard`)}
+            onClick={() => navigate(`/${resolvedRole}/dashboard`)}
             title="Go to Dashboard"
           >
-            <UserCircle className="h-12 w-12 text-indigo-500 flex-shrink-0" />
+              <div className="relative">
+                {user?.avatarUrl ? (
+                  <img
+                    src={`${getApiUrl()}${user.avatarUrl}`}
+                    alt="avatar"
+                    onClick={(e) => { handleAvatarClick(e); }}
+                    className="h-12 w-12 rounded-full object-cover cursor-pointer border-2 border-white dark:border-gray-900"
+                  />
+                ) : (
+                  <UserCircle onClick={(e) => handleAvatarClick(e)} className="h-12 w-12 text-indigo-500 flex-shrink-0 cursor-pointer" />
+                )}
+                {showAvatarEditor && (
+                  <AvatarEditor
+                    initialImage={selectedImage}
+                    onClose={() => { setShowAvatarEditor(false); setSelectedImage(null); }}
+                    onSaved={(resp) => { handleAvatarSaved(resp); setShowAvatarEditor(false); setSelectedImage(null); }}
+                  />
+                )}
+
+                {/* Hidden inputs: gallery (default) and camera (capture) */}
+                <input ref={fileInputRef} onChange={handleAvatarSelected} accept="image/*" type="file" className="hidden" />
+                <input ref={cameraInputRef} onChange={handleAvatarSelected} accept="image/*" capture="environment" type="file" className="hidden" />
+
+                {/* Avatar menu — appears on avatar click */}
+                {avatarMenuOpen && (
+                  <div className="absolute left-0 top-full mt-2 w-44 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded shadow-lg z-[99999]">
+                    <button onClick={pickFromGallery} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">Choose from gallery</button>
+                    <button onClick={takePhoto} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">Take photo</button>
+                  </div>
+                )}
+              </div>
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-gray-800 dark:text-gray-200 text-base leading-tight truncate">
                 {user?.name || user?.username || "User"}
@@ -278,7 +413,7 @@ export default function SidebarLayout({ role, children }) {
           </div>
           <div
             onClick={() => {
-              const target = role === 'admin' ? '/admin/salary' : `/${role}/payroll`;
+              const target = resolvedRole === 'admin' ? '/admin/salary' : `/${resolvedRole}/payroll`;
               navigate(target);
             }}
             className="mt-4 cursor-pointer group"
@@ -324,8 +459,10 @@ export default function SidebarLayout({ role, children }) {
               let list = (rolePermissions[menuRole] && rolePermissions[menuRole].length
                 ? rolePermissions[menuRole]
                 : FALLBACK_ROLE_ITEMS[menuRole] || []);
-              // Auto-approve all items for super_admin: union with every defined item id
-              if (menuRole === 'super_admin') {
+              // Auto-approve all items for super_admin by default — but allow a toggle
+              // stored in localStorage (key: 'superAdminStrict') to require explicit grants.
+              const superAdminStrict = localStorage.getItem('superAdminStrict') === 'true';
+              if (menuRole === 'super_admin' && !superAdminStrict) {
                 const allIds = Object.keys(MENU_ITEM_DEFS);
                 const set = new Set(list);
                 for (const id of allIds) {

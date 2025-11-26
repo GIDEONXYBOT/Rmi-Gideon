@@ -22,13 +22,13 @@ router.get("/dashboard", async (req, res) => {
       return res.status(400).json({ message: "Missing or invalid supervisorId" });
     }
 
-    // Today window (Asia/Manila)
+    // Use tomorrow's assignments for supervisor side (view-only)
     const now = DateTime.now().setZone("Asia/Manila");
-    const dayKey = now.toFormat("yyyy-MM-dd");
+    const dayKey = now.plus({ days: 1 }).toFormat("yyyy-MM-dd"); // tomorrow
     const start = now.startOf("day").toJSDate();
     const end = now.endOf("day").toJSDate();
 
-    // Fetch today's assignments for this supervisor
+    // Fetch tomorrow's assignments for this supervisor (view-only)
     const assignments = await DailyTellerAssignment.find({ dayKey, supervisorId }).lean();
     const tellerIds = assignments.map((a) => a.tellerId).filter(Boolean);
 

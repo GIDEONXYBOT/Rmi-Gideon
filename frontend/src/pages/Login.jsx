@@ -18,10 +18,9 @@ export default function Login() {
       localStorage.setItem("role", res.data.role);
       localStorage.setItem("username", res.data.username);
 
-      if (res.data.role === "admin" || res.data.role === "super_admin") window.location.href = "/admin";
-      else if (res.data.role === "supervisor") window.location.href = "/supervisor";
-      else if (res.data.role === "head_watcher" || res.data.role === "sub_watcher") window.location.href = "/teller";
-      else window.location.href = "/teller";
+      // Send all users to the public feed page after login (social-style feed)
+      // This keeps the app unified: users see other uploads immediately after signing in.
+      window.location.href = "/feed";
     } catch (err) {
       setMessage(err.response?.data?.message || "Login failed");
     }

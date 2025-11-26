@@ -716,6 +716,32 @@ router.get("/betting-event", requireAuth, requireRole(['super_admin']), async (r
     }
 
     console.log("✅ Successfully fetched betting event data");
+
+    // Attach per-teller ranks to staffReports (1st, 2nd, 3rd...) before returning
+    try {
+      const reports = filteredData?.staffReports;
+      if (Array.isArray(reports) && reports.length > 0) {
+        const sorted = [...reports].sort((a, b) => (Number(b.betAmount ?? b.totalBet ?? 0) - Number(a.betAmount ?? a.totalBet ?? 0)));
+        const rankMap = new Map();
+        sorted.forEach((r, i) => rankMap.set((r.username || r.tellerUsername || r.name || r.tellerName || r.tellerId || i).toString(), i + 1));
+
+        const ordinal = (n) => {
+          if (!n || n <= 0) return null;
+          const s = ["th", "st", "nd", "rd"];
+          const v = n % 100;
+          return n + (s[(v - 20) % 10] || s[v] || s[0]);
+        };
+
+        filteredData.staffReports = reports.map(r => {
+          const key = (r.username || r.tellerUsername || r.name || r.tellerName || r.tellerId || '').toString();
+          const rank = rankMap.get(key) || 0;
+          return { ...r, rank, rankOrdinal: rank ? ordinal(rank) : null };
+        });
+      }
+    } catch (rkErr) {
+      console.warn('⚠️ Could not compute ranks for betting-event staffReports:', rkErr?.message || rkErr);
+    }
+
     res.json({
       success: true,
       data: filteredData,
@@ -751,10 +777,113 @@ router.get("/kpi/tellers", async (req, res) => {
     // Fetch real teller data from database instead of external scraper
     let bettingData = null;
     try {
-      console.log("🔄 Fetching real teller data from database...");
+      console.log("🔄 Attempting to fetch teller KPI data from betting event reports first...");
 
-      // Get date range for filtering (default to last 30 days if no date specified)
-      let dateFilter = {};
+        // First: try fetching betting event data from external event API (preferred source)
+        let useBettingEvent = false;
+        try {
+          const eventRes = await axios.get('https://rmi-gideon.gtarena.ph/api/m/secure/report/event', {
+            headers: {
+              'X-TOKEN': 'af9735e1c7857a07f0b078df36842ace',
+              'Content-Type': 'application/json'
+            },
+            timeout: 10_000
+          });
+
+          const payload = eventRes?.data || {};
+          // Betting event payload shape varies — prefer payload.staffReports or payload.data.staffReports
+          const rawReports = payload.staffReports || payload.data?.staffReports || payload;
+
+          if (rawReports && (Array.isArray(rawReports) || Array.isArray(rawReports.staffReports))) {
+            // Normalize array of records
+            const items = Array.isArray(rawReports) ? rawReports : rawReports.staffReports || [];
+
+            if (items.length > 0) {
+              console.log(`📯 Retrieved ${items.length} raw betting-event records from external API`);
+
+              // Group and aggregate by teller username/id
+              const map = new Map();
+              for (const item of items) {
+                // attempt to read common fields from different formats
+                const username = (item.username || item.tellerUsername || item.name || item.tellerName || item.tellerId || '').toString();
+                if (!username) continue;
+
+                const betAmount = Number(item.betAmount ?? item.totalBet ?? item.total_bet ?? 0);
+                const payout = Number(item.payout ?? item.systemBalance ?? 0);
+                const commission = Number(item.commission ?? 0);
+                const canceledBet = Number(item.canceledBet ?? item.canceled_bet ?? 0);
+                const cashOnHand = Number(item.cashOnHand ?? item.cash_on_hand ?? 0);
+                const over = Number(item.over ?? 0);
+                const short = Number(item.short ?? 0);
+
+                if (!map.has(username)) {
+                  map.set(username, {
+                    name: item.name || item.tellerName || username,
+                    username,
+                    totalBet: 0,
+                    totalPayout: 0,
+                    totalCommission: 0,
+                    totalCanceled: 0,
+                    cashOnHand: cashOnHand || 0,
+                    over: over || 0,
+                    short: short || 0
+                  });
+                }
+
+                const entry = map.get(username);
+                entry.totalBet += betAmount;
+                entry.totalPayout += payout;
+                entry.totalCommission += commission;
+                entry.totalCanceled += canceledBet;
+                // Keep cashOnHand/over/short as last-known if present
+                if (cashOnHand) entry.cashOnHand = cashOnHand;
+                if (over) entry.over = over;
+                if (short) entry.short = short;
+              }
+
+              // Convert aggregated map to staffReports shape used by KPI UI
+              const staffReports = Array.from(map.values()).map(r => {
+                const profit = r.cashOnHand ? (r.cashOnHand - r.totalPayout) : (r.totalBet - r.totalPayout);
+                const commission = Math.round(r.totalCommission || Math.max(0, Math.round(profit * 0.025)));
+
+                return {
+                  name: r.name,
+                  username: r.username,
+                  betAmount: r.totalBet,
+                  payout: r.totalPayout,
+                  canceledBet: r.totalCanceled,
+                  commission,
+                  systemBalance: r.totalPayout,
+                  startingBalance: r.totalPayout,
+                  profit,
+                  over: r.over || 0,
+                  short: r.short || 0,
+                  cashOnHand: r.cashOnHand || 0
+                };
+              });
+
+              bettingData = {
+                staffReports,
+                isRealData: true,
+                source: 'betting_event_report',
+                totalReports: items.length,
+                uniqueTellers: staffReports.length
+              };
+
+              useBettingEvent = true;
+              console.log(`✅ KPI: aggregated ${staffReports.length} unique tellers from betting-event records`);
+            }
+          }
+        } catch (evtErr) {
+          console.warn('⚠️ KPI: failed to fetch/parse betting-event API, will fallback to teller reports:', evtErr?.message || evtErr);
+        }
+
+        // If betting event data variable not populated, fall back to teller reports from DB
+        if (!useBettingEvent) {
+          console.log("🔄 Fetching real teller data from database as fallback...");
+
+          // Get date range for filtering (default to last 30 days if no date specified)
+          let dateFilter = {};
       if (date) {
         const filterDate = new Date(date);
         const startOfDay = new Date(filterDate.getFullYear(), filterDate.getMonth(), filterDate.getDate());
@@ -827,6 +956,7 @@ router.get("/kpi/tellers", async (req, res) => {
       console.log(`✅ Successfully loaded ${staffReports.length} real tellers from database`);
       console.log("🔍 Real data sample:", staffReports?.[0]);
 
+      }
     } catch (dbError) {
       console.error("❌ Failed to fetch teller data from database:", dbError.message);
       console.log("🔧 Database query failed. Using mock data as fallback...");
@@ -871,12 +1001,10 @@ router.get("/kpi/tellers", async (req, res) => {
       };
     }
 
-    if (!bettingData || !bettingData.staffReports) {
-      console.error("❌ Failed to fetch betting data from scraper:", bettingError.message);
-      console.error("❌ Full error:", bettingError);
-      console.log("🔧 GTArena API now requires OTP authentication. Using mock data for demonstration...");
+    if (!bettingData || !Array.isArray(bettingData.staffReports) || bettingData.staffReports.length === 0) {
+      console.log("🔧 No betting-event or teller report data available — using demo fallback data for KPI");
 
-      // Mock data with clear indication that it's demo data
+      // Mock/demo data when neither betting-event API nor DB reports are available
       bettingData = {
         staffReports: [
           {
@@ -911,8 +1039,8 @@ router.get("/kpi/tellers", async (req, res) => {
           }
         ],
         isMockData: true,
-        scraperStatus: "GTArena API requires OTP authentication - needs valid credentials + OTP",
-        message: "Currently showing demo data. To see real tellers, provide valid GTArena API credentials with OTP support."
+        scraperStatus: "No betting-event or database teller reports available - showing mock data",
+        message: "Currently showing demo data. To see real tellers, provide event report data or ensure teller reports exist in DB."
       };
     }
 
@@ -963,6 +1091,11 @@ router.get("/kpi/tellers", async (req, res) => {
     const avgProfitMargin = tellerSummaries.length > 0 ? tellerSummaries.reduce((sum, t) => sum + t.profitMargin, 0) / tellerSummaries.length : 0;
     const topPerformer = tellerSummaries.reduce((top, current) => current.profit > (top?.profit || 0) ? current : top, null);
 
+    // Use a consistent top-level source indicator for UI (real_betting_data when not mock),
+    // and include a subSource to denote origin (betting_event_report | database_teller_reports)
+    const subSource = bettingData?.source || null;
+    const topSource = bettingData?.isMockData ? 'demo_data' : 'real_betting_data';
+
     return res.json({
       success: true,
       data: {
@@ -983,7 +1116,8 @@ router.get("/kpi/tellers", async (req, res) => {
           }
         },
         tellers: tellerSummaries,
-        source: 'real_betting_data',
+        source: topSource,
+        subSource: subSource,
         filtered: false,
         selectedDate: null
       }

@@ -74,15 +74,9 @@ export default function LoginPage() {
       localStorage.setItem("userName", user.name || user.username);
       setUser(user); // ✅ Update context dynamically
 
-      console.log('✅ Login successful, redirecting...', user.role);
-
-      // Navigate based on role
-      if (user.role === "super_admin") navigate("/super_admin/dashboard");
-      else if (user.role === "admin") navigate("/admin/dashboard");
-      else if (user.role === "supervisor" || user.role === "supervisor_teller") navigate("/supervisor/dashboard");
-      else if (user.role === "teller") navigate("/teller/dashboard");
-      else if (user.role === "declarator") navigate("/declarator/dashboard");
-      else setError("Unknown user role. Contact admin.");
+      console.log('✅ Login successful — redirecting to feed page', user.role);
+      // After login send everyone to the social feed where uploads from other users are visible
+      navigate('/feed');
     } catch (err) {
       console.error("❌ Login failed:", err.response?.data || err.message);
       console.error("❌ Full error:", err);

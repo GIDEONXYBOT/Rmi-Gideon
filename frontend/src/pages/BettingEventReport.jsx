@@ -89,6 +89,19 @@ export default function BettingEventReport() {
     return (betAmount || 0) * 0.055;
   };
 
+  const ordinalSuffixOf = (i) => {
+    const n = i;
+    if (!n) return '';
+    const v = n % 100;
+    if (v >= 11 && v <= 13) return `${n}th`;
+    switch (n % 10) {
+      case 1: return `${n}st`;
+      case 2: return `${n}nd`;
+      case 3: return `${n}rd`;
+      default: return `${n}th`;
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-6">
@@ -233,6 +246,7 @@ export default function BettingEventReport() {
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Rank</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Teller</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Starting Balance</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Bet Amount</th>
@@ -248,6 +262,9 @@ export default function BettingEventReport() {
                 const commission = calculateCommission(staff.betAmount);
                 return (
                   <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-200 font-semibold">
+                      {ordinalSuffixOf(index + 1)}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900 dark:text-white">{staff.name}</div>
                       <div className="text-sm text-gray-500 dark:text-gray-400">{staff.username}</div>

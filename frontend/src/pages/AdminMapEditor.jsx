@@ -87,10 +87,12 @@ export default function AdminMapEditor() {
     })();
   }, []);
 
-  // Auto-load default 3D model if none is present
+  // Auto-load default 3D model if none is present.
+  // Use an externally-hosted model if VITE_DEFAULT_GLB_URL is provided (recommended for large files)
   useEffect(() => {
     if (!model3DData) {
-      fetch('/default-model.glb')
+      const defaultModelUrl = import.meta.env.VITE_DEFAULT_GLB_URL || '/default-model.glb';
+      fetch(defaultModelUrl)
         .then(res => res.blob())
         .then(blob => {
           const reader = new FileReader();

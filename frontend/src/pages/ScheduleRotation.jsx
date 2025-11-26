@@ -37,6 +37,7 @@ export default function ScheduleRotation() {
   const [tomorrowAssignments, setTomorrowAssignments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [tellerCount, setTellerCount] = useState(3);
+  const [workDaysRange, setWorkDaysRange] = useState('week'); // 'week' | 'month' | 'year' | 'all'
   const [generating, setGenerating] = useState(false);
 
   // 🆕 Replacement modal & suggestions
@@ -53,6 +54,15 @@ export default function ScheduleRotation() {
   // 🆕 Suggested tellers card
   const [suggestedTellers, setSuggestedTellers] = useState([]);
   const [allTellers, setAllTellers] = useState([]);
+  // Full-week selection state
+  const [weekStartKey, setWeekStartKey] = useState(null);
+  const [fullWeekSelection, setFullWeekSelection] = useState(null);
+  const [selectedFullWeekIds, setSelectedFullWeekIds] = useState([]);
+  const [fullWeekCount, setFullWeekCount] = useState(0);
+  const [previewPlanned, setPreviewPlanned] = useState([]);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [applying, setApplying] = useState(false);
+  const [lastAuditId, setLastAuditId] = useState(null);
 
   // 🆕 Today's working tellers
   const [todayWorkingTellers, setTodayWorkingTellers] = useState([]);
@@ -67,11 +77,24 @@ export default function ScheduleRotation() {
     console.log("📅 useEffect triggered for todayDate:", todayDate);
     fetchData();
     fetchSuggestedTellers();
-    if (isAdminOnly) {
+    if (isSupervisorOrAdmin) {
       fetchAllTellers();
     }
     fetchTodayWorkingTellers();
-  }, [todayDate]);
+    // compute week start (Monday) for the week containing todayDate
+    try {
+      const d = new Date(todayDate);
+      // get day (0 Sunday..6 Saturday); convert so Monday=0
+      const day = d.getDay();
+      const diff = (day + 6) % 7; // number of days since Monday
+      const monday = new Date(d);
+      monday.setDate(d.getDate() - diff);
+      const wk = monday.toISOString().slice(0, 10);
+      setWeekStartKey(wk);
+    } catch (e) {
+      console.warn('Failed to calculate week start', e.message);
+    }
+  }, [todayDate, workDaysRange]);
 
   // ✅ Real-time socket listener
   useEffect(() => {
@@ -99,18 +122,35 @@ export default function ScheduleRotation() {
 
       return () => {
         socket.off("scheduleUpdated");
+        socket.off("userPenaltyCleared");
       };
     }
   }, []);
+
+  // Listen for penalty cleared events
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+    const handler = (payload) => {
+      console.log('🔁 Penalty cleared event received:', payload);
+      // refresh list and schedule
+      fetchAllTellers();
+      fetchData();
+    };
+    socket.on('userPenaltyCleared', handler);
+    return () => socket.off('userPenaltyCleared', handler);
+  }, [weekStartKey]);
 
   // ✅ Fetch schedule data
   const fetchData = async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
-      const res = await axios.get(`${API}/api/schedule/tomorrow`, {
+      console.log('🔍 Fetching tomorrow schedule with range:', workDaysRange);
+      const res = await axios.get(`${API}/api/schedule/tomorrow?range=${workDaysRange}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      console.log('🔍 /api/schedule/tomorrow response:', res.data?.schedule?.map(s=>({id:s._id,tellerName:s.tellerName,rangeWorkDays:s.rangeWorkDays,range:s.range})));
       setTomorrowAssignments(res.data.schedule || []);
     } catch (err) {
       console.error("❌ Failed to fetch schedule:", err);
@@ -155,6 +195,21 @@ export default function ScheduleRotation() {
     }
   };
 
+  const removePenalty = async (tellerId) => {
+    if (!window.confirm('Remove penalty for this teller now?')) return;
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(`${API}/api/admin/users/${tellerId}/remove-penalty`, {}, { headers: { Authorization: `Bearer ${token}` } });
+      showToast({ type: 'success', message: 'Penalty removed' });
+      // Refresh list and schedule
+      await fetchAllTellers();
+      await fetchData();
+    } catch (err) {
+      console.error('❌ Failed to remove penalty', err);
+      showToast({ type: 'error', message: 'Failed to remove penalty' });
+    }
+  };
+
   // 🆕 Fetch today's working tellers based on submitted reports
   const fetchTodayWorkingTellers = async () => {
     try {
@@ -171,12 +226,31 @@ export default function ScheduleRotation() {
     }
   };
 
+  // ✅ Fetch saved full-week selection for the active week
+  const fetchFullWeekSelection = async (weekKeyParam = weekStartKey) => {
+    if (!weekKeyParam) return;
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get(`${API}/api/schedule/full-week/${weekKeyParam}`, { headers: { Authorization: `Bearer ${token}` } });
+      setFullWeekSelection(res.data.selection || null);
+      if (res.data.selection) {
+        setSelectedFullWeekIds((res.data.selection.tellerIds || []).map(t => t._id));
+        setFullWeekCount(res.data.selection.count || (res.data.selection.tellerIds || []).length || 0);
+      } else {
+        setSelectedFullWeekIds([]);
+        setFullWeekCount(0);
+      }
+    } catch (err) {
+      console.error("❌ Failed to fetch full-week selection:", err);
+    }
+  };
+
   const handleGenerateTomorrow = async () => {
     if (!window.confirm("Generate tomorrow’s schedule now?")) return;
     try {
       setGenerating(true);
       const token = localStorage.getItem("token");
-      const res = await axios.get(`${API}/api/schedule/tomorrow`, {
+      const res = await axios.get(`${API}/api/schedule/tomorrow?range=${workDaysRange}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setTomorrowAssignments(res.data.schedule || []);
@@ -205,8 +279,8 @@ export default function ScheduleRotation() {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      // Update the assignments immediately without page refresh
-      setTomorrowAssignments(res.data.schedule || []);
+      // Refresh assignments and suggested tellers using the selected range
+      await fetchData();
       fetchSuggestedTellers(); // Refresh suggested tellers too
       
       showToast({
@@ -216,6 +290,95 @@ export default function ScheduleRotation() {
     } catch (err) {
       console.error("Error updating teller count:", err);
       showToast({ type: "error", message: "Failed to update teller count." });
+    }
+  };
+
+  // Toggle teller in full-week selection
+  const handleToggleFullWeekTeller = (tellerId) => {
+    setSelectedFullWeekIds(prev => {
+      const exists = prev.includes(tellerId);
+      if (exists) return prev.filter(id => id !== tellerId);
+      // enforce limit if count > 0
+      if (fullWeekCount > 0 && prev.length >= fullWeekCount) {
+        // Prevent selecting more than configured fullWeekCount
+        return prev;
+      }
+      return [...prev, tellerId];
+    });
+  };
+
+  const saveFullWeekSelection = async () => {
+    if (!weekStartKey) return showToast({ type: 'error', message: 'Week start not set' });
+    try {
+      const token = localStorage.getItem('token');
+      const payload = { weekKey: weekStartKey, tellerIds: selectedFullWeekIds, count: fullWeekCount };
+      // Apply immediately for the current week (from tomorrow through Sunday)
+      await applyFullWeekSelection();
+    } catch (err) {
+      console.error('❌ Failed to save full-week selection', err);
+      showToast({ type: 'error', message: 'Failed to save full-week selection' });
+    }
+  };
+
+  const applyFullWeekSelection = async () => {
+    if (!weekStartKey) return showToast({ type: 'error', message: 'Week start not set' });
+    try {
+      setApplying(true);
+      const token = localStorage.getItem('token');
+      const payload = { weekKey: weekStartKey, tellerIds: selectedFullWeekIds, count: fullWeekCount, confirmApply: true };
+      const res = await axios.put(`${API}/api/schedule/full-week`, payload, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.data && res.data.applied) {
+        setLastAuditId(res.data.auditId || null);
+        // Refresh state
+        await fetchFullWeekSelection(weekStartKey);
+        await fetchData();
+        setShowPreviewModal(false);
+        showToast({ type: 'success', message: 'Full-week applied. You can undo from the confirmation.' });
+      } else {
+        showToast({ type: 'error', message: 'Failed to apply full-week selection' });
+      }
+    } catch (err) {
+      console.error('❌ Failed to apply full-week selection', err);
+      showToast({ type: 'error', message: 'Failed to apply full-week selection' });
+    } finally {
+      setApplying(false);
+    }
+  };
+
+  const undoFullWeekAudit = async (auditIdParam = lastAuditId) => {
+    if (!auditIdParam) return showToast({ type: 'error', message: 'No audit to undo' });
+    if (!window.confirm('Undo the last full-week application? This will attempt to revert assignments.')) return;
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.post(`${API}/api/schedule/full-week/undo/${auditIdParam}`, {}, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.data && res.data.reverted) {
+        await fetchData();
+        showToast({ type: 'success', message: 'Undo completed successfully' });
+        setLastAuditId(null);
+      } else {
+        showToast({ type: 'error', message: 'Failed to undo' });
+      }
+    } catch (err) {
+      console.error('❌ Undo failed', err);
+      showToast({ type: 'error', message: 'Undo failed' });
+    }
+  };
+
+  const resetFullWeekSelection = async () => {
+    if (!weekStartKey) return;
+    if (!window.confirm('Reset full-week selection for this week?')) return;
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`${API}/api/schedule/full-week/${weekStartKey}`, { headers: { Authorization: `Bearer ${token}` } });
+      setFullWeekSelection(null);
+      setSelectedFullWeekIds([]);
+      setFullWeekCount(0);
+      // Refresh tomorrow assignments
+      await fetchData();
+      showToast({ type: 'success', message: 'Full-week selection reset for this week' });
+    } catch (err) {
+      console.error('❌ Failed to reset full-week selection', err);
+      showToast({ type: 'error', message: 'Failed to reset selection' });
     }
   };
 
@@ -243,6 +406,11 @@ export default function ScheduleRotation() {
     setPenaltyDays(0);
     setShowAbsentModal(true);
   };
+
+  // Fetch full-week selection whenever weekStartKey or allTellers updates
+  useEffect(() => {
+    if (weekStartKey && allTellers.length) fetchFullWeekSelection(weekStartKey);
+  }, [weekStartKey, allTellers]);
 
   const confirmAbsent = async () => {
     if (!selectedAssignment) return;
@@ -382,9 +550,25 @@ export default function ScheduleRotation() {
           dark ? "bg-gray-800" : "bg-white"
         }`}
       >
-        <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
           <Clock className="w-5 h-5 text-indigo-500" /> Tomorrow’s Assignments
-        </h2>
+          </h2>
+
+          <div className="flex items-center gap-3">
+            <label className="text-sm text-gray-400">Days worked range:</label>
+            <select
+              value={workDaysRange}
+              onChange={(e) => setWorkDaysRange(e.target.value)}
+              className={`text-sm p-2 rounded-lg border ${dark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-200'}`}
+            >
+              <option value="week">Last 7 days</option>
+              <option value="month">This month</option>
+              <option value="year">This year</option>
+              <option value="all">All-time</option>
+            </select>
+          </div>
+        </div>
 
         {loading ? (
           <div className="text-center text-gray-400 py-6">Loading...</div>
@@ -400,7 +584,7 @@ export default function ScheduleRotation() {
               <tr>
                 <th className="p-3">Teller</th>
                 <th className="p-3">Days Worked</th>
-                {isSupervisorOrAdmin && <th className="p-3 text-center">Actions</th>}
+                {isAdminOnly && <th className="p-3 text-center">Actions</th>}
               </tr>
             </thead>
             <tbody>
@@ -426,14 +610,19 @@ export default function ScheduleRotation() {
                         }`}
                       ></span>
                       <span className="font-semibold">{a.tellerName}</span>
+                      {a.isFullWeek && (
+                        <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                          Full-week
+                        </span>
+                      )}
                     </div>
                   </td>
                   <td className="p-3">
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      {a.totalWorkDays || 0} days
+                      {typeof a.rangeWorkDays !== 'undefined' ? a.rangeWorkDays : (a.totalWorkDays || 0)} days
                     </span>
                   </td>
-                  {isSupervisorOrAdmin && (
+                  {isAdminOnly && (
                     <td className="p-3 text-center">
                       <div className="flex justify-center gap-2">
                         <button
@@ -448,6 +637,30 @@ export default function ScheduleRotation() {
                         >
                           <X className="w-3 h-3" /> Absent
                         </button>
+                        {/* Replace button for super_admin to select replacement for this assignment */}
+                        {user?.role === 'super_admin' && (
+                          <button
+                            onClick={async () => {
+                              // Open replacement modal for this assignment
+                              setSelectedAssignment(a);
+                              setSuggestLoading(true);
+                              setShowModal(true);
+                              try {
+                                const token = localStorage.getItem('token');
+                                const res = await axios.get(`${API}/api/schedule/suggest/${a.dayKey}`, { headers: { Authorization: `Bearer ${token}` } });
+                                setSuggestions(res.data.suggestions || []);
+                              } catch (err) {
+                                console.error('❌ Failed to fetch replacement suggestions:', err);
+                                setSuggestions([]);
+                              } finally {
+                                setSuggestLoading(false);
+                              }
+                            }}
+                            className="flex items-center gap-1 px-3 py-1 text-xs rounded-lg bg-yellow-500 text-white hover:opacity-90"
+                          >
+                            Replace
+                          </button>
+                        )}
                       </div>
                     </td>
                   )}
@@ -553,7 +766,7 @@ export default function ScheduleRotation() {
           <span className="text-sm text-gray-400">
             Number of tellers for tomorrow:
           </span>
-          {isSupervisorOrAdmin ? (
+          {isAdminOnly ? (
             <input
               type="number"
               min={1}
@@ -571,7 +784,7 @@ export default function ScheduleRotation() {
             </span>
           )}
         </div>
-        {isSupervisorOrAdmin && (
+        {isAdminOnly && (
           <button
             onClick={handleSetTellerCount}
             className="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:opacity-90"
@@ -582,7 +795,63 @@ export default function ScheduleRotation() {
       </div>
 
       {/* 🆕 All Tellers Directory */}
+      {/* 🆕 Full-week Selection */}
       {isAdminOnly && (
+        <div className={`rounded-lg shadow p-4 mb-8 ${dark ? "bg-gray-800" : "bg-white"}`}>
+          <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-indigo-500" /> Full-week Tellers
+          </h2>
+
+          <div className="mb-3 text-sm text-gray-400">
+            Week starting: <strong>{weekStartKey || '—'}</strong>
+          </div>
+
+          <div className="flex gap-3 items-center mb-4">
+            <label className="text-sm text-gray-400">Number who will work full week:</label>
+            <input
+              type="number"
+              min={0}
+              value={fullWeekCount}
+              onChange={(e) => setFullWeekCount(Number(e.target.value))}
+              className={`w-20 p-2 rounded-lg border ${dark ? "bg-gray-700 border-gray-600 text-gray-100" : "bg-gray-50 border-gray-200"}`}
+            />
+            <button
+              onClick={saveFullWeekSelection}
+              className="px-3 py-2 rounded-lg bg-indigo-600 text-white hover:opacity-90"
+            >Save</button>
+            <button
+              onClick={resetFullWeekSelection}
+              className="px-3 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
+            >Reset</button>
+          </div>
+
+          <div className="text-sm text-gray-400 mb-3">Select tellers who will work for the entire week (selection limited by the number above)</div>
+
+          {allTellers.length === 0 ? (
+            <div className="text-center text-gray-400 py-4">No tellers available to select.</div>
+          ) : (
+            <ul className="divide-y divide-gray-200 max-h-72 overflow-y-auto">
+              {allTellers.map((t) => (
+                <li key={t._id} className={`flex items-center justify-between py-2 ${dark ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
+                  <div>
+                    <p className="font-semibold">{t.name || t.username}</p>
+                    <p className="text-xs text-gray-500">Last worked: {t.lastWorked ? new Date(t.lastWorked).toLocaleDateString() : 'Never'}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={selectedFullWeekIds.includes(t._id)}
+                      disabled={!selectedFullWeekIds.includes(t._id) && fullWeekCount > 0 && selectedFullWeekIds.length >= fullWeekCount}
+                      onChange={() => handleToggleFullWeekTeller(t._id)}
+                    />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+      {isSupervisorOrAdmin && (
         <div
           className={`rounded-lg shadow p-4 mb-8 ${
             dark ? "bg-gray-800" : "bg-white"
@@ -642,7 +911,7 @@ export default function ScheduleRotation() {
       )}
 
       {/* 🆕 Absent Reason Modal */}
-      {showAbsentModal && isSupervisorOrAdmin && (
+      {showAbsentModal && isAdminOnly && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
           <div
             className={`rounded-2xl shadow-lg p-6 w-full max-w-md ${
@@ -729,7 +998,7 @@ export default function ScheduleRotation() {
       )}
 
       {/* 🆕 Replacement Modal */}
-      {showModal && isSupervisorOrAdmin && (
+      {showModal && isAdminOnly && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
           <div
             className={`rounded-2xl shadow-lg p-6 w-full max-w-md ${
@@ -760,9 +1029,12 @@ export default function ScheduleRotation() {
                         <span>Last Worked: {teller.lastWorked || "Never"}</span>
                       </div>
                       {teller.skipUntil && (
-                        <p className="text-xs text-red-500 mt-1">
-                          ⚠️ Penalty until: {teller.skipUntil}
-                        </p>
+                        <div className="flex items-center gap-3 mt-1">
+                          <p className="text-xs text-red-500">⚠️ Penalty until: {teller.skipUntil}</p>
+                          {isAdminOnly && (
+                            <button onClick={() => removePenalty(teller._id)} className="text-xs px-2 py-1 bg-red-600 text-white rounded-lg hover:opacity-90">Remove Penalty</button>
+                          )}
+                        </div>
                       )}
                     </div>
                     <button
@@ -783,6 +1055,63 @@ export default function ScheduleRotation() {
               >
                 Close
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🆕 Full-week Preview Modal */}
+      {showPreviewModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
+          <div className={`rounded-2xl shadow-lg p-6 w-full max-w-3xl ${dark ? "bg-gray-800 text-gray-100" : "bg-white text-gray-900"}`}>
+            <h2 className="text-xl font-bold flex items-center gap-2 mb-4">
+              <Calendar className="w-5 h-5 text-indigo-500" /> Full-week changes preview
+            </h2>
+
+            <div className="max-h-96 overflow-y-auto">
+              {previewPlanned.length === 0 ? (
+                <div className="text-center py-6 text-gray-400">No changes planned for this week.</div>
+              ) : (
+                previewPlanned.map((p) => (
+                  <div key={p.dayKey} className="mb-4 border rounded p-3">
+                    <div className="font-semibold mb-2">Day: {p.dayKey}</div>
+                    {p.replacements && p.replacements.length > 0 && (
+                      <div className="mb-2">
+                        <div className="text-sm font-medium">Replacements</div>
+                        <ul className="mt-2 space-y-1 text-sm">
+                          {p.replacements.map((r, idx) => (
+                            <li key={idx} className="flex items-center justify-between">
+                              <div>{r.from?.name || r.from?.id} → <strong>{(allTellers.find(t=>t._id===r.to.id)?.name) || r.to.id}</strong></div>
+                              <div className="text-xs text-gray-400">assignmentId: {r.assignmentId}</div>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {p.appends && p.appends.length > 0 && (
+                      <div>
+                        <div className="text-sm font-medium">Appends</div>
+                        <ul className="mt-2 text-sm">
+                          {p.appends.map((a, idx) => (
+                            <li key={idx} className="flex items-center justify-between">
+                              <div><strong>{(allTellers.find(t=>t._id===a.to.id)?.name) || a.to.id}</strong> will be appended</div>
+                              <div className="text-xs text-gray-400">day: {a.dayKey}</div>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-3 mt-4">
+              {lastAuditId && (
+                <button onClick={() => undoFullWeekAudit()} className="px-3 py-2 rounded-lg bg-yellow-500 text-white">Undo last</button>
+              )}
+              <button onClick={() => setShowPreviewModal(false)} className="px-3 py-2 rounded-lg bg-gray-500 text-white">Cancel</button>
+              <button onClick={applyFullWeekSelection} disabled={applying} className="px-3 py-2 rounded-lg bg-indigo-600 text-white">{applying ? 'Applying...' : 'Confirm & Apply'}</button>
             </div>
           </div>
         </div>

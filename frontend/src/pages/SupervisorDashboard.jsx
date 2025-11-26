@@ -184,9 +184,9 @@ export default function SupervisorDashboard() {
       )}
 
       <div className="rounded-lg shadow p-4" style={{ backgroundColor: darkMode ? "#071026" : "#fff" }}>
-        <h2 className="font-semibold mb-3">Active Tellers</h2>
+        <h2 className="font-semibold mb-3">Tomorrow's Assignments <span className="text-xs text-gray-400 ml-2">(view-only)</span></h2>
         {tellers.length === 0 ? (
-          <p>No tellers assigned yet.</p>
+          <p>No tellers assigned for tomorrow yet.</p>
         ) : (
           <table className="w-full text-left text-sm">
             <thead style={{ backgroundColor: darkMode ? "#0b1220" : "#f3f4f6" }}>

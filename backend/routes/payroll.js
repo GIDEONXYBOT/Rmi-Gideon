@@ -5,6 +5,7 @@ import User from "../models/User.js";
 import TellerReport from "../models/TellerReport.js";
 import Capital from "../models/Capital.js";
 import SystemSettings from "../models/SystemSettings.js";
+import { requireAuth, requireRole } from "../middleware/auth.js";
 
 const router = express.Router();
 
@@ -781,6 +782,86 @@ router.post("/create-override", async (req, res) => {
     res.status(500).json({ message: "Failed to create payroll override" });
   }
 });
+
+/* ========================================================
+   🔐 SUPER ADMIN: Withdraw ALL payroll overrides (one-shot)
+   - If userId is provided: withdraw only overrides for that user.
+   - Otherwise: find ALL payrolls that were created via override and are not withdrawn,
+     create per-user withdrawal records and mark payrolls withdrawn (approved by super_admin).
+   - Only role: super_admin
+======================================================== */
+router.post(
+  "/withdraw-all-overrides",
+  requireAuth,
+  requireRole(["super_admin"]),
+  async (req, res) => {
+    try {
+      const { userId = null, weekRange = null } = req.body;
+      const matchBase = { withdrawn: false, "adjustments.reason": /CREATED BY OVERRIDE/i };
+      if (userId) matchBase.user = userId;
+
+      let payrolls = await Payroll.find(matchBase).lean();
+
+      // Safety filters: skip admin/super_admin payrolls and payrolls with non-positive totals
+      payrolls = payrolls.filter((p) => p.role !== "admin" && p.role !== "super_admin" && (p.totalSalary || 0) > 0);
+
+      // Safety cap to avoid accidental mass operations
+      const MAX_BATCH = Number(process.env.MAX_WITHDRAW_BATCH || 500);
+      if (payrolls.length > MAX_BATCH) {
+        return res.status(400).json({ success: false, message: `Too many payrolls to withdraw at once (${payrolls.length}). Use a smaller scope or set MAX_WITHDRAW_BATCH.` });
+      }
+
+      if (!payrolls || payrolls.length === 0)
+        return res.json({ success: true, message: "No override payrolls found to withdraw", count: 0 });
+
+      // Group payrolls by user to create per-user withdrawals
+      const byUser = payrolls.reduce((acc, p) => {
+        const uid = String(p.user);
+        if (!acc[uid]) acc[uid] = [];
+        acc[uid].push(p);
+        return acc;
+      }, {});
+
+      const createdWithdrawals = [];
+
+      for (const [uid, pList] of Object.entries(byUser)) {
+        const payrollIds = pList.map((p) => p._id);
+        const total = pList.reduce((s, pp) => s + (pp.totalSalary || 0), 0);
+
+        // Build Withdrawal doc in APPROVED state since a super_admin is performing this
+        const withdrawal = new Withdrawal({
+          userId: uid,
+          payrollIds,
+          amount: total,
+          remaining: 0,
+          weekRange,
+          createdBy: req.user ? req.user._id : null,
+          status: "approved",
+          approvedBy: req.user ? req.user._id : null,
+          approvedAt: new Date(),
+        });
+
+        await withdrawal.save();
+
+        // Mark payrolls as withdrawn and attach the withdrawal amount
+        await Payroll.updateMany(
+          { _id: { $in: payrollIds } },
+          { $set: { withdrawn: true, withdrawnAt: new Date(), withdrawal: total } }
+        );
+
+        // Notify in real-time if socket exists
+        if (global.io) global.io.emit("withdrawalApproved", { withdrawalId: withdrawal._id, userId: uid, amount: withdrawal.amount });
+
+        createdWithdrawals.push({ withdrawalId: withdrawal._id, userId: uid, amount: total, payrollCount: payrollIds.length });
+      }
+
+      res.json({ success: true, message: `✅ Withdrawn ${payrolls.length} override payroll(s)`, withdrawals: createdWithdrawals });
+    } catch (err) {
+      console.error("❌ withdraw-all-overrides error:", err);
+      res.status(500).json({ message: "Failed to withdraw override payrolls" });
+    }
+  }
+);
 
 /**
  * GET /api/payroll/unapproved

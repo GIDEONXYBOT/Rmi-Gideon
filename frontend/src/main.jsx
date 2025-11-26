@@ -47,6 +47,10 @@ import NotificationCenter from "./pages/NotificationCenter.jsx";
 import BettingEventReport from "./pages/BettingEventReport.jsx";
 import KeyPerformanceIndicator from "./pages/KeyPerformanceIndicator.jsx";
 import TellerMappings from "./pages/TellerMappings.jsx";
+import UploadPage from "./pages/UploadPage.jsx";
+import FeedPage from "./pages/FeedPage.jsx";
+import UsersList from "./pages/UsersList.jsx";
+import UserProfile from "./pages/UserProfile.jsx";
 
 // Supervisor Pages
 import SupervisorHistory from "./pages/SupervisorHistory.jsx";
@@ -96,6 +100,13 @@ function ProtectedRoute({ role, allowedRoles, children }) {
   return children;
 }
 
+/** Small auth-only wrapper component */
+function AuthOnly({ children }) {
+  const token = localStorage.getItem('token');
+  if (!token) return <Navigate to="/login" replace />;
+  return children;
+}
+
 function App() {
   return (
     <ErrorBoundary>
@@ -110,6 +121,40 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/mobile-debug" element={<MobileDebugPage />} />
+            {/* Small auth wrapper — only requires a token (component defined below) */}
+
+            {/* Universal upload page — open to any logged-in user */}
+            <Route path="/upload" element={
+              <AuthOnly>
+                <SidebarLayout>
+                  <UploadPage />
+                </SidebarLayout>
+              </AuthOnly>
+            } />
+            {/* Users directory */}
+            <Route path="/users" element={
+              <AuthOnly>
+                <SidebarLayout>
+                  <UsersList />
+                </SidebarLayout>
+              </AuthOnly>
+            } />
+
+            <Route path="/users/:id" element={
+              <AuthOnly>
+                <SidebarLayout>
+                  <UserProfile />
+                </SidebarLayout>
+              </AuthOnly>
+            } />
+            {/* Public feed — any logged-in user can view */}
+            <Route path="/feed" element={
+              <AuthOnly>
+                <SidebarLayout>
+                  <FeedPage />
+                </SidebarLayout>
+              </AuthOnly>
+            } />
             <Route
               path="/forgot-password"
               element={
@@ -166,6 +211,8 @@ function App() {
                       <Route path="teller-assignment" element={<AdvancedTellerAssignment />} />
                       <Route path="notifications" element={<NotificationCenter />} />
                       <Route path="key-performance-indicator" element={<KeyPerformanceIndicator />} />
+                      {/* Provide alias so admin URL works as well */}
+                      <Route path="betting-event-report" element={<BettingEventReport />} />
                       
                       <Route path="*" element={<NotFound />} />
                     </Routes>

@@ -51,8 +51,9 @@ const app = express();
   });
 // }
 
-app.use(express.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+// Increase body size limits to support base64 image uploads for avatars
+app.use(express.json({ limit: '10mb' }));
+app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 
 // ✅ Request logging middleware with mobile detection
 app.use((req, res, next) => {
@@ -136,7 +137,7 @@ import authRoutes from "./routes/auth.js"; // ✅ add this
 // import tellerReportsRoutes from "./routes/tellerReports.js";
 // import tellerManagementRoutes from "./routes/teller-management.js";
 // import tellersRoutes from "./routes/tellers.js";
-// import supervisorRoutes from "./routes/supervisor.js";
+import supervisorRoutes from "./routes/supervisor.js";
 // import debugRoutes from "./routes/debug.js";
 // import deploymentsRoutes from "./routes/deployments.js";
 // import staffRoutes from "./routes/staff.js"; // ✅ new staff/employee routes
@@ -149,6 +150,25 @@ import notificationsRoutes from "./routes/notifications.js"; // ✅ notification
 import shiftRoutes from "./routes/shift.js"; // ✅ shift management
 import shortPaymentsRoutes from "./routes/shortPayments.js"; // ✅ short payment plans
 import assetsRoutes from "./routes/assets.js"; // ✅ asset management
+
+// Additional API routes used by the frontend that weren't mounted yet
+import reportRoutes from "./routes/reports.js"; // /api/reports
+import mapConfigRoutes from "./routes/mapConfig.js"; // /api/map-config
+import tellerManagementRoutes from "./routes/teller-management.js"; // /api/teller-management
+import deploymentsRoutes from "./routes/deployments.js"; // /api/deployments
+import bettingDataRoutes from "./routes/bettingData.js"; // /api/betting-data
+import externalBettingRoutes from "./routes/externalBetting.js"; // /api/external-betting
+import attendanceRoutes from "./routes/attendance.js"; // /api/attendance
+import tellersRoutes from "./routes/tellers.js"; // /api/tellers
+import schedulerRoutes from "./routes/schedulerRoutes.js"; // /api/scheduler
+import scheduleRoutes from "./routes/schedule.js"; // /api/schedule (frontend expects this)
+import transactionsRoutes from "./routes/transactions.js"; // /api/transactions
+import employeeRoutes from "./routes/employee.js"; // /api/employee
+import cashflowArchiveRoutes from "./routes/cashflowArchive.js"; // /api/cashflow-archive
+import reportSingleRoutes from "./routes/dashboard.js"; // /api/report (singular)
+import salariesRoutes from "./routes/salaries.js"; // /api/salaries (frontend expects this)
+import mediaRoutes from "./routes/media.js"; // /api/media (feed uploads)
+// deploymentsRoutesAlias removed (duplicate import)
 
 // Temporarily disable all routes to test basic server startup
 // app.use("/api/payroll", payrollRoutes);
@@ -173,11 +193,34 @@ app.use("/api/menu-permissions", menuPermissionsRoutes); // used by frontend sid
 // app.use("/api/reports", reportRoutes); // Re-enabled
 // app.use("/api/scheduler", schedulerRoutes);
 app.use("/api/auth", authRoutes);
+// Mount endpoints that frontend relies on (enable missing ones)
+app.use("/api/reports", reportRoutes);
+app.use("/api/map-config", mapConfigRoutes);
+app.use("/api/teller-management", tellerManagementRoutes);
+app.use("/api/supervisor", supervisorRoutes);
+app.use("/api/deployments", deploymentsRoutes);
+app.use("/api/assets", assetsRoutes);
+app.use("/api/external-betting", externalBettingRoutes);
+app.use("/api/betting-data", bettingDataRoutes);
+app.use("/api/attendance", attendanceRoutes);
+app.use("/api/tellers", tellersRoutes);
+app.use("/api/scheduler", schedulerRoutes);
+app.use("/api/schedule", scheduleRoutes);
+app.use("/api/teller-zones", tellerZonesRoutes);
+app.use("/api/notifications", notificationsRoutes);
+app.use("/api/shift", shiftRoutes);
+app.use("/api/short-payments", shortPaymentsRoutes);
+app.use("/api/transactions", transactionsRoutes);
+app.use("/api/employee", employeeRoutes);
+app.use("/api/report", reportSingleRoutes); // routes under /api/report/ (e.g. /admin)
+app.use("/api/cashflow-archive", cashflowArchiveRoutes);
+app.use("/api/salaries", salariesRoutes);
+app.use("/api/media", mediaRoutes);
 // app.use("/api/chat", chatRoutes);
 // app.use("/api/schedule", scheduleRoutes);
 // app.use("/api/attendance", attendanceRoutes);
 // app.use("/api/teller-reports", tellerReportsRoutes);
-// app.use("/api/teller-management", tellerManagementRoutes);
+// (deprecated fallback registrations if needed) app.use("/api/teller-management", tellerManagementRoutes);
 // app.use("/api/tellers", tellersRoutes);
 // app.use("/api/supervisor", supervisorRoutes);
 // app.use("/api/staff", staffRoutes); // ✅ staff/employee management
@@ -197,6 +240,9 @@ try {
   const __dirname = path.dirname(__filename);
   const distPath = path.resolve(__dirname, "../frontend/dist");
   app.use(express.static(distPath));
+  // Serve uploaded assets (avatars, maps, etc.) from /uploads
+  const uploadsPath = path.resolve(__dirname, 'uploads');
+  app.use('/uploads', express.static(uploadsPath));
   // SPA fallback: send index.html for non-API routes
   app.get(/^(?!\/api\/).+/, (req, res) => {
     res.sendFile(path.join(distPath, "index.html"));
@@ -343,12 +389,25 @@ const PORT = process.env.PORT || 5000;
 // Global error handlers
 process.on('unhandledRejection', (reason, promise) => {
   console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
-  process.exit(1);
+  // In development keep the process alive so intermittent runtime errors don't cause
+  // the server to fully exit while the developer is iterating. In production we still
+  // fail fast and exit so a process manager can restart the service.
+  if (process.env.NODE_ENV === 'production') {
+    console.error('Process exiting due to unhandledRejection (production)');
+    process.exit(1);
+  } else {
+    console.warn('Continuing (unhandledRejection) — running in non-production mode.');
+  }
 });
 
 process.on('uncaughtException', (err) => {
   console.error('❌ Uncaught Exception:', err);
-  process.exit(1);
+  if (process.env.NODE_ENV === 'production') {
+    console.error('Process exiting due to uncaughtException (production)');
+    process.exit(1);
+  } else {
+    console.warn('Continuing (uncaughtException) — running in non-production mode.');
+  }
 });
 
 server.listen(PORT, "0.0.0.0", () => {
@@ -365,7 +424,13 @@ server.on("error", (err) => {
   } else {
     console.error("❌ Server error:", err);
   }
-  process.exit(1);
+  if (process.env.NODE_ENV === 'production') {
+    // Exit in production to allow a process manager to restart the service.
+    process.exit(1);
+  } else {
+    // In dev, don't kill the process automatically — let the developer investigate.
+    console.warn('Server error occurred (non-production) — process kept alive for debugging');
+  }
 });
 
 export default app;

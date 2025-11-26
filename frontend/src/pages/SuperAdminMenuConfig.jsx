@@ -16,6 +16,8 @@ import {
   Calendar,
   Settings as SettingsIcon,
   TrendingUp,
+  Camera,
+  BarChart3,
   UserCog,
   Briefcase,
   FileBarChart,
@@ -51,6 +53,14 @@ const AVAILABLE_MENU_ITEMS = [
   { id: "deployments", label: "Deployment Management", icon: <FileText size={16} />, allowedRoles: ["super_admin", "admin", "supervisor", "teller", "declarator"] },
   { id: "assistant", label: "Admin Assistant", icon: <Users size={16} />, allowedRoles: ["super_admin", "admin"] },
   { id: "settings", label: "Settings", icon: <SettingsIcon size={16} />, allowedRoles: ["super_admin", "admin", "supervisor", "teller", "declarator"] },
+  { id: "upload", label: "Upload", icon: <Camera size={16} />, allowedRoles: ["super_admin", "admin", "supervisor", "teller", "declarator", "supervisor_teller"] },
+  { id: "feed", label: "Feed", icon: <FileText size={16} />, allowedRoles: ["super_admin", "admin", "supervisor", "teller", "declarator", "supervisor_teller"] },
+  { id: "users", label: "People / Users", icon: <Users size={16} />, allowedRoles: ["super_admin", "admin", "supervisor", "teller", "declarator", "supervisor_teller"] },
+  { id: "chat", label: "Chat / Messages", icon: <FileText size={16} />, allowedRoles: ["super_admin", "admin", "supervisor", "teller", "declarator", "supervisor_teller"] },
+  { id: "key-performance-indicator", label: "Key Performance Indicator", icon: <BarChart3 size={16} />, allowedRoles: ["super_admin", "admin", "supervisor"] },
+  { id: "betting-analytics", label: "Betting Analytics", icon: <TrendingUp size={16} />, allowedRoles: ["super_admin", "admin"] },
+  { id: "betting-event-report", label: "Betting Event Report", icon: <TrendingUp size={16} />, allowedRoles: ["super_admin", "admin", "supervisor"] },
+  { id: "staff-performance", label: "Staff Performance", icon: <BarChart3 size={16} />, allowedRoles: ["super_admin","admin","supervisor"] },
   { id: "menu-config", label: "Menu Permissions", icon: <Shield size={16} />, allowedRoles: ["super_admin", "admin"] },
   { id: "manage-sidebars", label: "Sidebar Control", icon: <SettingsIcon size={16} />, allowedRoles: ["super_admin", "admin"] },
   { id: "live-map", label: "Live Map", icon: <MapPin size={16} />, allowedRoles: ["super_admin", "admin", "supervisor", "teller", "declarator"] },
@@ -64,8 +74,8 @@ const AVAILABLE_MENU_ITEMS = [
   { id: "submit-report", label: "Submit Report (Legacy)", icon: <FileText size={16} /> },
   { id: "schedule", label: "Schedule/Rotation (Legacy)", icon: <Calendar size={16} /> },
   { id: "teller-of-month", label: "Teller of the Month (Legacy)", icon: <Users size={16} /> },
-  { id: "users", label: "User Management (Legacy)", icon: <UserCog size={16} /> },
-  { id: "approvals", label: "Approvals (Alias)", icon: <CheckSquare size={16} /> },
+  // legacy 'users' entry intentionally removed to avoid duplicate ids (canonical 'users' is provided above)
+  // 'approvals' alias intentionally removed — map to canonical 'user-approval' in SidebarLayout
 ];
 
 const ROLES = [
@@ -94,10 +104,14 @@ export default function SuperAdminMenuConfig() {
   const fetchPermissions = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`${getApiUrl()}/api/menu-permissions`);
+      const token = localStorage.getItem('token');
+      const opts = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+      const res = await axios.get(`${getApiUrl()}/api/menu-permissions`, opts);
       const permMap = {};
       res.data.forEach((perm) => {
-        permMap[perm.role] = perm.menuItems || [];
+        // normalize legacy alias 'approvals' -> 'user-approval' and deduplicate
+        const items = (perm.menuItems || []).map(id => id === 'approvals' ? 'user-approval' : id);
+        permMap[perm.role] = Array.from(new Set(items));
       });
       setPermissions(permMap);
     } catch (err) {
@@ -147,14 +161,20 @@ export default function SuperAdminMenuConfig() {
   const handleSave = async (role) => {
     setSaving(true);
     try {
+      const token = localStorage.getItem('token');
+      const opts = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
       await axios.put(`${getApiUrl()}/api/menu-permissions/${role}`, {
         menuItems: permissions[role] || [],
         updatedBy: user?.username || "super_admin",
-      });
+      }, opts);
       showToast({ type: "success", message: `Saved menu permissions for ${role}` });
     } catch (err) {
       console.error("Failed to save menu permissions:", err);
-      showToast({ type: "error", message: "Failed to save menu permissions" });
+      if (err?.response?.status === 401) {
+        showToast({ type: "error", message: "Unauthorized — you must be signed in as super_admin to change menu permissions." });
+      } else {
+        showToast({ type: "error", message: "Failed to save menu permissions" });
+      }
     } finally {
       setSaving(false);
     }
@@ -185,16 +205,22 @@ export default function SuperAdminMenuConfig() {
   const handleSaveAll = async () => {
     setSaving(true);
     try {
+      const token = localStorage.getItem('token');
+      const opts = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
       for (const role of ROLES) {
         await axios.put(`${getApiUrl()}/api/menu-permissions/${role.id}`, {
           menuItems: permissions[role.id] || [],
           updatedBy: user?.username || "super_admin",
-        });
+        }, opts);
       }
       showToast({ type: "success", message: "Saved all menu permissions" });
     } catch (err) {
       console.error("Failed to save all permissions:", err);
-      showToast({ type: "error", message: "Failed to save all permissions" });
+      if (err?.response?.status === 401) {
+        showToast({ type: "error", message: "Unauthorized — must be signed in as super_admin to save all role permissions." });
+      } else {
+        showToast({ type: "error", message: "Failed to save all permissions" });
+      }
     } finally {
       setSaving(false);
     }
@@ -204,7 +230,9 @@ export default function SuperAdminMenuConfig() {
     if (!window.confirm("Reset all roles to default menu permissions?")) return;
     setSaving(true);
     try {
-      await axios.post(`${getApiUrl()}/api/menu-permissions/initialize`);
+      const token = localStorage.getItem('token');
+      const opts = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+      await axios.post(`${getApiUrl()}/api/menu-permissions/initialize`, {}, opts);
       showToast({ type: "success", message: "Initialized default permissions" });
       fetchPermissions();
     } catch (err) {
@@ -229,7 +257,7 @@ export default function SuperAdminMenuConfig() {
               <p className="text-sm text-gray-500">Configure sidebar menu items for each role</p>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
             <button
               onClick={fetchPermissions}
               disabled={loading}
@@ -248,6 +276,22 @@ export default function SuperAdminMenuConfig() {
               <RefreshCw size={16} />
               Reset to Defaults
             </button>
+            <div className="flex items-center gap-2 px-3 py-2 rounded border bg-gray-50 dark:bg-gray-700 text-sm">
+              <label className="text-xs mr-2">Enforce explicit menu permissions for Super Admin</label>
+              <input
+                type="checkbox"
+                checked={localStorage.getItem('superAdminStrict') === 'true'}
+                onChange={(e) => {
+                  const value = e.target.checked ? 'true' : 'false';
+                  localStorage.setItem('superAdminStrict', value);
+                  // notify user
+                  showToast({ type: 'info', message: `super_admin strict mode ${e.target.checked ? 'enabled' : 'disabled'}` });
+                  // trigger a global change by emitting an update via socket (best-effort)
+                  try { window.location.reload(); } catch (err) { /* ok */ }
+                }}
+                className="h-4 w-4"
+              />
+            </div>
             <button
               onClick={handleSaveAll}
               disabled={saving}

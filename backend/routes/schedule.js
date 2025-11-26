@@ -5,6 +5,8 @@ import DailyTellerAssignment from "../models/DailyTellerAssignment.js";
 import TellerReport from "../models/TellerReport.js";
 import User from "../models/User.js";
 import DailyAttendance from "../models/DailyAttendance.js";
+import FullWeekSelection from "../models/FullWeekSelection.js";
+import FullWeekAudit from "../models/FullWeekAudit.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 
 const router = express.Router();
@@ -97,7 +99,26 @@ router.get("/tomorrow", requireAuth, async (req, res) => {
       // Fair rotation scheduling - prioritize least worked tellers
       let supIndex = 0;
       const MAX_TELLERS = 3; // adjustable limit for daily active tellers
-      const selected = tellers.slice(0, MAX_TELLERS);
+          // If there is a full-week selection for this week, make sure those tellers are always scheduled
+          const weekStartKey = DateTime.fromISO(tomorrow).startOf('week').toFormat('yyyy-MM-dd');
+          const fullWeek = await FullWeekSelection.findOne({ weekKey: weekStartKey }).lean();
+          let preSelectedIds = [];
+          if (fullWeek && Array.isArray(fullWeek.tellerIds) && fullWeek.tellerIds.length) {
+            // Take only those available and still eligible for this date
+            preSelectedIds = tellers.map(t => t._id.toString()).filter(id => fullWeek.tellerIds.map(x => x.toString()).includes(id));
+          }
+
+          // Start with pre-selected full-week tellers, then fill up to MAX_TELLERS
+          let selected = [];
+          if (preSelectedIds.length) {
+            selected = tellers.filter(t => preSelectedIds.includes(t._id.toString())).slice(0, MAX_TELLERS);
+          }
+          if (selected.length < MAX_TELLERS) {
+            // Add additional tellers (excluding those already pre-selected)
+            const remaining = tellers.filter(t => !selected.find(s => s._id.toString() === t._id.toString()));
+            const needed = MAX_TELLERS - selected.length;
+            selected = selected.concat(remaining.slice(0, needed));
+          }
 
       const newDocs = [];
       for (const teller of selected) {
@@ -119,6 +140,8 @@ router.get("/tomorrow", requireAuth, async (req, res) => {
             supervisorId: teller.supervisorId || null,
             supervisorName,
             status: "scheduled",
+            assignmentMethod: preSelectedIds.includes(teller._id.toString()) ? 'full_week' : 'traditional_rotation',
+            isFullWeek: preSelectedIds.includes(teller._id.toString()) || false,
           };
           newDocs.push(doc);
           
@@ -140,13 +163,141 @@ router.get("/tomorrow", requireAuth, async (req, res) => {
       assignments = await DailyTellerAssignment.find({ dayKey: tomorrow }).lean();
     }
 
-    // Populate teller information including total work days
+    // Ensure full-week selected tellers are present in assignments even if assignments already existed
+    try {
+      const weekStartKeyActive = DateTime.fromISO(tomorrow).startOf('week').toFormat('yyyy-MM-dd');
+      const fullWeekActive = await FullWeekSelection.findOne({ weekKey: weekStartKeyActive }).lean();
+      if (fullWeekActive && Array.isArray(fullWeekActive.tellerIds) && fullWeekActive.tellerIds.length) {
+        const desiredIds = fullWeekActive.tellerIds.map(x => x.toString());
+
+        // Filter only approved/eligible tellers for tomorrow
+        const eligible = await User.find({ _id: { $in: desiredIds }, status: 'approved', $or: [ { skipUntil: null }, { skipUntil: { $lt: tomorrow } } ] }).lean();
+        const eligibleIds = eligible.map(u => u._id.toString());
+
+        // Current assigned IDs
+        const assignedIds = assignments.map(a => a.tellerId.toString());
+
+        // For each eligible desired id not in assignments, insert or replace
+        const missing = eligibleIds.filter(id => !assignedIds.includes(id));
+        if (missing.length) {
+          console.log(`🔧 Enforcing full-week selection for ${weekStartKeyActive} — missing ${missing.length} teller(s) in assignments`);
+
+          // Try to replace non-full-week assignments first
+          for (const missingId of missing) {
+            // Find a replaceable assignment (not a full-week)
+            // Choose a replacement candidate among non-full-week assignments that minimizes impact on fairness.
+            // Strategy: pick the assigned teller with the highest totalWorkDays (and most recent lastWorked) so we keep least-worked tellers assigned.
+            let replace = null;
+            const nonFull = assignments.filter(a => !a.isFullWeek);
+            if (nonFull.length) {
+              // Fetch stats for all candidates in one go
+              const userIds = nonFull.map(a => a.tellerId);
+              const users = await User.find({ _id: { $in: userIds } }).select('totalWorkDays lastWorked').lean();
+              const userMap = new Map(users.map(u => [u._id.toString(), u]));
+
+              // Sort nonFull by totalWorkDays desc, then by lastWorked desc (so most-worked/recent appear first)
+              nonFull.sort((x, y) => {
+                const ux = userMap.get(x.tellerId.toString());
+                const uy = userMap.get(y.tellerId.toString());
+                const xDays = ux?.totalWorkDays || 0;
+                const yDays = uy?.totalWorkDays || 0;
+                if (yDays !== xDays) return yDays - xDays;
+                const xLast = ux?.lastWorked ? DateTime.fromISO(ux.lastWorked).toMillis() : 0;
+                const yLast = uy?.lastWorked ? DateTime.fromISO(uy.lastWorked).toMillis() : 0;
+                return yLast - xLast;
+              });
+
+              replace = nonFull[0];
+            }
+            if (replace) {
+              console.log(`🔁 Replacing assignment ${replace._id} teller ${replace.tellerId} -> ${missingId}`);
+              // fetch user details once
+              const newUserForReplace = await User.findById(missingId).select('name username').lean();
+              const newName = newUserForReplace?.name || newUserForReplace?.username || '';
+
+              // update document
+              await DailyTellerAssignment.findByIdAndUpdate(replace._id, {
+                tellerId: missingId,
+                tellerName: newName,
+                isFullWeek: true,
+                assignmentMethod: 'full_week'
+              });
+
+              // update assignments in-memory (no await inside callback)
+              assignments = assignments.map(a =>
+                a._id.toString() === replace._id.toString()
+                  ? { ...a, tellerId: missingId, tellerName: newName, isFullWeek: true, assignmentMethod: 'full_week' }
+                  : a
+              );
+            } else {
+              // No replaceable slot -> append a new assignment for this missing full-week teller
+              const u = await User.findById(missingId).select('name username supervisorId').lean();
+              const sup = u?.supervisorId ? (await User.findById(u.supervisorId).select('name username').lean()) : null;
+              const doc = {
+                dayKey: tomorrow,
+                tellerId: missingId,
+                tellerName: u?.name || u?.username || 'Unknown',
+                supervisorId: u?.supervisorId || null,
+                supervisorName: sup?.name || sup?.username || '',
+                status: 'scheduled',
+                assignmentMethod: 'full_week',
+                isFullWeek: true
+              };
+              const created = await DailyTellerAssignment.create(doc);
+              assignments.push(created.toObject());
+              console.log(`➕ Appended full-week assignment for teller ${missingId} as ${created._id}`);
+            }
+          }
+
+          // Refresh assignments from db to reflect changes
+          assignments = await DailyTellerAssignment.find({ dayKey: tomorrow }).lean();
+        }
+      }
+    } catch (errEnforce) {
+      console.warn('⚠️ Failed to enforce full-week selection for tomorrow:', errEnforce.message);
+    }
+
+    // Determine requested range (week|month|year|all)
+    const range = (req.query.range || 'all').toLowerCase();
+    console.log(`📊 /api/schedule/tomorrow requested with range=${range}`);
+    // Compute start boundary depending on range
+    const startBoundary = (() => {
+      try {
+        if (range === 'week') return DateTime.fromISO(tomorrow).minus({ days: 6 }).toFormat('yyyy-MM-dd');
+        if (range === 'month') return DateTime.fromISO(tomorrow).startOf('month').toFormat('yyyy-MM-dd');
+        if (range === 'year') return DateTime.fromISO(tomorrow).startOf('year').toFormat('yyyy-MM-dd');
+        return null; // 'all' - use existing totals
+      } catch (e) {
+        return null;
+      }
+    })();
+
+    // Populate teller information including requested range worked days
     const populatedAssignments = await Promise.all(
       assignments.map(async (assignment) => {
         const teller = await User.findById(assignment.tellerId).select('totalWorkDays name username').lean();
+
+        let rangeWorkDays = teller?.totalWorkDays || 0; // fallback to stored total
+        if (startBoundary) {
+          // Count teller reports between startBoundary and tomorrow (inclusive)
+          try {
+            rangeWorkDays = await TellerReport.countDocuments({
+              tellerId: assignment.tellerId,
+              date: { $gte: startBoundary, $lte: tomorrow }
+            });
+            console.log(`   • Teller ${assignment.tellerId} has ${rangeWorkDays} reports between ${startBoundary} and ${tomorrow}`);
+          } catch (e) {
+            console.warn('⚠️ Failed to count reports for range', range, assignment.tellerId, e.message);
+            // fallback to existing stored total
+            rangeWorkDays = teller?.totalWorkDays || 0;
+          }
+        }
+
         return {
           ...assignment,
-          totalWorkDays: teller?.totalWorkDays || 0
+          totalWorkDays: teller?.totalWorkDays || 0,
+          rangeWorkDays,
+          range: range
         };
       })
     );
@@ -165,7 +316,7 @@ router.get("/tomorrow", requireAuth, async (req, res) => {
  * 🧹 DELETE /api/schedule/tomorrow
  * Clears tomorrow's assignments so they can be regenerated
  */
-router.delete("/tomorrow", async (req, res) => {
+router.delete("/tomorrow", requireAuth, requireRole(['admin','super_admin']), async (req, res) => {
   try {
     const tomorrow = formatDate(1);
     const result = await DailyTellerAssignment.deleteMany({ dayKey: tomorrow });
@@ -336,18 +487,57 @@ router.post("/ai-generate", requireAuth, requireRole(['admin', 'super_admin']), 
       };
     }
 
+    // Check for full-week selection for the target week and reserve those tellers
+    const weekStartKey = DateTime.fromISO(targetDate).startOf('week').toFormat('yyyy-MM-dd');
+    const fullWeekSelection = await FullWeekSelection.findOne({ weekKey: weekStartKey }).lean();
+    const fullWeekIds = (fullWeekSelection && Array.isArray(fullWeekSelection.tellerIds))
+      ? fullWeekSelection.tellerIds.map(x => x.toString())
+      : [];
+
     // Sort by AI score (highest first) and select top candidates
     const rankedTellers = Object.values(tellerScores)
       .sort((a, b) => b.aiScore - a.aiScore)
       .slice(0, Math.min(requiredCount, presentTellerIds.length));
 
     // Create schedule assignments
-    const aiAssignments = rankedTellers.map((teller, index) => ({
+    // Ensure full-week selected tellers are always included (try present ones first)
+    const forcedTellersPresent = rankedTellers.filter(t => fullWeekIds.includes(t.userId));
+
+    // Also consider full-week selected tellers who might not be present in today's attendance
+    const presentIdsSet = new Set(Object.keys(tellerScores));
+    const nonPresentFullIds = fullWeekIds.filter(id => !presentIdsSet.has(id));
+
+    // Load non-present full-week users (if any) so they can be forced in the schedule
+    const nonPresentFullUsers = [];
+    if (nonPresentFullIds.length) {
+      const users = await User.find({ _id: { $in: nonPresentFullIds }, status: 'approved' }).lean();
+      for (const u of users) {
+        nonPresentFullUsers.push({
+          userId: u._id.toString(),
+          username: u.username,
+          name: u.name,
+          aiScore: 200, // very high to prioritize
+          recentAssignments: 0,
+          totalAssignments: u.totalWorkDays || 0,
+          lastAssigned: u.lastWorked || 'never'
+        });
+      }
+    }
+
+    const forcedTellers = forcedTellersPresent.concat(nonPresentFullUsers).slice(0, requiredCount);
+
+    // Remaining selection from ranked tellers excluding forced ones
+    const remainingCandidates = rankedTellers.filter(t => !forcedTellers.find(f => f.userId === t.userId));
+
+    const finalSelection = forcedTellers.concat(remainingCandidates).slice(0, requiredCount);
+
+    const aiAssignments = finalSelection.map((teller, index) => ({
       dayKey: targetDate,
       tellerId: teller.userId,
       tellerName: teller.name,
       status: "pending",
-      assignmentMethod: "ai_attendance_based",
+      assignmentMethod: fullWeekIds.includes(teller.userId) ? 'full_week' : "ai_attendance_based",
+      isFullWeek: fullWeekIds.includes(teller.userId) || false,
       aiScore: teller.aiScore,
       rank: index + 1,
       reason: `Score: ${teller.aiScore} (Recent: ${teller.recentAssignments}, Last: ${teller.lastAssigned})`
@@ -422,6 +612,13 @@ router.get("/history", async (req, res) => {
 router.post("/mark-present", requireAuth, requireRole(['supervisor', 'admin', 'super_admin']), async (req, res) => {
   try {
     const { tellerId, tellerName, dayKey } = req.body;
+    // Supervisors may only mark attendance for TODAY. For attempts targeting future days (e.g. tomorrow) deny.
+    if (req.user?.role === 'supervisor') {
+      const todayKey = formatDate(0);
+      if (!dayKey || dayKey !== todayKey) {
+        return res.status(403).json({ message: 'Forbidden - supervisors may only mark attendance for today' });
+      }
+    }
 
     await DailyTellerAssignment.updateOne(
       { tellerId, dayKey },
@@ -459,6 +656,13 @@ router.post("/mark-present", requireAuth, requireRole(['supervisor', 'admin', 's
 router.post("/mark-absent", requireAuth, requireRole(['supervisor', 'admin', 'super_admin']), async (req, res) => {
   try {
     const { tellerId, tellerName, dayKey, reason, penaltyDays } = req.body;
+    // Supervisors may only mark absence for TODAY
+    if (req.user?.role === 'supervisor') {
+      const todayKey = formatDate(0);
+      if (!dayKey || dayKey !== todayKey) {
+        return res.status(403).json({ message: 'Forbidden - supervisors may only mark absence for today' });
+      }
+    }
 
     // Update assignment with absent status and reason
     await DailyTellerAssignment.updateOne(
@@ -532,6 +736,14 @@ router.put("/mark-present/:assignmentId", requireAuth, requireRole(['supervisor'
       return res.status(404).json({ message: "Assignment not found" });
     }
 
+    // Supervisors may only update today's assignments
+    if (req.user?.role === 'supervisor') {
+      const todayKey = formatDate(0);
+      if (assignment.dayKey !== todayKey) {
+        return res.status(403).json({ message: 'Forbidden - supervisors may only modify today assignments' });
+      }
+    }
+
     assignment.status = "present";
     await assignment.save();
 
@@ -564,6 +776,14 @@ router.put("/mark-absent/:assignmentId", requireAuth, requireRole(['supervisor',
     const assignment = await DailyTellerAssignment.findById(assignmentId);
     if (!assignment) {
       return res.status(404).json({ message: "Assignment not found" });
+    }
+
+    // Supervisors may only update today's assignments
+    if (req.user?.role === 'supervisor') {
+      const todayKey = formatDate(0);
+      if (assignment.dayKey !== todayKey) {
+        return res.status(403).json({ message: 'Forbidden - supervisors may only modify today assignments' });
+      }
     }
 
     assignment.status = "absent";
@@ -672,6 +892,10 @@ router.get("/suggest/:dayKey", requireAuth, async (req, res) => {
  */
 router.put("/set-teller-count", requireAuth, requireRole(['supervisor', 'admin', 'super_admin']), async (req, res) => {
   try {
+    // Supervisors are not allowed to mutate tomorrow's schedule (view-only). Admins and super_admin can proceed.
+    if (req.user?.role === 'supervisor') {
+      return res.status(403).json({ message: 'Forbidden - supervisors cannot change tomorrow schedule' });
+    }
     const { tellerCount } = req.body;
 
     console.log("📊 Set teller count request:", { tellerCount, body: req.body });
@@ -776,6 +1000,269 @@ router.put("/set-teller-count", requireAuth, requireRole(['supervisor', 'admin',
 });
 
 /**
+ * ✅ PUT /api/schedule/full-week
+ * Create or update a week's full-week teller selection
+ * Body: { weekKey: 'yyyy-MM-dd' (week start), tellerIds: [<id>], count: <number> }
+ */
+router.put('/full-week', requireAuth, requireRole(['supervisor', 'admin', 'super_admin']), async (req, res) => {
+  try {
+    // Full-week selection modifies future assignments (applies starting tomorrow or later) — disallow for supervisor role
+    if (req.user?.role === 'supervisor') {
+      return res.status(403).json({ message: 'Forbidden - supervisors cannot create/update full-week selections' });
+    }
+    const { weekKey, tellerIds = [], count = 0 } = req.body;
+    if (!weekKey) return res.status(400).json({ message: 'weekKey is required (use week start yyyy-MM-dd)' });
+
+    // Validate tellerIds
+    const validTellers = Array.isArray(tellerIds) ? tellerIds : [];
+
+    // If preview requested, compute the changes but do not apply
+    const preview = req.query.preview === 'true' || req.body.preview === true;
+    const confirmApply = req.body.confirmApply === true || req.query.apply === 'true';
+
+    // normalize selection
+    const desiredIds = validTellers.map((x) => x.toString());
+
+    // For full-week operations, compute all days in the week starting at weekKey
+    // However apply only from tomorrow (next day) through the week end (Sunday) so changes don't retroactively affect past days
+    const weekStart = DateTime.fromISO(weekKey).startOf('day');
+    const today = DateTime.now().setZone('Asia/Manila');
+    const tomorrowDate = today.plus({ days: 1 }).toFormat('yyyy-MM-dd');
+    // Start at the later of weekStart and tomorrow
+    const applyStart = DateTime.fromISO(tomorrowDate) > weekStart ? DateTime.fromISO(tomorrowDate) : weekStart;
+    // Compute dayKeys from applyStart until the week end (Sunday) — weekKey start + 6
+    const weekEnd = weekStart.plus({ days: 6 }).endOf('day');
+    const dayKeys = [];
+    for (let dt = applyStart; dt <= weekEnd; dt = dt.plus({ days: 1 })) {
+      dayKeys.push(dt.toFormat('yyyy-MM-dd'));
+    }
+
+    // Gather planned changes (replacements/appends) per day
+    const planned = [];
+
+    for (const dayKey of dayKeys) {
+      // current assignments for that day
+      let assignments = await DailyTellerAssignment.find({ dayKey }).lean();
+      // find desired tellers that are eligible (approved & not skipped)
+      const eligible = await User.find({ _id: { $in: desiredIds }, status: 'approved', $or: [{ skipUntil: null }, { skipUntil: { $lt: dayKey } }] }).lean();
+      const eligibleIds = eligible.map(u => u._id.toString());
+
+      const assignedIds = assignments.map(a => a.tellerId.toString());
+      const missing = eligibleIds.filter(id => !assignedIds.includes(id));
+
+      const replacements = [];
+      const appends = [];
+
+      // For each missing id, see if there is a non-full-week slot to replace
+      for (const missingId of missing) {
+        const nonFull = assignments.filter(a => !a.isFullWeek);
+        let replace = null;
+        if (nonFull.length) {
+          const userIds = nonFull.map(a => a.tellerId);
+          const users = await User.find({ _id: { $in: userIds } }).select('totalWorkDays lastWorked').lean();
+          const userMap = new Map(users.map(u => [u._id.toString(), u]));
+
+          nonFull.sort((x, y) => {
+            const ux = userMap.get(x.tellerId.toString());
+            const uy = userMap.get(y.tellerId.toString());
+            const xDays = ux?.totalWorkDays || 0;
+            const yDays = uy?.totalWorkDays || 0;
+            if (yDays !== xDays) return yDays - xDays;
+            const xLast = ux?.lastWorked ? DateTime.fromISO(ux.lastWorked).toMillis() : 0;
+            const yLast = uy?.lastWorked ? DateTime.fromISO(uy.lastWorked).toMillis() : 0;
+            return yLast - xLast;
+          });
+
+          replace = nonFull[0];
+        }
+        if (replace) {
+          replacements.push({ dayKey, assignmentId: replace._id.toString(), from: { id: replace.tellerId.toString(), name: replace.tellerName }, to: { id: missingId } });
+          // consume that slot in memory
+          assignments = assignments.filter(a => a._id.toString() !== replace._id.toString());
+        } else {
+          appends.push({ dayKey, to: { id: missingId } });
+        }
+      }
+
+      if (replacements.length || appends.length) {
+        planned.push({ dayKey, replacements, appends });
+      }
+    }
+
+    if (preview) {
+      return res.json({ success: true, preview: true, planned });
+    }
+
+    // If not preview and not confirmApply, do a silent upsert (legacy behavior)
+    if (!confirmApply) {
+      const updated = await FullWeekSelection.findOneAndUpdate(
+        { weekKey },
+        { $set: { tellerIds: validTellers, count: Number(count) || validTellers.length, createdBy: req.user?._id || null, createdAt: new Date() } },
+        { upsert: true, new: true }
+      );
+      return res.json({ success: true, selection: updated, planned });
+    }
+
+    // confirmApply: apply changes and create audit
+    const appliedChanges = [];
+    for (const item of planned) {
+      const { dayKey, replacements, appends } = item;
+      // Apply replacements
+      for (const r of replacements) {
+        try {
+          const oldAssign = await DailyTellerAssignment.findById(r.assignmentId).lean();
+          const newUser = await User.findById(r.to.id).select('name username').lean();
+          await DailyTellerAssignment.findByIdAndUpdate(r.assignmentId, {
+            tellerId: r.to.id,
+            tellerName: newUser?.name || newUser?.username || '',
+            isFullWeek: true,
+            assignmentMethod: 'full_week'
+          });
+          appliedChanges.push({ dayKey, action: 'replace', assignmentId: r.assignmentId, oldTellerId: oldAssign?.tellerId, oldTellerName: oldAssign?.tellerName, newTellerId: r.to.id, newTellerName: newUser?.name || newUser?.username || '' });
+        } catch (e) {
+          console.warn('⚠️ Failed to apply replacement', e.message);
+        }
+      }
+
+      // Apply appends
+      for (const a of appends) {
+        try {
+          const u = await User.findById(a.to.id).select('name username supervisorId').lean();
+          const sup = u?.supervisorId ? (await User.findById(u.supervisorId).select('name username').lean()) : null;
+          const doc = {
+            dayKey,
+            tellerId: u._id,
+            tellerName: u?.name || u?.username || 'Unknown',
+            supervisorId: u?.supervisorId || null,
+            supervisorName: sup?.name || sup?.username || '',
+            status: 'scheduled',
+            assignmentMethod: 'full_week',
+            isFullWeek: true
+          };
+          const created = await DailyTellerAssignment.create(doc);
+          appliedChanges.push({ dayKey, action: 'append', assignmentId: created._id, oldTellerId: null, oldTellerName: null, newTellerId: u._id, newTellerName: u?.name || u?.username || '' });
+        } catch (e) {
+          console.warn('⚠️ Failed to append assignment', e.message);
+        }
+      }
+    }
+
+    // Save selection now and create audit
+    const updated = await FullWeekSelection.findOneAndUpdate(
+      { weekKey },
+      { $set: { tellerIds: validTellers, count: Number(count) || validTellers.length, createdBy: req.user?._id || null, createdAt: new Date() } },
+      { upsert: true, new: true }
+    );
+
+    const audit = new FullWeekAudit({ weekKey, createdBy: req.user?._id, selection: validTellers, count: Number(count) || validTellers.length, changes: appliedChanges });
+    await audit.save();
+
+    res.json({ success: true, applied: true, auditId: audit._id, appliedChanges });
+  } catch (err) {
+    console.error('❌ Full-week update error:', err);
+    res.status(500).json({ message: 'Failed to set full-week selection' });
+  }
+});
+
+/**
+ * ✅ GET /api/schedule/full-week/:weekKey
+ * Fetch the saved full-week selection for a week
+ */
+router.get('/full-week/:weekKey', requireAuth, async (req, res) => {
+  try {
+    const { weekKey } = req.params;
+    const record = await FullWeekSelection.findOne({ weekKey }).populate('tellerIds', 'name username role').lean();
+    res.json({ success: true, selection: record || null });
+  } catch (err) {
+    console.error('❌ Get full-week selection error:', err);
+    res.status(500).json({ message: 'Failed to get full-week selection' });
+  }
+});
+
+/**
+ * ✅ DELETE /api/schedule/full-week/:weekKey
+ * Remove the saved full-week selection for a week (reset)
+ */
+router.delete('/full-week/:weekKey', requireAuth, requireRole(['supervisor', 'admin', 'super_admin']), async (req, res) => {
+  try {
+    if (req.user?.role === 'supervisor') return res.status(403).json({ message: 'Forbidden - supervisors cannot delete full-week selections' });
+    const { weekKey } = req.params;
+    const del = await FullWeekSelection.deleteMany({ weekKey });
+    res.json({ success: true, deleted: del.deletedCount });
+  } catch (err) {
+    console.error('❌ Delete full-week selection error:', err);
+    res.status(500).json({ message: 'Failed to delete full-week selection' });
+  }
+});
+
+/**
+ * GET /api/schedule/full-week/audits
+ * List audits (admin/super_admin)
+ */
+router.get('/full-week/audits', requireAuth, requireRole(['admin', 'super_admin']), async (req, res) => {
+  try {
+    const { weekKey } = req.query;
+    const q = weekKey ? { weekKey } : {};
+    const audits = await FullWeekAudit.find(q).populate('createdBy', 'name username').sort({ createdAt: -1 }).lean();
+    res.json({ success: true, audits });
+  } catch (err) {
+    console.error('❌ Fetch audits error:', err);
+    res.status(500).json({ message: 'Failed to fetch audits' });
+  }
+});
+
+/**
+ * POST /api/schedule/full-week/undo/:auditId
+ * Undo the applied full-week audit (admin/super_admin only)
+ */
+router.post('/full-week/undo/:auditId', requireAuth, requireRole(['admin', 'super_admin']), async (req, res) => {
+  try {
+    const { auditId } = req.params;
+    const audit = await FullWeekAudit.findById(auditId).lean();
+    if (!audit) return res.status(404).json({ message: 'Audit not found' });
+    if (audit.reverted) return res.status(400).json({ message: 'Audit already reverted' });
+
+    const changes = audit.changes || [];
+    const results = [];
+
+    for (const ch of changes) {
+      if (ch.action === 'replace') {
+        try {
+          await DailyTellerAssignment.findByIdAndUpdate(ch.assignmentId, {
+            tellerId: ch.oldTellerId || null,
+            tellerName: ch.oldTellerName || '',
+            isFullWeek: false,
+            assignmentMethod: 'traditional_rotation'
+          });
+          results.push({ assignmentId: ch.assignmentId, status: 'reverted' });
+        } catch (e) {
+          console.warn('⚠️ Failed to revert replacement', e.message);
+          results.push({ assignmentId: ch.assignmentId, status: 'failed', reason: e.message });
+        }
+      }
+      if (ch.action === 'append') {
+        try {
+          // delete the appended assignment
+          await DailyTellerAssignment.deleteOne({ _id: ch.assignmentId });
+          results.push({ assignmentId: ch.assignmentId, status: 'deleted' });
+        } catch (e) {
+          console.warn('⚠️ Failed to delete appended assignment', e.message);
+          results.push({ assignmentId: ch.assignmentId, status: 'failed', reason: e.message });
+        }
+      }
+    }
+
+    // mark audit reverted
+    await FullWeekAudit.findByIdAndUpdate(auditId, { $set: { reverted: true, revertedBy: req.user?._id, revertedAt: new Date() } });
+
+    res.json({ success: true, reverted: true, results });
+  } catch (err) {
+    console.error('❌ Undo audit error:', err);
+    res.status(500).json({ message: 'Failed to undo audit' });
+  }
+});
+
+/**
  * ✅ GET /api/schedule/today-working/:date
  * Get tellers who have submitted reports for the specified date
  */
@@ -828,6 +1315,14 @@ router.put("/replace/:assignmentId", requireAuth, requireRole(['supervisor', 'ad
 
     const assignment = await DailyTellerAssignment.findById(assignmentId);
     if (!assignment) return res.status(404).json({ message: "Assignment not found" });
+
+    // Supervisors cannot perform replacements for assignments that are not for today
+    if (req.user?.role === 'supervisor') {
+      const today = formatDate(0);
+      if (assignment.dayKey !== today) {
+        return res.status(403).json({ message: 'Forbidden - supervisors cannot replace assignments for future dates' });
+      }
+    }
 
     const replacement = await User.findById(replacementId).lean();
     if (!replacement) return res.status(404).json({ message: "Replacement teller not found" });

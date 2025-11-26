@@ -40,6 +40,17 @@ const userSchema = new mongoose.Schema(
       default: "pending",
     },
 
+    // 📸 Avatar / profile image URL (served from /uploads/avatars/<id>.<ext>)
+    avatarUrl: {
+      type: String,
+      default: ''
+    },
+    // generated avatar thumbnails (small, medium, large)
+    avatarSizes: {
+      sm: { type: String, default: '' },
+      md: { type: String, default: '' },
+      lg: { type: String, default: '' }
+    },
     // 🔗 Link tellers to supervisors
     supervisorId: {
       type: mongoose.Schema.Types.ObjectId,

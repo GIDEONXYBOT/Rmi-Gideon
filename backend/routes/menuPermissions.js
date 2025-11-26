@@ -1,4 +1,5 @@
 import express from "express";
+import { requireAuth, requireRole } from '../middleware/auth.js';
 import MenuPermission from "../models/MenuPermission.js";
 
 const router = express.Router();
@@ -9,7 +10,12 @@ const router = express.Router();
  */
 router.get("/", async (req, res) => {
   try {
-    const permissions = await MenuPermission.find().lean();
+    let permissions = await MenuPermission.find().lean();
+    // Normalize legacy alias 'approvals' -> 'user-approval' to avoid duplicate menu ids
+    permissions = permissions.map(p => {
+      const items = Array.isArray(p.menuItems) ? p.menuItems.map(id => id === 'approvals' ? 'user-approval' : id) : [];
+      return { ...p, menuItems: Array.from(new Set(items)) };
+    });
     res.json(permissions);
   } catch (err) {
     console.error("Error fetching menu permissions:", err);
@@ -29,6 +35,10 @@ router.get("/:role", async (req, res) => {
     // If no permission exists, return default empty array
     if (!permission) {
       permission = { role, menuItems: [] };
+    } else {
+      // Normalize legacy alias 'approvals' -> 'user-approval'
+      const items = Array.isArray(permission.menuItems) ? permission.menuItems.map(id => id === 'approvals' ? 'user-approval' : id) : [];
+      permission.menuItems = Array.from(new Set(items));
     }
     
     res.json(permission);
@@ -42,7 +52,7 @@ router.get("/:role", async (req, res) => {
  * PUT /api/menu-permissions/:role
  * Update menu permissions for a specific role (super_admin only)
  */
-router.put("/:role", async (req, res) => {
+router.put("/:role", requireAuth, requireRole(['super_admin']), async (req, res) => {
   try {
     const { role } = req.params;
     const { menuItems, updatedBy } = req.body;
@@ -51,12 +61,14 @@ router.put("/:role", async (req, res) => {
       return res.status(400).json({ message: "menuItems must be an array" });
     }
 
+    // Normalize aliases & deduplicate before upsert
+    const normalizedItems = Array.from(new Set((menuItems || []).map(id => id === 'approvals' ? 'user-approval' : id)));
     // Upsert the permission record
     const permission = await MenuPermission.findOneAndUpdate(
       { role },
       {
         role,
-        menuItems,
+        menuItems: normalizedItems,
         updatedBy: updatedBy || "super_admin",
       },
       { upsert: true, new: true }
@@ -81,83 +93,16 @@ router.put("/:role", async (req, res) => {
  * POST /api/menu-permissions/initialize
  * Initialize default permissions for all roles (run once)
  */
-router.post("/initialize", async (req, res) => {
+router.post("/initialize", requireAuth, requireRole(['super_admin']), async (req, res) => {
   try {
     const defaultPermissions = [
-      {
-        role: "admin",
-        menuItems: [
-          "dashboard",
-          "teller-management",
-          "teller-reports",
-          "supervisor-report",
-          "teller-reports-viewer",
-          "teller-overview",
-          "report",
-          "cashflow",
-          "user-approval",
-          "withdrawals",
-          "employees",
-          "salary",
-          "suggested-schedule",
-          "attendance-scheduler",
-          "payroll",
-          "settings"
-        ],
-      },
-      {
-        role: "supervisor",
-        menuItems: [
-          "dashboard",
-          "teller-management",
-          "supervisor-report",
-          "teller-reports",
-          "teller-reports-viewer",
-          "staff-performance",
-          "teller-month",
-          "history",
-          "payroll",
-          "suggested-schedule",
-          "attendance-scheduler",
-          "settings"
-        ],
-      },
-      {
-        role: "teller",
-        menuItems: [
-          "dashboard",
-          "teller-reports",
-          "history",
-          "payroll",
-          "teller-month",
-          "suggested-schedule",
-          "deployments",
-          "settings"
-        ],
-      },
-      {
-        role: "supervisor_teller",
-        menuItems: [
-          "dashboard",
-          "teller-management",
-          "supervisor-report",
-          "teller-reports",
-          "teller-reports-viewer",
-          "staff-performance",
-          "history",
-          "payroll",
-          "teller-month",
-          "suggested-schedule",
-          "settings"
-        ],
-      },
-      {
-        role: "declarator",
-        menuItems: ["deployments", "settings"],
-      },
-      {
-        role: "super_admin",
-        menuItems: [
+      // Admin starts with minimal set - full control belongs to super_admin
+      { role: 'admin', menuItems: ['dashboard'] },
+      { role: 'supervisor', menuItems: ['dashboard'] },
+      { role: 'teller', menuItems: ['dashboard'] },
+      { role: 'supervisor_teller', menuItems: ['dashboard'] },
+      { role: 'declarator', menuItems: [] },
+      { role: 'super_admin', menuItems: [
           "dashboard",
           "supervisor-report",
           "teller-reports",
@@ -180,8 +125,7 @@ router.post("/initialize", async (req, res) => {
           "menu-config",
           "manage-sidebars",
           "settings"
-        ],
-      },
+        ] },
     ];
 
     for (const perm of defaultPermissions) {
