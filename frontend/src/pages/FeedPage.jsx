@@ -98,7 +98,7 @@ export default function FeedPage() {
         {((items.length > 0) ? items : makeRandomFeed(4)).map((it) => (
           <article key={it._id} className="bg-white dark:bg-gray-800 rounded shadow-sm overflow-hidden border dark:border-gray-700">
             <div className="p-3 flex items-center gap-3">
-              <img src={it.uploader?.avatarUrl ? `${getApiUrl()}${it.uploader.avatarUrl}` : '/favicon.ico'} alt="avatar" className="w-10 h-10 rounded-full object-cover" />
+              <img src={it.uploader?.avatarUrl ? `${getApiUrl()}${it.uploader.avatarUrl}` : '/favicon.ico'} alt="avatar" className="w-10 h-10 rounded-full object-cover" onError={(e) => e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiNFNUU3RUIiLz4KPHBhdGggZD0iTTIwIDIwQzIyLjc2MTQgMjAgMjUgMTcuNzYxNCAyNSAxNUMyNSAxMi4yMzg2IDIyLjc2MTQgMTAgMjAgMTBDMTcuMjM4NiAxMCAxNSAxMi4yMzg2IDE1IDE1QzE1IDE3Ljc2MTQgMTcuNzYxNCAyMCAyMCAyMFoiIGZpbGw9IiM5Q0E0QUYiLz4KPHBhdGggZD0iTTMwIDI4QzMwIDI0LjY4NjMgMjYuNDI3MSAyMiAyMiAyMkgxOEMxMy41NzI5IDIyIDEwIDI0LjY4NjMgMTAgMjhWMzBIMzBWMjhaIiBmaWxsPSIjOUNBNEFGIi8+Cjwvc3ZnPgo='} />
               <div className="flex-1">
                 <div className="flex items-center justify-between gap-3">
                   <div className="text-sm font-semibold">{it.uploader?.name || it.uploader?.username || 'User'}</div>

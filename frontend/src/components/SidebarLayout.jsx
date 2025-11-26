@@ -378,6 +378,7 @@ export default function SidebarLayout({ role, children }) {
                     alt="avatar"
                     onClick={(e) => { handleAvatarClick(e); }}
                     className="h-12 w-12 rounded-full object-cover cursor-pointer border-2 border-white dark:border-gray-900"
+                    onError={(e) => e.target.style.display = 'none'} // Hide on error, fallback to icon
                   />
                 ) : (
                   <UserCircle onClick={(e) => handleAvatarClick(e)} className="h-12 w-12 text-indigo-500 flex-shrink-0 cursor-pointer" />

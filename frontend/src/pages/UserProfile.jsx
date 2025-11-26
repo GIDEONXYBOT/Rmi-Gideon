@@ -14,9 +14,11 @@ export default function UserProfile(){
     (async ()=>{
       try{
         const API = getApiUrl();
+        const token = localStorage.getItem('token');
+        const opts = token ? { headers: { Authorization: `Bearer ${token}` }, timeout: 8000 } : { timeout: 8000 };
         const [uRes, fRes] = await Promise.all([
-          axios.get(`${API}/api/users/${id}`, { timeout: 8000 }),
-          axios.get(`${API}/api/media/feed?userId=${id}`, { timeout: 8000 })
+          axios.get(`${API}/api/users/${id}`, opts),
+          axios.get(`${API}/api/media/feed?userId=${id}`, opts)
         ]);
         setUser(uRes.data);
         setItems(fRes.data?.items || []);
@@ -31,7 +33,7 @@ export default function UserProfile(){
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="flex items-center gap-4 mb-4">
-        <img src={user.avatarUrl ? `${getApiUrl()}${user.avatarUrl}` : '/favicon.ico'} className="w-20 h-20 rounded-full object-cover" alt="avatar"/>
+        <img src={user.avatarUrl ? `${getApiUrl()}${user.avatarUrl}` : '/favicon.ico'} className="w-20 h-20 rounded-full object-cover" alt="avatar" onError={(e) => e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iNDAiIGZpbGw9IiNFNUU3RUIiLz4KPHBhdGggZD0iTTQwIDQwQzQ1LjUyMjggNDAgNTAgMzQuNDc3MiA1MCAyOUM1MCAyMy40NzcyIDQ1LjUyMjggMTggNDAgMThDMzQuNDc3MiAxOCAzMCAyMy40NzcyIDMwIDI5QzMwIDM0LjQ3NzIgMzQuNDc3MiAzNC40NzcyIDQwIDQwIDQwIDQwWiIgZmlsbD0iIzlDQTQ5RiIvPgo8cGF0aCBkPSJNNjAgNTJDNTYgNDYuODYzNiA0MCA0MiA0MCA0Mkg0MEMxMy41NzI5IDQyIDEwIDQ2Ljg2MzYgMTAgNTJWODJINjBWNTRaIiBmaWxsPSIjOUNBNEFGIi8+Cjwvc3ZnPgo='} />
         <div>
           <div className="text-xl font-semibold">{user.name || user.username}</div>
           <div className="text-sm text-gray-400">{user.username} • {user.role}</div>
