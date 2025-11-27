@@ -35,7 +35,7 @@ const app = express();
 // } else {
   // Development CORS (mobile-optimized)
   app.use(cors({ 
-    origin: true, // Allow all origins
+    origin: ["https://gideon-reports.pages.dev", "https://*.yourdomain.com"], // Allow specific origins
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept", "Cache-Control", "Pragma"],
@@ -44,7 +44,7 @@ const app = express();
   
   // Handle preflight requests explicitly
   app.options('*', (req, res) => {
-    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Cache-Control, Pragma');
     res.sendStatus(200);
