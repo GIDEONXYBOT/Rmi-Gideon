@@ -182,6 +182,50 @@ router.get("/payroll-summary", async (req, res) => {
 });
 
 /* ========================================================
+   🔧 FIX BASE SALARIES FOR ALL USERS (EMERGENCY FIX)
+======================================================== */
+router.post("/fix-base-salaries", requirePermission('employees'), async (req, res) => {
+  try {
+    const defaultBaseSalaries = {
+      teller: 450,
+      supervisor: 600,
+      supervisor_teller: 600,
+      admin: 0,
+      super_admin: 0,
+      head_watcher: 450,
+      sub_watcher: 400,
+      declarator: 450,
+    };
+
+    console.log('🔧 Fixing base salaries for all users...');
+
+    const users = await User.find({});
+    let fixedCount = 0;
+
+    for (const user of users) {
+      const correctSalary = defaultBaseSalaries[user.role] || 450;
+      if (!user.baseSalary || user.baseSalary === 0 || user.baseSalary !== correctSalary) {
+        user.baseSalary = correctSalary;
+        await user.save();
+        fixedCount++;
+      }
+    }
+
+    console.log(`✅ Fixed base salaries for ${fixedCount} users`);
+
+    res.json({
+      success: true,
+      message: `Fixed base salaries for ${fixedCount} users`,
+      fixedCount
+    });
+
+  } catch (err) {
+    console.error("❌ Error fixing base salaries:", err);
+    res.status(500).json({ error: "Failed to fix base salaries" });
+  }
+});
+
+/* ========================================================
    🔑 CHANGE USER PASSWORD (ADMIN ONLY)
 ======================================================== */
 router.put("/users/:id/password", requirePermission('employees'), async (req, res) => {
