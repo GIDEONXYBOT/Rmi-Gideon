@@ -397,9 +397,11 @@ export default function SidebarLayout({ role, children }) {
 
                 {/* Avatar menu — appears on avatar click */}
                 {avatarMenuOpen && (
-                  <div className="absolute left-0 top-full mt-2 w-44 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded shadow-lg z-[99999]">
-                    <button onClick={pickFromGallery} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">Choose from gallery</button>
-                    <button onClick={takePhoto} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">Take photo</button>
+                  <div className="fixed inset-0 z-[100000]" onClick={() => setAvatarMenuOpen(false)}>
+                    <div className="absolute left-4 top-[120px] w-44 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded shadow-lg z-[100001]">
+                      <button onClick={pickFromGallery} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">Choose from gallery</button>
+                      <button onClick={takePhoto} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">Take photo</button>
+                    </div>
                   </div>
                 )}
               </div>
