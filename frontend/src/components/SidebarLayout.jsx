@@ -363,7 +363,7 @@ export default function SidebarLayout({ role, children }) {
         className={`fixed md:sticky md:top-0 sidebar-fixed z-40 h-screen transition-transform duration-300 transform 
         ${showSidebar ? "translate-x-0" : "-translate-x-64"} 
         w-64 
-        bg-white dark:bg-gray-900 border-r dark:border-gray-700 flex flex-col shadow-lg md:shadow-none overflow-hidden`}
+        bg-white dark:bg-gray-900 border-r dark:border-gray-700 flex flex-col shadow-lg md:shadow-none`}
       >
         <div className="px-4 pt-4 pb-3 border-b dark:border-gray-700 flex-shrink-0">
           <div 
