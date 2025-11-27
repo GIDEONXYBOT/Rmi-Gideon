@@ -2,6 +2,10 @@ import React, { useContext } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import "./index.css";
+import axios from "axios";
+
+// Set axios default timeout to 30 seconds to handle Render free tier sleep
+axios.defaults.timeout = 30000;
 
 // Context
 import { SettingsProvider, SettingsContext } from "./context/SettingsContext.jsx";
