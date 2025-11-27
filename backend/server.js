@@ -107,7 +107,9 @@ mongoose
   })
   .catch((err) => {
     console.error("❌ MongoDB connection error:", err);
-    process.exit(1); // Exit if database connection fails
+    console.warn("⚠️ Starting server without database connection for debugging");
+    // Don't exit, try to start server anyway
+    // process.exit(1); // Exit if database connection fails
   });
 
 // ======================================================
