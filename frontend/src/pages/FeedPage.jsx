@@ -1,22 +1,28 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, Suspense, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { getApiUrl } from '../utils/apiConfig';
 
+// Lazy load heavy components
+const CommentsSection = React.lazy(() => import('../components/CommentsSection'));
+
 function TimeAgo({ time }) {
-  try {
-    const diff = Date.now() - new Date(time).getTime();
-    const sec = Math.floor(diff / 1000);
-    if (sec < 60) return <span>{sec}s</span>;
-    const min = Math.floor(sec / 60);
-    if (min < 60) return <span>{min}m</span>;
-    const hr = Math.floor(min / 60);
-    if (hr < 24) return <span>{hr}h</span>;
-    const d = Math.floor(hr / 24);
-    return <span>{d}d</span>;
-  } catch {
-    return <span>-</span>;
-  }
+  // Memoize the calculation
+  return useMemo(() => {
+    try {
+      const diff = Date.now() - new Date(time).getTime();
+      const sec = Math.floor(diff / 1000);
+      if (sec < 60) return <span>{sec}s</span>;
+      const min = Math.floor(sec / 60);
+      if (min < 60) return <span>{min}m</span>;
+      const hr = Math.floor(min / 60);
+      if (hr < 24) return <span>{hr}h</span>;
+      const d = Math.floor(hr / 24);
+      return <span>{d}d</span>;
+    } catch {
+      return <span>-</span>;
+    }
+  }, [time]);
 }
 
 export default function FeedPage() {
@@ -25,13 +31,25 @@ export default function FeedPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [comments, setComments] = useState({});
+  const [showComments, setShowComments] = useState({});
+
+  // Get current user
+  const getCurrentUser = () => {
+    try {
+      return JSON.parse(localStorage.getItem("user") || "null");
+    } catch {
+      return null;
+    }
+  };
+  const currentUser = getCurrentUser();
 
   async function load() {
     setLoading(true);
     setError('');
     try {
       const API = getApiUrl();
-      const res = await axios.get(`${API}/api/media/feed`, { timeout: 10000 });
+      const res = await axios.get(`${API}/api/media/feed`, { timeout: 15000 }); // Reduced from 30s to 15s
       if (res.data?.success) setItems(res.data.items || []);
       else setError(res.data?.message || 'Failed to fetch feed');
     } catch (err) {
@@ -41,8 +59,94 @@ export default function FeedPage() {
 
   useEffect(() => { load(); }, [refreshTrigger]);
 
+  // Preload first few images for better initial loading experience
+  useEffect(() => {
+    if (items.length > 0) {
+      // Preload first 3 images
+      const preloadImages = items.slice(0, 3);
+      preloadImages.forEach((item) => {
+        if (item.imageUrl) {
+          const img = new Image();
+          const src = item.imageUrl.startsWith('http') ? item.imageUrl : `${getApiUrl()}${item.imageUrl}`;
+          img.src = src;
+        }
+      });
+    }
+  }, [items]);
+
   // Function to refresh feed (can be called from other components)
   window.refreshFeed = () => setRefreshTrigger(prev => prev + 1);
+
+  // Handle like/unlike
+  const handleLike = useCallback(async (feedId) => {
+    if (!currentUser) return;
+
+    try {
+      const API = getApiUrl();
+      const res = await axios.post(`${API}/api/media/feed/${feedId}/like`, {}, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+
+      if (res.data?.success) {
+        // Update the item in state
+        setItems(prev => prev.map(item =>
+          item._id === feedId
+            ? {
+                ...item,
+                likes: res.data.liked
+                  ? [...item.likes, currentUser]
+                  : item.likes.filter(user => user._id !== currentUser._id)
+              }
+            : item
+        ));
+      }
+    } catch (err) {
+      console.error('Failed to toggle like:', err);
+    }
+  }, [currentUser]);
+
+  // Handle delete post
+  const handleDelete = useCallback(async (feedId) => {
+    if (!confirm('Are you sure you want to delete this post?')) return;
+
+    try {
+      const API = getApiUrl();
+      const res = await axios.delete(`${API}/api/media/feed/${feedId}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+
+      if (res.data?.success) {
+        setItems(prev => prev.filter(item => item._id !== feedId));
+      }
+    } catch (err) {
+      console.error('Failed to delete post:', err);
+      alert('Failed to delete post');
+    }
+  }, []);
+
+  // Load comments for a post
+  const loadComments = async (feedId) => {
+    try {
+      const API = getApiUrl();
+      const res = await axios.get(`${API}/api/media/feed/${feedId}/comments`);
+
+      if (res.data?.success) {
+        setComments(prev => ({ ...prev, [feedId]: res.data.comments }));
+      }
+    } catch (err) {
+      console.error('Failed to load comments:', err);
+    }
+  };
+
+  // Toggle comments visibility
+  const toggleComments = useCallback((feedId) => {
+    const currentlyVisible = showComments[feedId];
+    setShowComments(prev => ({ ...prev, [feedId]: !currentlyVisible }));
+
+    if (!currentlyVisible && !comments[feedId]) {
+      loadComments(feedId);
+    }
+  }, [showComments, comments]);
 
   // Generate a friendly placeholder/random feed for empty state
   function makeRandomFeed(count = 4) {
@@ -81,6 +185,7 @@ export default function FeedPage() {
   }
 
   const [loaded, setLoaded] = useState({});
+  const [imageErrors, setImageErrors] = useState({});
 
   // Use connection hints to prefer smaller images on slow networks
   const connection = typeof navigator !== 'undefined' && navigator.connection ? navigator.connection : null;
@@ -89,6 +194,35 @@ export default function FeedPage() {
   function markLoaded(id) {
     setLoaded(prev => ({ ...prev, [id]: true }));
   }
+
+  function markError(id) {
+    setImageErrors(prev => ({ ...prev, [id]: true }));
+    setLoaded(prev => ({ ...prev, [id]: true })); // Mark as loaded to hide skeleton
+  }
+
+  // Intersection Observer for efficient lazy loading
+  const [visibleImages, setVisibleImages] = useState(new Set());
+  const imageRefs = useRef({});
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const imgId = entry.target.dataset.imgId;
+            setVisibleImages(prev => new Set([...prev, imgId]));
+          }
+        });
+      },
+      { rootMargin: '50px' } // Start loading 50px before image enters viewport
+    );
+
+    Object.values(imageRefs.current).forEach((img) => {
+      if (img) observer.observe(img);
+    });
+
+    return () => observer.disconnect();
+  }, [items]);
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
@@ -130,15 +264,25 @@ export default function FeedPage() {
                 {/* Use smaller thumb on mobile/slow networks when available */}
                 <picture>
                   {(it.thumbUrl || it.imageUrl) && (
-                    <source media="(max-width:640px)" srcSet={(it.thumbUrl || it.imageUrl).startsWith('http') ? (it.thumbUrl || it.imageUrl) : `${getApiUrl()}${it.thumbUrl || it.imageUrl}`} />
+                    <source media="(max-width:640px)" srcSet={(it.thumbUrl || it.imageUrl).startsWith('http') || (it.thumbUrl || it.imageUrl).startsWith('data:') ? (it.thumbUrl || it.imageUrl) : `${getApiUrl()}${it.thumbUrl || it.imageUrl}`} />
                   )}
                   {/* If connection is slow prefer thumb to save bandwidth */}
-                  <source media="(max-width:1024px)" srcSet={effectiveType.includes('2g') || effectiveType.includes('slow-2g') ? ((it.thumbUrl || it.imageUrl).startsWith('http') ? (it.thumbUrl || it.imageUrl) : `${getApiUrl()}${it.thumbUrl || it.imageUrl}`) : ((it.imageUrl).startsWith('http') ? it.imageUrl : `${getApiUrl()}${it.imageUrl}`)} />
+                  <source media="(max-width:1024px)" srcSet={effectiveType.includes('2g') || effectiveType.includes('slow-2g') ? ((it.thumbUrl || it.imageUrl).startsWith('http') || (it.thumbUrl || it.imageUrl).startsWith('data:') ? (it.thumbUrl || it.imageUrl) : `${getApiUrl()}${it.thumbUrl || it.imageUrl}`) : ((it.imageUrl).startsWith('http') || (it.imageUrl).startsWith('data:') ? it.imageUrl : `${getApiUrl()}${it.imageUrl}`)} />
                   <img
-                    src={(it.imageUrl).startsWith('http') ? it.imageUrl : `${getApiUrl()}${it.imageUrl}`}
+                    ref={(el) => imageRefs.current[it._id] = el}
+                    data-img-id={it._id}
+                    src={(it.imageUrl).startsWith('http') || (it.imageUrl).startsWith('data:') ? it.imageUrl : `${getApiUrl()}${it.imageUrl}`}
                     alt="feed"
-                    loading="lazy"
+                    loading={visibleImages.has(it._id) ? "eager" : "lazy"}
                     onLoad={() => markLoaded(it._id)}
+                    onError={(e) => {
+                      // If image fails to load and it's a relative path, try with base64 data
+                      if (it.imageData && !e.target.src.includes('data:')) {
+                        e.target.src = `data:image/png;base64,${it.imageData}`;
+                      } else {
+                        markError(it._id);
+                      }
+                    }}
                     className={`w-full h-full object-cover transition-opacity duration-300 ${loaded[it._id] ? 'opacity-100' : 'opacity-0'}`}
                   />
                 </picture>
@@ -149,17 +293,91 @@ export default function FeedPage() {
                     <div className="w-24 h-24 rounded-lg bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 animate-pulse" />
                   </div>
                 )}
+
+                {/* Error state for failed images */}
+                {imageErrors[it._id] && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-700">
+                    <div className="text-center text-gray-500 p-4">
+                      <svg className="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                      </svg>
+                      <p className="text-sm mb-2">Image failed to load</p>
+                      {currentUser?.role === 'admin' && it.imageUrl?.startsWith('/uploads/') && (
+                        <button
+                          onClick={async () => {
+                            try {
+                              const API = getApiUrl();
+                              const res = await axios.post(`${API}/api/media/migrate-images`, {}, {
+                                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+                              });
+                              if (res.data?.success) {
+                                alert(`Migration completed: ${res.data.message}`);
+                                // Refresh the feed to show migrated images
+                                window.refreshFeed && window.refreshFeed();
+                              }
+                            } catch (err) {
+                              alert('Migration failed: ' + err.message);
+                            }
+                          }}
+                          className="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600"
+                        >
+                          Migrate Image
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
             <div className="p-3 flex items-center justify-between text-sm text-gray-500">
               <div className="flex items-center gap-3">
-                <button className="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700">Like</button>
-                <button className="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700">Comment</button>
+                <button
+                  onClick={() => handleLike(it._id)}
+                  className={`px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-1 ${
+                    it.likes?.some(user => user._id === currentUser?._id) ? 'text-red-500' : ''
+                  }`}
+                >
+                  <svg className="w-4 h-4" fill={it.likes?.some(user => user._id === currentUser?._id) ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                  </svg>
+                  {it.likes?.length || 0}
+                </button>
+                <button
+                  onClick={() => toggleComments(it._id)}
+                  className="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-1"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                  {(comments[it._id]?.length || 0)}
+                </button>
                 <button className="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700">Share</button>
+                {currentUser && it.uploader?._id === currentUser._id && (
+                  <button
+                    onClick={() => handleDelete(it._id)}
+                    className="px-2 py-1 rounded hover:bg-red-100 dark:hover:bg-red-900 text-red-600"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                )}
               </div>
               <div className="text-xs">ID: {String(it._id).slice(-6)}{it._placeholder ? ' • sample' : ''}</div>
             </div>
+
+            {/* Comments Section */}
+            {showComments[it._id] && (
+              <Suspense fallback={<div className="px-3 pb-3 text-sm text-gray-500">Loading comments...</div>}>
+                <CommentsSection
+                  feedId={it._id}
+                  currentUser={currentUser}
+                  comments={comments}
+                  setComments={setComments}
+                />
+              </Suspense>
+            )}
           </article>
         ))}
       </div>

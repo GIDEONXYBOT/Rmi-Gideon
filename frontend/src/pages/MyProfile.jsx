@@ -3,6 +3,7 @@ import { SettingsContext } from '../context/SettingsContext';
 import axios from 'axios';
 import { getApiUrl } from '../utils/apiConfig';
 import { UserCircle, Camera, Upload, X } from 'lucide-react';
+import { AvatarEditor } from '../components/AvatarEditor';
 
 const API = getApiUrl();
 
@@ -26,13 +27,36 @@ export default function MyProfile() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) { // 2MB limit
-      alert('Profile picture must be ≤ 2MB');
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!file.type.startsWith('image/') || !allowedTypes.includes(file.type.toLowerCase())) {
+      alert('Please select a valid image file (JPEG, PNG, GIF, or WebP)');
       return;
     }
 
-    setSelectedImage(file);
-    setShowAvatarEditor(true);
+    if (file.size > 10 * 1024 * 1024) { // 10MB limit
+      alert('Profile picture must be ≤ 10MB');
+      return;
+    }
+
+    // Read as data URL
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result;
+      
+      // Validate data URL
+      if (!dataUrl || !dataUrl.startsWith('data:image/')) {
+        alert('Failed to read image file. Please try a different image.');
+        return;
+      }
+
+      setSelectedImage(dataUrl);
+      setShowAvatarEditor(true);
+    };
+    reader.onerror = () => {
+      alert('Failed to read the selected file. Please try again.');
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleAvatarSaved = async (result) => {

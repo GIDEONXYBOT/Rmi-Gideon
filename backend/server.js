@@ -240,9 +240,17 @@ try {
   const __dirname = path.dirname(__filename);
   // const distPath = path.resolve(__dirname, "../frontend/dist");
   // app.use(express.static(distPath));
-  // Serve uploaded assets (avatars, maps, etc.) from /uploads
+  // Serve uploaded assets (avatars, maps, etc.) from /uploads with caching
   const uploadsPath = path.resolve(__dirname, 'uploads');
-  app.use('/uploads', express.static(uploadsPath));
+  app.use('/uploads', express.static(uploadsPath, {
+    maxAge: '1d', // Cache for 1 day
+    setHeaders: (res, path) => {
+      // Set cache control for images
+      if (path.endsWith('.png') || path.endsWith('.jpg') || path.endsWith('.jpeg') || path.endsWith('.gif')) {
+        res.setHeader('Cache-Control', 'public, max-age=86400'); // 24 hours
+      }
+    }
+  }));
   // SPA fallback: send index.html for non-API routes
   // app.get(/^(?!\/api\/).+/, (req, res) => {
   //   res.sendFile(path.join(distPath, "index.html"));

@@ -50,7 +50,7 @@ export default function LoginPage() {
       console.log('🎯 API URL from getApiUrl():', apiUrl);
       
       const res = await axios.post(`${apiUrl}/api/auth/login`, payload, {
-        timeout: 10000, // 10 second timeout
+        timeout: 45000, // 45 second timeout for login (Render free tier can be slow to wake up)
         headers: {
           'Content-Type': 'application/json',
           'Cache-Control': 'no-cache',

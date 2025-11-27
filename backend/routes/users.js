@@ -192,5 +192,51 @@ router.delete('/me/avatar', requireAuth, async (req, res) => {
   }
 });
 
+// PUT /api/users/profile - update own profile (name and username)
+router.put('/profile', requireAuth, async (req, res) => {
+  try {
+    const { name, username } = req.body;
+
+    // Validate required fields
+    if (!name || !username) {
+      return res.status(400).json({ message: 'Name and username are required' });
+    }
+
+    // Trim whitespace
+    const trimmedName = name.trim();
+    const trimmedUsername = username.trim();
+
+    if (!trimmedName || !trimmedUsername) {
+      return res.status(400).json({ message: 'Name and username cannot be empty' });
+    }
+
+    // Check if username is already taken by another user
+    const existingUser = await User.findOne({
+      username: trimmedUsername,
+      _id: { $ne: req.user._id }
+    });
+
+    if (existingUser) {
+      return res.status(400).json({ message: 'Username is already taken' });
+    }
+
+    // Update user profile
+    req.user.name = trimmedName;
+    req.user.username = trimmedUsername;
+    await req.user.save();
+
+    // Return updated user (without password)
+    const updatedUser = await User.findById(req.user._id).select('-password -passwordHash');
+    res.json({
+      message: 'Profile updated successfully',
+      user: updatedUser
+    });
+
+  } catch (err) {
+    console.error('Failed to update profile:', err);
+    res.status(500).json({ message: 'Failed to update profile' });
+  }
+});
+
 export default router;
 

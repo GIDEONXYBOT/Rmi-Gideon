@@ -30,7 +30,7 @@ import {
 
 import FloatingChat from "../pages/ChatRoom.jsx"; // ✅ floating chat import
 import SuperAdminSidebarControl from '../pages/SuperAdminSidebarControl.jsx';
-import AvatarEditor from './AvatarEditor.jsx';
+import { AvatarEditor } from './AvatarEditor';
 
 export default function SidebarLayout({ role, children }) {
   const { user, settings, setUser } = useContext(SettingsContext);
@@ -49,7 +49,6 @@ export default function SidebarLayout({ role, children }) {
   const [pendingCount, setPendingCount] = useState(0);
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
-  const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [showAvatarEditor, setShowAvatarEditor] = useState(false);
 
@@ -128,27 +127,77 @@ export default function SidebarLayout({ role, children }) {
 
   // Profile picture upload handler
   const handleAvatarClick = (e) => {
-    // open a small menu offering camera vs gallery
+    // Directly navigate to profile page instead of showing menu
     e?.stopPropagation?.();
-    setAvatarMenuOpen(prev => !prev);
+    navigate('/profile');
   };
 
   const handleAvatarSelected = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    // Limit file size to 2MB for safety
-    const MAX = 2 * 1024 * 1024;
-    if (file.size > MAX) {
-      showToast({ type: 'error', message: 'Profile picture must be <= 2MB' });
+    
+    // Detect mobile device
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    // Validate file type - be more lenient on mobile
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif'];
+    const isValidType = file.type.startsWith('image/') && (
+      isMobile ? true : allowedTypes.includes(file.type.toLowerCase())
+    );
+    
+    if (!isValidType) {
+      showToast({ 
+        type: 'error', 
+        message: isMobile 
+          ? 'Please select a valid image file' 
+          : 'Please select a valid image file (JPEG, PNG, GIF, or WebP)' 
+      });
       return;
+    }
+    
+    // Adjust file size limit for mobile (lower limit to prevent memory issues)
+    const MAX = isMobile ? 5 * 1024 * 1024 : 10 * 1024 * 1024; // 5MB on mobile, 10MB on desktop
+    if (file.size > MAX) {
+      showToast({ 
+        type: 'error', 
+        message: `Profile picture must be <= ${isMobile ? '5MB' : '10MB'}` 
+      });
+      return;
+    }
+
+    // Show loading indicator for mobile
+    if (isMobile) {
+      showToast({ type: 'info', message: 'Processing image...' });
     }
 
     // Read as data URL and open editor (crop/compress UI)
     const reader = new FileReader();
+    
+    // Add timeout for mobile devices
+    const timeout = isMobile ? 15000 : 10000; // 15s for mobile, 10s for desktop
+    const timeoutId = setTimeout(() => {
+      reader.abort();
+      showToast({ type: 'error', message: 'Image processing timed out. Please try a smaller image.' });
+    }, timeout);
+
     reader.onload = async () => {
+      clearTimeout(timeoutId);
       const dataUrl = reader.result;
 
-      // quick client-side validation for min dimensions and file size
+      // Validate data URL
+      if (!dataUrl || !dataUrl.startsWith('data:image/')) {
+        showToast({ type: 'error', message: 'Failed to read image file. Please try a different image.' });
+        return;
+      }
+
+      // For mobile, skip detailed validation to avoid memory issues
+      if (isMobile) {
+        setSelectedImage(dataUrl);
+        setShowAvatarEditor(true);
+        return;
+      }
+
+      // quick client-side validation for min dimensions and file size (desktop only)
       const img = new Image();
       img.onload = () => {
         const MIN_W = 128;
@@ -168,15 +217,31 @@ export default function SidebarLayout({ role, children }) {
         }
 
         setSelectedImage(dataUrl);
-        setAvatarMenuOpen(false);
         setShowAvatarEditor(true);
       };
       img.onerror = () => {
-        showToast({ type: 'error', message: 'Invalid image file' });
+        showToast({ type: 'error', message: 'Invalid image file - please select a valid image' });
       };
       img.src = dataUrl;
     };
-    reader.readAsDataURL(file);
+    
+    reader.onerror = () => {
+      clearTimeout(timeoutId);
+      showToast({ type: 'error', message: 'Failed to read the selected file. Please try again.' });
+    };
+    
+    reader.onabort = () => {
+      clearTimeout(timeoutId);
+      showToast({ type: 'error', message: 'Image processing was cancelled.' });
+    };
+    
+    try {
+      reader.readAsDataURL(file);
+    } catch (error) {
+      clearTimeout(timeoutId);
+      console.error('FileReader error:', error);
+      showToast({ type: 'error', message: 'Unable to process the selected file. Please try a different image.' });
+    }
   };
 
   const handleAvatarSaved = (result) => {
@@ -191,23 +256,13 @@ export default function SidebarLayout({ role, children }) {
   // helpers to trigger specific inputs
   const pickFromGallery = (e) => {
     e?.stopPropagation?.();
-    setAvatarMenuOpen(false);
     try { fileInputRef.current?.click(); } catch (e) {}
   };
 
   const takePhoto = (e) => {
     e?.stopPropagation?.();
-    setAvatarMenuOpen(false);
     try { cameraInputRef.current?.click(); } catch (e) {}
   };
-
-  // Close the avatar menu on outside clicks
-  useEffect(() => {
-    if (!avatarMenuOpen) return;
-    const handler = () => setAvatarMenuOpen(false);
-    document.addEventListener('click', handler);
-    return () => document.removeEventListener('click', handler);
-  }, [avatarMenuOpen]);
 
   // ✅ Swipe gestures for mobile sidebar - DISABLED to prevent form interference
   // useEffect(() => {
@@ -392,19 +447,22 @@ export default function SidebarLayout({ role, children }) {
                 )}
 
                 {/* Hidden inputs: gallery (default) and camera (capture) */}
-                <input ref={fileInputRef} onChange={handleAvatarSelected} accept="image/*" type="file" className="hidden" />
-                <input ref={cameraInputRef} onChange={handleAvatarSelected} accept="image/*" capture="environment" type="file" className="hidden" />
+                <input 
+                  ref={fileInputRef} 
+                  onChange={handleAvatarSelected} 
+                  accept="image/*" 
+                  type="file" 
+                  className="hidden" 
+                />
+                <input 
+                  ref={cameraInputRef} 
+                  onChange={handleAvatarSelected} 
+                  accept="image/*" 
+                  capture="environment" 
+                  type="file" 
+                  className="hidden" 
+                />
 
-                {/* Avatar menu — appears on avatar click */}
-                {avatarMenuOpen && (
-                  <div className="fixed inset-0 z-[100000]" onClick={() => setAvatarMenuOpen(false)}>
-                    <div className="absolute left-4 top-[120px] w-44 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded shadow-lg z-[100001]">
-                      <button onClick={() => { navigate('/profile'); setAvatarMenuOpen(false); }} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">View Profile</button>
-                      <button onClick={pickFromGallery} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">Change Picture</button>
-                      <button onClick={takePhoto} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">Take Photo</button>
-                    </div>
-                  </div>
-                )}
               </div>
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-gray-800 dark:text-gray-200 text-base leading-tight truncate">

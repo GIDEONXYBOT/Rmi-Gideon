@@ -151,8 +151,8 @@ export default function Payroll() {
       }
       
       const [payrollRes, withdrawalRes] = await Promise.all([
-        axios.get(payrollEndpoint, { timeout: 10000 }),
-        axios.get(`${getApiUrl()}/api/payroll/withdrawals/${user._id}`, { timeout: 10000 }),
+        axios.get(payrollEndpoint, { timeout: 30000 }),
+        axios.get(`${getApiUrl()}/api/payroll/withdrawals/${user._id}`, { timeout: 30000 }),
       ]);
       
       // Handle different response formats
@@ -176,7 +176,7 @@ export default function Payroll() {
 
   const fetchDailyReports = async () => {
     try {
-      const res = await axios.get(`${getApiUrl()}/api/teller-reports/teller/${user._id}`, { timeout: 10000 });
+      const res = await axios.get(`${getApiUrl()}/api/teller-reports/teller/${user._id}`, { timeout: 30000 });
       const reports = res.data?.reports || [];
       
       // Filter to current week (ensure endOfWeek includes all of Sunday)
