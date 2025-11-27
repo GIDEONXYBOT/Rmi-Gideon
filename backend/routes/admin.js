@@ -299,6 +299,54 @@ router.put("/users/:id/theme", requirePermission('employees'), async (req, res) 
 });
 
 /* ========================================================
+   🔧 FIX PAYROLL BASE SALARIES FOR EXISTING PAYROLLS
+======================================================== */
+router.post("/fix-payroll-base-salaries", requirePermission('employees'), async (req, res) => {
+  try {
+    console.log('🔧 Fixing base salaries in existing payrolls...');
+
+    const payrolls = await Payroll.find({ baseSalary: { $lte: 0 } }).populate('user');
+    let fixedCount = 0;
+
+    for (const payroll of payrolls) {
+      if (!payroll.user) continue;
+
+      const user = payroll.user;
+      const correctSalary = {
+        teller: 450,
+        supervisor: 600,
+        supervisor_teller: 600,
+        admin: 0,
+        super_admin: 0,
+        head_watcher: 450,
+        sub_watcher: 400,
+        declarator: 450,
+      }[user.role] || 450;
+
+      if (correctSalary > 0) {
+        const updatedTotal = correctSalary + Number(payroll.over || 0) - Number(payroll.short || 0) - Number(payroll.deduction || 0);
+        await Payroll.findByIdAndUpdate(payroll._id, {
+          $set: { baseSalary: correctSalary, totalSalary: updatedTotal }
+        });
+        fixedCount++;
+      }
+    }
+
+    console.log(`✅ Fixed base salaries for ${fixedCount} payroll records`);
+
+    res.json({
+      success: true,
+      message: `Fixed base salaries for ${fixedCount} payroll records`,
+      fixedCount
+    });
+
+  } catch (err) {
+    console.error("❌ Error fixing payroll base salaries:", err);
+    res.status(500).json({ error: "Failed to fix payroll base salaries" });
+  }
+});
+
+/* ========================================================
    🔧 FIX BASE SALARIES FOR ALL USERS (TEMPORARY)
 ======================================================== */
 router.post("/fix-base-salaries", requirePermission('employees'), async (req, res) => {
