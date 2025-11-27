@@ -263,7 +263,7 @@ try {
 // ======================================================
 // SOCKET + SCHEDULER SETUP
 // ======================================================
-// import { scheduleDailyReset } from "./scheduler/midnightReset.js";
+import { scheduleDailyReset } from "./scheduler/midnightReset.js";
 
 // Start HTTP + Socket.IO
 const server = http.createServer(app);
@@ -364,9 +364,9 @@ app.get('/socket.io/*', (req, res) => {
 // Scheduler setup
 // import { initSupervisorResetScheduler } from "./scheduler/supervisorReset.js";
 
-// const DEFAULT_RESET_TIME = process.env.RESET_TIME || "00:00";
-// scheduleDailyReset(DEFAULT_RESET_TIME);
-// console.log(`🕐 Scheduler set for ${DEFAULT_RESET_TIME} Asia/Manila`);
+const DEFAULT_RESET_TIME = process.env.RESET_TIME || "00:00";
+scheduleDailyReset(DEFAULT_RESET_TIME);
+console.log(`🕐 Scheduler set for ${DEFAULT_RESET_TIME} Asia/Manila`);
 
 // Supervisor reset scheduler is now initialized after DB connection (see above)
 

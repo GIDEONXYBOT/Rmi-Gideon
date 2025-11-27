@@ -18,7 +18,7 @@ export async function ensureBaseSalaryForActiveUsers() {
 
     // Find all capital transactions that were added by supervisors yesterday
     const capitalTxns = await Transaction.find({
-      type: "capital",
+      type: { $in: ["capital", "additional"] },
       createdAt: { $gte: dayStart, $lt: dayEnd },
       supervisorId: { $exists: true, $ne: null },
     }).lean();
