@@ -374,7 +374,7 @@ export default function SidebarLayout({ role, children }) {
               <div className="relative">
                 {user?.avatarUrl ? (
                   <img
-                    src={`${getApiUrl()}${user.avatarUrl}`}
+                    src={`${getApiUrl()}${user.avatarUrl}?t=${Date.now()}`}
                     alt="avatar"
                     onClick={(e) => { handleAvatarClick(e); }}
                     className="h-12 w-12 rounded-full object-cover cursor-pointer border-2 border-white dark:border-gray-900"

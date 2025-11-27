@@ -54,6 +54,11 @@ export default function MyProfile() {
       if (response.data?.user) {
         setUser(response.data.user);
         alert('Profile picture updated successfully!');
+        
+        // Refresh feed to show updated avatar to other users
+        if (window.refreshFeed) {
+          window.refreshFeed();
+        }
       }
     } catch (err) {
       console.error('Failed to upload avatar:', err);
@@ -76,6 +81,11 @@ export default function MyProfile() {
 
       setUser({ ...user, avatarUrl: '', avatarSizes: { sm: '', md: '', lg: '' } });
       alert('Profile picture removed successfully!');
+      
+      // Refresh feed to show removed avatar
+      if (window.refreshFeed) {
+        window.refreshFeed();
+      }
     } catch (err) {
       console.error('Failed to remove avatar:', err);
       alert('Failed to remove profile picture: ' + (err.response?.data?.message || err.message));
@@ -98,7 +108,7 @@ export default function MyProfile() {
           <div className="relative">
             {user.avatarUrl ? (
               <img
-                src={`${API}${user.avatarUrl}`}
+                src={`${API}${user.avatarUrl}?t=${Date.now()}`}
                 alt="Profile"
                 className="w-24 h-24 rounded-full object-cover border-4 border-gray-200 dark:border-gray-600"
                 onError={(e) => e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iNDAiIGZpbGw9IiNFNUU3RUIiLz4KPHBhdGggZD0iTTQwIDQwQzQ1LjUyMjggNDAgNTAgMzQuNDc3MiA1MCAyOUM1MCAyMy40NzcyIDQ1LjUyMjggMTggNDAgMThDMzQuNDc3MiAxOCAzMCAyMy40NzcyIDMwIDI5QzMwIDM0LjQ3NzIgMzQuNDc3MiAzNC40NzcyIDQwIDQwIDQwIDQwWiIgZmlsbD0iIzlDQTQ5RiIvPgo8cGF0aCBkPSJNNjAgNTJDNTYgNDYuODYzNiA0MCA0MiA0MCA0Mkg0MEMxMy41NzI5IDQyIDEwIDQ2Ljg2MzYgMTAgNTJWODJINjBWNTRaIiBmaWxsPSIjOUNBNEFGIi8+Cjwvc3ZnPgo='}

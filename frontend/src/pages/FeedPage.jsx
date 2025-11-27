@@ -24,6 +24,7 @@ export default function FeedPage() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   async function load() {
     setLoading(true);
@@ -38,7 +39,10 @@ export default function FeedPage() {
     } finally { setLoading(false); }
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [refreshTrigger]);
+
+  // Function to refresh feed (can be called from other components)
+  window.refreshFeed = () => setRefreshTrigger(prev => prev + 1);
 
   // Generate a friendly placeholder/random feed for empty state
   function makeRandomFeed(count = 4) {
@@ -101,7 +105,7 @@ export default function FeedPage() {
           <article key={it._id} className="bg-white dark:bg-gray-800 rounded shadow-sm overflow-hidden border dark:border-gray-700">
             <div className="p-3 flex items-center gap-3">
               <img
-                src={it.uploader?.avatarUrl ? (it.uploader.avatarUrl.startsWith('http') ? it.uploader.avatarUrl : `${getApiUrl()}${it.uploader.avatarUrl}`) : '/favicon.ico'}
+                src={it.uploader?.avatarUrl ? (it.uploader.avatarUrl.startsWith('http') ? `${it.uploader.avatarUrl}?t=${Date.now()}` : `${getApiUrl()}${it.uploader.avatarUrl}?t=${Date.now()}`) : '/favicon.ico'}
                 alt="avatar"
                 className="w-10 h-10 rounded-full object-cover cursor-pointer hover:opacity-80 transition"
                 onClick={() => navigate(`/users/${it.uploader?._id}`)}
