@@ -7,6 +7,20 @@ import axios from "axios";
 // Set axios default timeout to 30 seconds to handle Render free tier sleep
 axios.defaults.timeout = 30000;
 
+// Add axios interceptor to include Authorization header
+axios.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
 // Context
 import { SettingsProvider, SettingsContext } from "./context/SettingsContext.jsx";
 import { ToastProvider } from "./context/ToastContext.jsx";
