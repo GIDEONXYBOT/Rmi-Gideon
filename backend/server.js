@@ -97,9 +97,9 @@ mongoose
 
     // Initialize supervisor assignment reset scheduler after DB connection
     try {
-      const { initSupervisorResetScheduler } = await import("./scheduler/supervisorReset.js");
-      await initSupervisorResetScheduler();
-      console.log("✅ Supervisor reset scheduler initialized");
+      // const { initSupervisorResetScheduler } = await import("./scheduler/supervisorReset.js");
+      // await initSupervisorResetScheduler();
+      console.log("⏸️ Supervisor reset scheduler disabled for debugging");
     } catch (schedulerError) {
       console.error("❌ Failed to initialize scheduler:", schedulerError);
       // Don't exit, just log the error
