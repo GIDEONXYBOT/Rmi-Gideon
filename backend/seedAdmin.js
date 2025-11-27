@@ -21,7 +21,7 @@ async function seedAdmin() {
     const admin = new User({
       username: "admin",
       name: "Administrator",
-      role: "admin",
+      role: "super_admin",
       active: true,
       verified: true,
       password: hashedPassword,
