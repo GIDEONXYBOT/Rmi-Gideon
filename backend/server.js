@@ -236,18 +236,18 @@ app.use("/api/media", mediaRoutes);
 // STATIC FRONTEND SERVE (Vite build in frontend/dist)
 // ======================================================
 try {
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = path.dirname(__filename);
-  const distPath = path.resolve(__dirname, "../frontend/dist");
-  app.use(express.static(distPath));
+  // const __filename = fileURLToPath(import.meta.url);
+  // const __dirname = path.dirname(__filename);
+  // const distPath = path.resolve(__dirname, "../frontend/dist");
+  // app.use(express.static(distPath));
   // Serve uploaded assets (avatars, maps, etc.) from /uploads
   const uploadsPath = path.resolve(__dirname, 'uploads');
   app.use('/uploads', express.static(uploadsPath));
   // SPA fallback: send index.html for non-API routes
-  app.get(/^(?!\/api\/).+/, (req, res) => {
-    res.sendFile(path.join(distPath, "index.html"));
-  });
-  console.log("🗂️ Serving frontend dist from:", distPath);
+  // app.get(/^(?!\/api\/).+/, (req, res) => {
+  //   res.sendFile(path.join(distPath, "index.html"));
+  // });
+  // console.log("🗂️ Serving frontend dist from:", distPath);
 } catch (e) {
   console.warn("⚠️ Failed to configure static frontend serving:", e.message);
 }
