@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { getApiUrl } from '../utils/apiConfig';
 
@@ -19,6 +20,7 @@ function TimeAgo({ time }) {
 }
 
 export default function FeedPage() {
+  const navigate = useNavigate();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -98,10 +100,21 @@ export default function FeedPage() {
         {((items.length > 0) ? items : makeRandomFeed(4)).map((it) => (
           <article key={it._id} className="bg-white dark:bg-gray-800 rounded shadow-sm overflow-hidden border dark:border-gray-700">
             <div className="p-3 flex items-center gap-3">
-              <img src={it.uploader?.avatarUrl ? (it.uploader.avatarUrl.startsWith('http') ? it.uploader.avatarUrl : `${getApiUrl()}${it.uploader.avatarUrl}`) : '/favicon.ico'} alt="avatar" className="w-10 h-10 rounded-full object-cover" onError={(e) => e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiNFNUU3RUIiLz4KPHBhdGggZD0iTTIwIDIwQzIyLjc2MTQgMjAgMjUgMTcuNzYxNCAyNSAxNUMyNSAxMi4yMzg2IDIyLjc2MTQgMTAgMjAgMTBDMTcuMjM4NiAxMCAxNSAxMi4yMzg2IDE1IDE1QzE1IDE3Ljc2MTQgMTcuNzYxNCAyMCAyMFoiIGZpbGw9IiM5Q0E0QUYiLz4KPHBhdGggZD0iTTMwIDI4QzMwIDI0LjY4NjMgMjYuNDI3MSAyMiAyMiAyMkgxOEMxMy41NzI5IDIyIDEwIDI0LjY4NjMgMTAgMjhWMzBIMzBWMjhaIiBmaWxsPSIjOUNBNEFGIi8+Cjwvc3ZnPgo='} />
+              <img
+                src={it.uploader?.avatarUrl ? (it.uploader.avatarUrl.startsWith('http') ? it.uploader.avatarUrl : `${getApiUrl()}${it.uploader.avatarUrl}`) : '/favicon.ico'}
+                alt="avatar"
+                className="w-10 h-10 rounded-full object-cover cursor-pointer hover:opacity-80 transition"
+                onClick={() => navigate(`/users/${it.uploader?._id}`)}
+                onError={(e) => e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiNFNUU3RUIiLz4KPHBhdGggZD0iTTIwIDIwQzIyLjc2MTQgMjAgMjUgMTcuNzYxNCAyNSAxNUMyNSAxMi4yMzg2IDIyLjc2MTQgMTAgMjAgMTBDMTcuMjM4NiAxMCAxNSAxMi4yMzg2IDE1IDE1QzE1IDE3Ljc2MTQgMTcuNzYxNCAyMCAyMFoiIGZpbGw9IiM5Q0E0QUYiLz4KPHBhdGggZD0iTTMwIDI4QzMwIDI0LjY4NjMgMjYuNDI3MSAyMiAyMiAyMkgxOEMxMy41NzI5IDIyIDEwIDI0LjY4NjMgMTAgMjhWMzBIMzBWMjhaIiBmaWxsPSIjOUNBNEFGIi8+Cjwvc3ZnPgo='}
+              />
               <div className="flex-1">
                 <div className="flex items-center justify-between gap-3">
-                  <div className="text-sm font-semibold">{it.uploader?.name || it.uploader?.username || 'User'}</div>
+                  <div
+                    className="text-sm font-semibold cursor-pointer hover:text-blue-600 transition"
+                    onClick={() => navigate(`/users/${it.uploader?._id}`)}
+                  >
+                    {it.uploader?.name || it.uploader?.username || 'User'}
+                  </div>
                   <div className="text-xs text-gray-400"><TimeAgo time={it.createdAt} /></div>
                 </div>
                 {it.caption && <div className="text-sm text-gray-600 mt-1">{it.caption}</div>}

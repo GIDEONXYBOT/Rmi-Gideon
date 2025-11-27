@@ -69,6 +69,7 @@ import UploadPage from "./pages/UploadPage.jsx";
 import FeedPage from "./pages/FeedPage.jsx";
 import UsersList from "./pages/UsersList.jsx";
 import UserProfile from "./pages/UserProfile.jsx";
+import MyProfile from "./pages/MyProfile.jsx";
 
 // Supervisor Pages
 import SupervisorHistory from "./pages/SupervisorHistory.jsx";
@@ -162,6 +163,14 @@ function App() {
               <AuthOnly>
                 <SidebarLayout>
                   <UserProfile />
+                </SidebarLayout>
+              </AuthOnly>
+            } />
+            {/* My Profile — current user profile management */}
+            <Route path="/profile" element={
+              <AuthOnly>
+                <SidebarLayout>
+                  <MyProfile />
                 </SidebarLayout>
               </AuthOnly>
             } />

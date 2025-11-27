@@ -399,8 +399,9 @@ export default function SidebarLayout({ role, children }) {
                 {avatarMenuOpen && (
                   <div className="fixed inset-0 z-[100000]" onClick={() => setAvatarMenuOpen(false)}>
                     <div className="absolute left-4 top-[120px] w-44 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded shadow-lg z-[100001]">
-                      <button onClick={pickFromGallery} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">Choose from gallery</button>
-                      <button onClick={takePhoto} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">Take photo</button>
+                      <button onClick={() => { navigate('/profile'); setAvatarMenuOpen(false); }} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">View Profile</button>
+                      <button onClick={pickFromGallery} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">Change Picture</button>
+                      <button onClick={takePhoto} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">Take Photo</button>
                     </div>
                   </div>
                 )}
