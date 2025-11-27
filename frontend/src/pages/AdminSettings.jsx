@@ -7,7 +7,7 @@ import { API_URL } from "../utils/apiConfig.js";
 const API = API_URL;
 
 export default function AdminSettings() {
-  const { settings, updateSettings, loading, user, userTheme, updateUserTheme } = useContext(SettingsContext);
+  const { settings, updateSettings, loading, user, userTheme, updateUserTheme, setUser } = useContext(SettingsContext);
   const [saving, setSaving] = useState(false);
 
   // Check if user is admin
@@ -57,6 +57,12 @@ export default function AdminSettings() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [ownNewPassword, setOwnNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
+  // User profile editing states (for all users)
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [profileName, setProfileName] = useState(user?.name || "");
+  const [profileUsername, setProfileUsername] = useState(user?.username || "");
+  const [savingProfile, setSavingProfile] = useState(false);
 
   // Teller report override states
   const [tellersForReport, setTellersForReport] = useState([]);
@@ -249,6 +255,40 @@ export default function AdminSettings() {
       alert("Failed to update supervisor reset settings.");
     } finally {
       setSupervisorResetSaving(false);
+    }
+  };
+
+  // Save user profile (name and username)
+  const saveProfile = async () => {
+    if (!profileName.trim() || !profileUsername.trim()) {
+      alert("⚠️ Name and username are required.");
+      return;
+    }
+
+    setSavingProfile(true);
+    try {
+      const token = localStorage.getItem("token");
+      await axios.put(
+        `${API}/api/users/profile`,
+        {
+          name: profileName.trim(),
+          username: profileUsername.trim()
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      // Update local user state in context
+      setUser(updatedUser);
+
+      alert("✅ Profile updated successfully!");
+      setEditingProfile(false);
+    } catch (err) {
+      console.error("❌ Failed to update profile:", err);
+      alert("Failed to update profile: " + (err.response?.data?.message || err.message));
+    } finally {
+      setSavingProfile(false);
     }
   };
 
@@ -515,6 +555,87 @@ export default function AdminSettings() {
         </div>
         </div>
       )}
+
+      {/* 👤 User Profile Settings - FOR ALL USERS */}
+      <div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
+        <h2 className="font-semibold text-lg mb-3">👤 My Profile</h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+          Update your personal information
+        </p>
+
+        {!editingProfile ? (
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm font-medium mb-1">Name</label>
+              <div className="p-2 bg-gray-50 dark:bg-gray-700 rounded border">
+                {user?.name || "Not set"}
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Username</label>
+              <div className="p-2 bg-gray-50 dark:bg-gray-700 rounded border">
+                {user?.username}
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Role</label>
+              <div className="p-2 bg-gray-50 dark:bg-gray-700 rounded border capitalize">
+                {user?.role}
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                setEditingProfile(true);
+                setProfileName(user?.name || "");
+                setProfileUsername(user?.username || "");
+              }}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+            >
+              ✏️ Edit Profile
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm font-medium mb-1">Name *</label>
+              <input
+                type="text"
+                value={profileName}
+                onChange={(e) => setProfileName(e.target.value)}
+                className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                placeholder="Enter your full name"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Username *</label>
+              <input
+                type="text"
+                value={profileUsername}
+                onChange={(e) => setProfileUsername(e.target.value)}
+                className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                placeholder="Enter your username"
+                required
+              />
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={saveProfile}
+                disabled={savingProfile}
+                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition disabled:opacity-50"
+              >
+                {savingProfile ? "💾 Saving..." : "💾 Save Changes"}
+              </button>
+              <button
+                onClick={() => setEditingProfile(false)}
+                className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition"
+              >
+                ❌ Cancel
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* 🎨 Theme Settings */}
       {localTheme && (
