@@ -264,13 +264,14 @@ try {
 // SOCKET + SCHEDULER SETUP
 // ======================================================
 import { scheduleDailyReset } from "./scheduler/midnightReset.js";
+import { Server } from "socket.io";
 
 // Start HTTP + Socket.IO
 const server = http.createServer(app);
-/*
+
 const io = new Server(server, {
   cors: {
-    origin: "*",
+    origin: ["https://gideon-reports.pages.dev", "http://localhost:3000", "http://localhost:5173"],
     methods: ["GET", "POST", "PUT", "DELETE"],
   },
 });
@@ -278,7 +279,6 @@ const io = new Server(server, {
 // Make io available globally
 app.io = io;
 global.io = io;
-*/
 
 // ======================================================
 // ✅ SOCKET EVENT HANDLERS (DISABLED FOR DEBUGGING)
@@ -352,13 +352,18 @@ io.on("connection", (socket) => {
 */
 
 // ======================================================
-// 🩹 FIXED: Removed duplicate socket.on("sendMessage")
-// (it existed outside io.on('connection'))
+// ✅ SOCKET EVENT HANDLERS
 // ======================================================
 
-// Handle socket.io requests (disabled)
-app.get('/socket.io/*', (req, res) => {
-  res.status(200).json({ message: 'Socket.IO disabled' });
+// Handle Socket.IO connections
+io.on('connection', (socket) => {
+  console.log('🔌 User connected:', socket.id);
+
+  socket.on('disconnect', () => {
+    console.log('🔌 User disconnected:', socket.id);
+  });
+
+  // Add any custom socket events here if needed
 });
 
 // Scheduler setup
@@ -422,7 +427,7 @@ server.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Backend Server Started`);
   console.log(`📡 Local: http://localhost:${PORT}`);
   console.log(`📡 Network: http://${LOCAL_IP}:${PORT}`);
-  // console.log(`🔌 Socket.IO ready for real-time updates\n`);
+  console.log(`🔌 Socket.IO ready for real-time updates\n`);
 });
 
 server.on("error", (err) => {
