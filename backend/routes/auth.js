@@ -76,7 +76,7 @@ router.post("/login", async (req, res) => {
       return res.status(400).json({ message: "Invalid username or password" });
     }
 
-    if (user.status === "pending" && user.role !== "admin") {
+    if (user.status === "pending" && user.role !== "admin" && user.role !== "super_admin") {
       console.log(`⏳ User ${username} is pending approval`);
       return res
         .status(403)

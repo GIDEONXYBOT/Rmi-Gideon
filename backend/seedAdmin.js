@@ -22,6 +22,7 @@ async function seedAdmin() {
       username: "admin",
       name: "Administrator",
       role: "super_admin",
+      status: "approved",
       active: true,
       verified: true,
       password: hashedPassword,
