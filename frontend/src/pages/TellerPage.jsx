@@ -18,6 +18,7 @@ export default function TellerPage() {
   const [tellerName, setTellerName] = useState("");
   const [status, setStatus] = useState("unsaved");
   const [verified, setVerified] = useState(false);
+  const [showPrintButton, setShowPrintButton] = useState(false);
 
   // 💸 Salary data
   const [salary, setSalary] = useState(null);
@@ -56,11 +57,95 @@ export default function TellerPage() {
       const payload = { teller: tellerName, denominations: denoms, cashOnHand, shortOver, remarks };
       await axios.post(`${API}/api/reports/teller`, payload);
       setStatus("saved");
+      setShowPrintButton(true);
       alert("✅ Teller report submitted!");
     } catch (err) {
       console.error("Error:", err);
       alert("❌ Failed to save teller report.");
     }
+  };
+
+  const handlePrint = async () => {
+    try {
+      // Check if Web Bluetooth is supported
+      if (!navigator.bluetooth) {
+        alert("❌ Bluetooth not supported in this browser. Please use Chrome or Edge.");
+        return;
+      }
+
+      // Request Bluetooth device
+      const device = await navigator.bluetooth.requestDevice({
+        acceptAllDevices: true,
+        optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb'] // Common thermal printer service
+      });
+
+      console.log('Connecting to device:', device.name);
+      const server = await device.gatt.connect();
+
+      // Get the primary service (this might need adjustment based on printer)
+      const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+      const characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
+
+      // Prepare receipt data
+      const receiptData = generateReceiptData();
+
+      // Send data to printer
+      await characteristic.writeValue(receiptData);
+
+      alert("✅ Report printed successfully!");
+    } catch (error) {
+      console.error('Print error:', error);
+      alert("❌ Failed to print: " + error.message);
+    }
+  };
+
+  const generateReceiptData = () => {
+    // ESC/POS commands for thermal printer
+    const commands = new Uint8Array([
+      0x1B, 0x40, // Initialize printer
+      0x1B, 0x61, 0x01, // Center alignment
+    ]);
+
+    const encoder = new TextEncoder();
+    let data = [];
+
+    // Header
+    data.push(...encoder.encode("RMI TELLER REPORT\n"));
+    data.push(...encoder.encode("==================\n\n"));
+
+    // Teller info
+    data.push(...encoder.encode(`Teller: ${tellerName}\n`));
+    data.push(...encoder.encode(`Date: ${new Date().toLocaleDateString()}\n\n`));
+
+    // Denominations
+    data.push(...encoder.encode("DENOMINATIONS:\n"));
+    data.push(...encoder.encode("--------------\n"));
+    denoms.forEach(denom => {
+      if (denom.pcs > 0) {
+        const total = denom.value * denom.pcs;
+        data.push(...encoder.encode(`₱${denom.value} x ${denom.pcs} = ₱${total.toLocaleString()}\n`));
+      }
+    });
+
+    data.push(...encoder.encode("\n"));
+    data.push(...encoder.encode(`TOTAL CASH: ₱${cashOnHand.toLocaleString()}\n`));
+
+    if (shortOver !== 0) {
+      data.push(...encoder.encode(`SHORT/OVER: ₱${shortOver.toLocaleString()}\n`));
+    }
+
+    if (remarks) {
+      data.push(...encoder.encode(`\nREMARKS: ${remarks}\n`));
+    }
+
+    // Footer
+    data.push(...encoder.encode("\n==================\n"));
+    data.push(...encoder.encode("Thank you!\n\n"));
+
+    // Cut paper
+    data.push(0x1D, 0x56, 0x42, 0x00);
+
+    return new Uint8Array(data);
   };
 
   const requestWithdraw = async () => {
@@ -223,6 +308,15 @@ export default function TellerPage() {
         >
           💾 Save Report
         </button>
+
+        {showPrintButton && (
+          <button
+            onClick={handlePrint}
+            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md ml-2"
+          >
+            🖨️ Print Receipt
+          </button>
+        )}
       </div>
     </div>
   );
