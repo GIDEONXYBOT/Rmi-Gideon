@@ -73,18 +73,69 @@ export default function TellerPage() {
         return;
       }
 
-      // Request Bluetooth device
+      // Request Bluetooth device with printer filters
       const device = await navigator.bluetooth.requestDevice({
-        acceptAllDevices: true,
-        optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb'] // Common thermal printer service
+        filters: [
+          // Common thermal printer service UUIDs
+          { services: ['000018f0-0000-1000-8000-00805f9b34fb'] },
+          { services: ['e7810a71-73ae-499d-8c15-faa9aef0c3f2'] },
+          { services: ['00001101-0000-1000-8000-00805f9b34fb'] }, // Serial Port Profile
+          // Filter by name containing printer-related keywords
+          { namePrefix: 'Printer' },
+          { namePrefix: 'Print' },
+          { namePrefix: 'Thermal' },
+          { namePrefix: 'Receipt' },
+          { namePrefix: 'POS' },
+          { namePrefix: 'xPrint' },
+          { namePrefix: '58IIH' },
+          { namePrefix: '80mm' },
+          { namePrefix: '58mm' },
+        ],
+        optionalServices: [
+          '000018f0-0000-1000-8000-00805f9b34fb',
+          'e7810a71-73ae-499d-8c15-faa9aef0c3f2',
+          '00001101-0000-1000-8000-00805f9b34fb'
+        ]
       });
 
-      console.log('Connecting to device:', device.name);
+      // Filter out demo/fake printers
+      const deviceName = device.name || 'Unknown Printer';
+      const isDemoPrinter = /(demo|test|fake|sample|example)/i.test(deviceName);
+
+      if (isDemoPrinter) {
+        alert("❌ Demo/test printer detected. Please select a real thermal printer.");
+        return;
+      }
+
+      console.log('Connecting to printer:', deviceName, 'Address:', device.id);
       const server = await device.gatt.connect();
 
-      // Get the primary service (this might need adjustment based on printer)
-      const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
-      const characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
+      // Try different service UUIDs
+      let service;
+      const serviceUUIDs = [
+        '000018f0-0000-1000-8000-00805f9b34fb',
+        'e7810a71-73ae-499d-8c15-faa9aef0c3f2',
+        '00001101-0000-1000-8000-00805f9b34fb'
+      ];
+
+      for (const uuid of serviceUUIDs) {
+        try {
+          service = await server.getPrimaryService(uuid);
+          console.log('Found service:', uuid);
+          break;
+        } catch (e) {
+          console.log('Service not found:', uuid);
+        }
+      }
+
+      if (!service) {
+        throw new Error('No compatible printer service found');
+      }
+
+      // Get characteristic for writing data
+      const characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb') ||
+                             await service.getCharacteristic('bef8d6c9-9c21-4c9e-b632-bd58c1009f9f') ||
+                             await service.getCharacteristic('00001101-0000-1000-8000-00805f9b34fb');
 
       // Prepare receipt data
       const receiptData = generateReceiptData();
@@ -92,10 +143,17 @@ export default function TellerPage() {
       // Send data to printer
       await characteristic.writeValue(receiptData);
 
-      alert("✅ Report printed successfully!");
+      alert(`✅ Report printed successfully on ${deviceName}!`);
     } catch (error) {
       console.error('Print error:', error);
-      alert("❌ Failed to print: " + error.message);
+
+      if (error.name === 'NotFoundError') {
+        alert("❌ No compatible thermal printer found. Make sure your printer is:\n• Turned on\n• In pairing mode\n• Within Bluetooth range\n• A thermal receipt printer");
+      } else if (error.name === 'NotAllowedError') {
+        alert("❌ Bluetooth access denied. Please allow Bluetooth access and try again.");
+      } else {
+        alert("❌ Failed to print: " + error.message);
+      }
     }
   };
 
@@ -113,9 +171,13 @@ export default function TellerPage() {
     data.push(...encoder.encode("RMI TELLER REPORT\n"));
     data.push(...encoder.encode("==================\n\n"));
 
+    // Left align for details
+    data.push(0x1B, 0x61, 0x00); // Left alignment
+
     // Teller info
     data.push(...encoder.encode(`Teller: ${tellerName}\n`));
-    data.push(...encoder.encode(`Date: ${new Date().toLocaleDateString()}\n\n`));
+    data.push(...encoder.encode(`Date: ${new Date().toLocaleDateString()}\n`));
+    data.push(...encoder.encode(`Time: ${new Date().toLocaleTimeString()}\n\n`));
 
     // Denominations
     data.push(...encoder.encode("DENOMINATIONS:\n"));
@@ -123,27 +185,31 @@ export default function TellerPage() {
     denoms.forEach(denom => {
       if (denom.pcs > 0) {
         const total = denom.value * denom.pcs;
-        data.push(...encoder.encode(`₱${denom.value} x ${denom.pcs} = ₱${total.toLocaleString()}\n`));
+        data.push(...encoder.encode(`P${denom.value.toString().padStart(4)} x ${denom.pcs.toString().padStart(3)} = P${total.toLocaleString().padStart(8)}\n`));
       }
     });
 
-    data.push(...encoder.encode("\n"));
-    data.push(...encoder.encode(`TOTAL CASH: ₱${cashOnHand.toLocaleString()}\n`));
+    data.push(...encoder.encode("--------------\n"));
+    data.push(...encoder.encode(`TOTAL CASH: P${cashOnHand.toLocaleString().padStart(8)}\n`));
 
     if (shortOver !== 0) {
-      data.push(...encoder.encode(`SHORT/OVER: ₱${shortOver.toLocaleString()}\n`));
+      const sign = shortOver > 0 ? '+' : '';
+      data.push(...encoder.encode(`SHORT/OVER: ${sign}P${Math.abs(shortOver).toLocaleString().padStart(7)}\n`));
     }
 
     if (remarks) {
-      data.push(...encoder.encode(`\nREMARKS: ${remarks}\n`));
+      data.push(...encoder.encode(`\nREMARKS:\n${remarks}\n`));
     }
 
     // Footer
+    data.push(0x1B, 0x61, 0x01); // Center alignment
     data.push(...encoder.encode("\n==================\n"));
-    data.push(...encoder.encode("Thank you!\n\n"));
+    data.push(...encoder.encode("Thank you for your service!\n"));
+    data.push(...encoder.encode("RMI Management\n\n"));
 
-    // Cut paper
-    data.push(0x1D, 0x56, 0x42, 0x00);
+    // Feed and cut paper
+    data.push(0x1B, 0x64, 0x03); // Feed 3 lines
+    data.push(0x1D, 0x56, 0x42, 0x00); // Full cut
 
     return new Uint8Array(data);
   };
