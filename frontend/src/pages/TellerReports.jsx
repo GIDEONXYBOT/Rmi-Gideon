@@ -712,196 +712,179 @@ export default function TellerReports() {
   const scanForPrinters = async () => {
     setPrinterScanning(true);
     setAvailablePrinters([]);
-    
+
     try {
-      // Start with mock printers for demo/testing
-      const mockPrinters = [
-        { id: 'xprint_58iih', name: 'xPrint 58IIH Thermal Printer', type: 'thermal', connected: true, serialNumber: 'XPRINT-58IIH', macAddress: 'USB-XPRINT' },
-        { id: 'real_1', name: 'Your Thermal Printer TM-T20II', type: 'thermal', connected: true, serialNumber: '10:22:4B:3C:75', macAddress: '10:22:4B:3C:75' },
-        { id: 'mock_1', name: 'Thermal Printer TM-T20', type: 'demo', connected: false, serialNumber: 'AA:BB:CC:DD:EE:01', macAddress: 'AA:BB:CC:DD:EE:01' },
-        { id: 'mock_2', name: 'Receipt Printer RP-80', type: 'demo', connected: false, serialNumber: 'BB:CC:DD:EE:FF:02', macAddress: 'BB:CC:DD:EE:FF:02' },
-        { id: 'mock_3', name: 'POS Printer POS-58', type: 'demo', connected: false, serialNumber: 'CC:DD:EE:FF:00:03', macAddress: 'CC:DD:EE:FF:00:03' },
-      ];
-      
-      setAvailablePrinters(mockPrinters);
-      
-      // Enhanced Bluetooth detection with detailed debugging
-      console.log("🔍 Starting Bluetooth diagnostics...");
-      console.log("User Agent:", navigator.userAgent);
-      console.log("Protocol:", window.location.protocol);
-      console.log("Host:", window.location.host);
-      console.log("Is Secure Context:", window.isSecureContext);
-      
-      // Check if Web Bluetooth API exists
-      if ('bluetooth' in navigator) {
-        console.log("✅ Web Bluetooth API is available");
-        
-        try {
-          // Check for HTTPS requirement - allow localhost and local IPs without HTTPS
-          const isLocalhost = window.location.hostname === 'localhost' || 
-                             window.location.hostname === '127.0.0.1' ||
-                             window.location.hostname.startsWith('192.168.') ||
-                             window.location.hostname.startsWith('10.') ||
-                             window.location.hostname.startsWith('172.');
-                             
-          if (window.location.protocol !== 'https:' && !isLocalhost) {
-            console.log("❌ HTTPS required for Bluetooth (unless local network)");
-            showToast({ 
-              type: "error", 
-              message: "Bluetooth requires HTTPS for remote access. Local network access allowed." 
-            });
-            return;
-          }
+      console.log("🔍 Starting thermal printer scan...");
+
+      // Check browser compatibility
+      if (!navigator.bluetooth) {
+        showToast({
+          type: "error",
+          message: "Web Bluetooth not supported. Use Chrome, Edge, or Opera on desktop/mobile."
+        });
+        setPrinterScanning(false);
+        return;
+      }
+
+      // Check Bluetooth availability
+      const available = await navigator.bluetooth.getAvailability();
+      if (!available) {
+        showToast({
+          type: "warning",
+          message: "Bluetooth not available. Please enable Bluetooth in your device settings."
+        });
+        setPrinterScanning(false);
+        return;
+      }
+
+      // Check secure context (HTTPS required for remote access)
+      const isLocalhost = window.location.hostname === 'localhost' ||
+                         window.location.hostname === '127.0.0.1' ||
+                         window.location.hostname.startsWith('192.168.') ||
+                         window.location.hostname.startsWith('10.') ||
+                         window.location.hostname.startsWith('172.');
+
+      if (!window.isSecureContext && !isLocalhost) {
+        showToast({
+          type: "error",
+          message: "Bluetooth requires HTTPS. Use localhost for testing or deploy over HTTPS."
+        });
+        setPrinterScanning(false);
+        return;
+      }
+
+      showToast({
+        type: "info",
+        message: "Scanning for thermal printers... Select your printer when prompted."
+      });
+
+      // Request Bluetooth device with comprehensive printer filters
+      const device = await navigator.bluetooth.requestDevice({
+        filters: [
+          // Common thermal printer service UUIDs
+          { services: ['000018f0-0000-1000-8000-00805f9b34fb'] }, // Generic Printer
+          { services: ['00001101-0000-1000-8000-00805f9b34fb'] }, // Serial Port Profile
+          { services: ['49535343-fe7d-4ae5-8fa9-9fafd205e455'] }, // Custom printer service
+          { services: ['0000180a-0000-1000-8000-00805f9b34fb'] }, // Device Information
+
+          // Filter by device name (case-insensitive)
+          { namePrefix: 'Print' },
+          { namePrefix: 'Printer' },
+          { namePrefix: 'Thermal' },
+          { namePrefix: 'Receipt' },
+          { namePrefix: 'POS' },
+          { namePrefix: 'TM-' }, // Epson TM series
+          { namePrefix: 'RP-' }, // Receipt printers
+          { namePrefix: 'xPrint' },
+          { namePrefix: '58' }, // 58mm printers
+          { namePrefix: '80' }, // 80mm printers
+          { namePrefix: 'Star' }, // Star Micronics
+          { namePrefix: 'Citizen' },
+          { namePrefix: 'Epson' },
+        ],
+        optionalServices: [
+          '000018f0-0000-1000-8000-00805f9b34fb',
+          '00001101-0000-1000-8000-00805f9b34fb',
+          '49535343-fe7d-4ae5-8fa9-9fafd205e455',
+          '0000180f-0000-1000-8000-00805f9b34fb', // Battery
+          '0000180a-0000-1000-8000-00805f9b34fb', // Device Info
+        ]
+      });
           
-          // For localhost, we can bypass the secure context requirement in some cases
-          if (!window.isSecureContext && !isLocalhost) {
-            console.log("❌ Not in secure context and not localhost");
-            showToast({ 
-              type: "error", 
-              message: "Bluetooth requires secure context (HTTPS) for remote access" 
-            });
-            return;
-          }
-          
-          // Test if Bluetooth adapter is available
-          console.log("🔍 Checking Bluetooth adapter availability...");
-          const available = await navigator.bluetooth.getAvailability();
-          console.log("📡 Bluetooth adapter available:", available);
-          
-          if (!available) {
-            console.log("❌ Bluetooth adapter not available");
-            showToast({ 
-              type: "warning", 
-              message: "Bluetooth adapter not found. Please turn on Bluetooth in your system settings." 
-            });
-            return;
-          }
-          
-          console.log("✅ Bluetooth is available, showing device picker...");
-          showToast({ 
-            type: "info", 
-            message: "Bluetooth ready! Click OK to select your printer from the device list." 
-          });
-          
-          // Request device with comprehensive options
-          const device = await navigator.bluetooth.requestDevice({
-            acceptAllDevices: true,
-            optionalServices: [
-              '00001101-0000-1000-8000-00805f9b34fb', // Serial Port Profile (SPP)
-              '000018f0-0000-1000-8000-00805f9b34fb', // Generic Printer Service
-              '0000180f-0000-1000-8000-00805f9b34fb', // Battery Service
-              '0000180a-0000-1000-8000-00805f9b34fb', // Device Information Service
-              '49535343-fe7d-4ae5-8fa9-9fafd205e455', // Custom printer service (some manufacturers)
-            ]
-          });
-          
-          if (device) {
-            console.log("✅ User selected Bluetooth device:", device);
-            
-            let serialNumber = device.id || 'Unknown';
-            let macAddress = null;
-            
-            // Try to extract MAC from device name
-            if (device.name) {
-              const macPattern = /([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})/;
-              const macMatch = device.name.match(macPattern);
-              if (macMatch) {
-                macAddress = macMatch[0].toUpperCase();
-                serialNumber = macAddress;
-              }
+      if (device) {
+        console.log("✅ User selected device:", device);
+
+        // Extract MAC address from device ID or name
+        let macAddress = null;
+        let serialNumber = device.id || 'Unknown';
+
+        // Try to extract MAC from device name
+        if (device.name) {
+          const macPatterns = [
+            /([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})/, // Standard MAC
+            /([0-9A-Fa-f]{4}[:-]){2}([0-9A-Fa-f]{4})/, // Some printer formats
+            /([0-9A-Fa-f]{2}){6}/, // No separator MAC
+          ];
+
+          for (const pattern of macPatterns) {
+            const match = device.name.match(pattern);
+            if (match) {
+              macAddress = match[0].toUpperCase().replace(/[:-]/g, ':');
+              break;
             }
-            
-            // Create a cleaner device ID if no MAC found
-            if (!macAddress && device.id) {
-              const cleanId = device.id.replace(/[^0-9A-Fa-f]/g, '');
-              if (cleanId.length >= 12) {
-                const macBytes = cleanId.slice(-12).match(/.{2}/g);
-                if (macBytes && macBytes.length === 6) {
-                  macAddress = macBytes.join(':').toUpperCase();
-                  serialNumber = macAddress;
-                }
-              }
-            }
-            
-            const bluetoothPrinter = {
-              id: 'bluetooth_' + Date.now(),
-              name: device.name || 'Bluetooth Printer',
-              type: 'bluetooth',
-              connected: false,
-              serialNumber: serialNumber,
-              macAddress: macAddress,
-              bluetoothDevice: device // Keep reference to the actual device
-            };
-            
-            // Add the real Bluetooth device to the list
-            setAvailablePrinters(prev => [bluetoothPrinter, ...prev]);
-            console.log("✅ Added Bluetooth printer:", bluetoothPrinter);
-            
-            showToast({ 
-              type: "success", 
-              message: `Found: ${device.name || 'Unknown Printer'}` 
-            });
-            
-          } else {
-            console.log("❌ No device selected");
-            showToast({ 
-              type: "info", 
-              message: "No device selected. Showing demo printers." 
-            });
           }
-        } catch (bluetoothError) {
-          console.error("❌ Bluetooth operation failed:", bluetoothError);
-          console.log("Error name:", bluetoothError.name);
-          console.log("Error message:", bluetoothError.message);
-          
-          let errorMessage = "Bluetooth scan failed. ";
-          
-          switch (bluetoothError.name) {
-            case 'NotFoundError':
-              errorMessage += "No devices found or user cancelled.";
-              break;
-            case 'NotSupportedError':
-              errorMessage += "Bluetooth not supported in this context. Try HTTPS.";
-              break;
-            case 'SecurityError':
-              errorMessage += "Bluetooth access denied. Check browser permissions.";
-              break;
-            case 'NotAllowedError':
-              errorMessage += "Bluetooth permission denied.";
-              break;
-            case 'InvalidStateError':
-              errorMessage += "Bluetooth not available. Check system Bluetooth settings.";
-              break;
-            default:
-              errorMessage += bluetoothError.message || "Unknown error.";
-          }
-          
-          showToast({ 
-            type: "warning", 
-            message: errorMessage 
-          });
         }
+
+        // Try to extract from device ID
+        if (!macAddress && device.id) {
+          const cleanId = device.id.replace(/[^0-9A-Fa-f]/g, '');
+          if (cleanId.length >= 12) {
+            const macBytes = cleanId.slice(-12).match(/.{2}/g);
+            if (macBytes && macBytes.length === 6) {
+              macAddress = macBytes.join(':').toUpperCase();
+            }
+          }
+        }
+
+        const printerInfo = {
+          id: 'bt_' + Date.now(),
+          name: device.name || 'Thermal Printer',
+          type: 'bluetooth',
+          connected: false,
+          serialNumber: macAddress || serialNumber,
+          macAddress: macAddress,
+          bluetoothDevice: device,
+          vendorId: device.vendorId || null,
+          productId: device.productId || null,
+        };
+
+        setAvailablePrinters([printerInfo]);
+        setSelectedPrinter(printerInfo);
+
+        showToast({
+          type: "success",
+          message: `Found thermal printer: ${device.name || 'Unknown Printer'}`
+        });
+
       } else {
-        console.log("❌ Web Bluetooth API not available");
-        console.log("Browser support check:");
-        console.log("- Chrome 56+:", /Chrome/.test(navigator.userAgent));
-        console.log("- Edge 79+:", /Edg/.test(navigator.userAgent));
-        console.log("- Opera 43+:", /OPR/.test(navigator.userAgent));
-        
-        showToast({ 
-          type: "error", 
-          message: "Web Bluetooth not supported. Use Chrome 56+, Edge 79+, or Opera 43+ on Windows/Android." 
+        showToast({
+          type: "info",
+          message: "No printer selected. Try scanning again."
         });
       }
-      
-      showToast({ 
-        type: "info", 
-        message: `Scan completed. ${mockPrinters.length} demo printers available.` 
+
+    } catch (bluetoothError) {
+      console.error("❌ Bluetooth operation failed:", bluetoothError);
+      console.log("Error name:", bluetoothError.name);
+      console.log("Error message:", bluetoothError.message);
+
+      let errorMessage = "Bluetooth scan failed. ";
+
+      switch (bluetoothError.name) {
+        case 'NotFoundError':
+          errorMessage += "No thermal printers found. Make sure your printer is turned on and in pairing mode.";
+          break;
+        case 'NotSupportedError':
+          errorMessage += "Bluetooth not supported in this context. Try HTTPS.";
+          break;
+        case 'SecurityError':
+          errorMessage += "Bluetooth access denied. Check browser permissions.";
+          break;
+        case 'NotAllowedError':
+          errorMessage += "Bluetooth permission denied.";
+          break;
+        case 'InvalidStateError':
+          errorMessage += "Bluetooth not available. Check system Bluetooth settings.";
+          break;
+        default:
+          errorMessage += bluetoothError.message || "Unknown error.";
+      }
+
+      showToast({
+        type: "warning",
+        message: errorMessage
       });
-      
-    } catch (error) {
-      console.error("❌ Printer scan error:", error);
-      showToast({ type: "error", message: "Failed to scan for printers: " + error.message });
+
     } finally {
       setPrinterScanning(false);
     }
