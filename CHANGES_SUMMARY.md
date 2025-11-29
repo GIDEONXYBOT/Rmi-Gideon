@@ -2,6 +2,10 @@
 
 ## 🎯 Main Issues Addressed
 
+### ⚙️ Daily Reset Time Updated
+**Change:** Default daily reset (previously midnight) moved to 04:00 (Asia/Manila) on 2025-11-29. You can still override this with the `RESET_TIME` environment variable or via the Admin > Daily Reset Time UI.
+
+
 ### 1. Base Salary Not Reflecting for Yesterday's Reports
 **Problem:** Users who submitted reports yesterday didn't have their base salary showing in payroll.
 

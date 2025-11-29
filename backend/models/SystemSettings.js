@@ -27,7 +27,7 @@ const SystemSettingsSchema = new mongoose.Schema({
   },
 
   // 🌏 System Timing & Configuration
-  resetTime: { type: String, default: "00:00" },
+  resetTime: { type: String, default: "04:00" },
   supervisorResetTime: { type: String, default: "02:00" }, // Time to clear teller-supervisor assignments
   autoResetSupervisorAssignments: { type: Boolean, default: false }, // Enable/disable auto-reset
   timezone: { type: String, default: "Asia/Manila" },

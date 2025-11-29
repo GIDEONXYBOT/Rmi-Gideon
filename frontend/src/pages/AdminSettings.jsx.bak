@@ -28,7 +28,7 @@ export default function AdminSettings() {
   }, [userTheme, user, settings]);
 
   // new: reset time state
-  const [resetTime, setResetTime] = useState("00:00");
+  const [resetTime, setResetTime] = useState("04:00");
   const [resetSaving, setResetSaving] = useState(false);
 
   // Supervisor reset states
@@ -41,7 +41,7 @@ export default function AdminSettings() {
   const [allowMultipleReportsPerDay, setAllowMultipleReportsPerDay] = useState(false);
   const [multipleReportsSaving, setMultipleReportsSaving] = useState(false);
 
-  // Backfill payroll recalc (super_admin only)
+  // 🔁 Backfill payroll recalc (super_admin only)
   const isSuperAdmin = user?.role === 'super_admin';
   const [backfillStartDate, setBackfillStartDate] = useState("");
   const [backfillEndDate, setBackfillEndDate] = useState("");
@@ -98,7 +98,7 @@ export default function AdminSettings() {
         if (mounted && res.data?.resetTime) {
           const valid = /^\d{1,2}:\d{2}/.test(res.data.resetTime)
             ? res.data.resetTime.slice(0, 5)
-            : "00:00";
+            : "04:00";
           setResetTime(valid);
         }
       } catch (err) {
@@ -1182,45 +1182,49 @@ export default function AdminSettings() {
       )}
 
       {/* 💰 Sync Payroll from Reports - ADMIN ONLY */}
-
-      {isAdmin && isSuperAdmin && (
-        <div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
-          <h2 className="font-semibold text-lg mb-3 flex items-center gap-2">
-            <History className="w-5 h-5" />
-            Backfill / Recalculate Payrolls
-          </h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-            Recalculate payroll totals (base + over - short/terms - deduction - withdrawal) for a date range.
-          </p>
-
-          <div className="grid md:grid-cols-3 gap-3 items-end mb-3">
-            <div>
-              <label className="text-sm font-medium block mb-1">Start date</label>
-              <input type="date" value={backfillStartDate} onChange={(e) => setBackfillStartDate(e.target.value)} className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
-            </div>
-            <div>
-              <label className="text-sm font-medium block mb-1">End date</label>
-              <input type="date" value={backfillEndDate} onChange={(e) => setBackfillEndDate(e.target.value)} className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
-            </div>
-            <div className="flex items-center gap-2">
-              <button onClick={runBackfillRecalculate} disabled={backfillRunning} className="px-4 py-2 bg-rose-600 text-white rounded-lg hover:opacity-90 disabled:opacity-50 flex items-center gap-2">
-                <RefreshCw className="w-4 h-4" />
-                {backfillRunning ? 'Running...' : 'Run Backfill'}
-              </button>
-              <button onClick={() => { setBackfillLogs([]); setBackfillResult(null); }} className="px-3 py-2 border rounded text-sm">Clear</button>
-            </div>
-          </div>
-
-          <div>
-            <label className="text-xs text-gray-500">Progress / Logs</label>
-            <textarea readOnly value={(backfillLogs || []).join('\n')} rows={5} className="w-full p-2 mt-2 border rounded bg-gray-50 dark:bg-gray-900 text-xs" />
-            {backfillResult && (
-              <div className="mt-2 text-sm text-green-700 dark:text-green-300">Processed: {backfillResult.processed || 0} — Errors: {(backfillResult.errors && backfillResult.errors.length) || 0}</div>
-            )}
-          </div>
-        </div>
-      )}
       {isAdmin && (
+        <div className="admin-section-wrapper">
+        {/* 🔁 Backfill / Recalculate Payrolls - SUPER ADMIN ONLY */}
+        {isSuperAdmin && (
+          <div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
+            <h2 className="font-semibold text-lg mb-3 flex items-center gap-2">
+              <History className="w-5 h-5" />
+              Backfill / Recalculate Payrolls
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+              Recalculate payroll totals (base + over - short/terms - deduction - withdrawal) over a date range. Use with caution — changes are applied in-place.
+            </p>
+
+            <div className="grid md:grid-cols-3 gap-3 items-end">
+              <div>
+                <label className="text-sm font-medium block mb-1">Start date</label>
+                <input type="date" value={backfillStartDate} onChange={(e) => setBackfillStartDate(e.target.value)} className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
+              </div>
+              <div>
+                <label className="text-sm font-medium block mb-1">End date</label>
+                <input type="date" value={backfillEndDate} onChange={(e) => setBackfillEndDate(e.target.value)} className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button onClick={runBackfillRecalculate} disabled={backfillRunning} className="px-4 py-2 bg-rose-600 text-white rounded-lg hover:opacity-90 disabled:opacity-50 flex items-center gap-2">
+                  {backfillRunning ? (<><RefreshCw className="w-4 h-4 animate-spin"/> Running...</>) : (<><RefreshCw className="w-4 h-4"/> Run Backfill</>)}
+                </button>
+                <button onClick={() => { setBackfillLogs([]); setBackfillResult(null); }} className="px-3 py-2 border rounded text-sm">Clear</button>
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <label className="block text-xs mb-1">Progress / Logs</label>
+              <textarea readOnly value={(backfillLogs || []).join('\n')} rows={6} className="w-full p-2 border rounded bg-gray-50 dark:bg-gray-900 text-xs" />
+              {backfillResult && (
+                <div className="mt-3 text-sm text-green-700 dark:text-green-300">
+                  ✅ Processed: {backfillResult.processed || 0} — Errors: {(backfillResult.errors && backfillResult.errors.length) || 0}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        
         <div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
           <h2 className="font-semibold text-lg mb-3 flex items-center gap-2">
             <DollarSign className="w-5 h-5" />

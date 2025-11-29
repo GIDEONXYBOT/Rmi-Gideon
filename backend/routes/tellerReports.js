@@ -693,11 +693,9 @@ async function syncPayrollFromReports(tellerId) {
       return;
     }
 
-    let payroll;
-    
     if (existingPayrolls.length === 0) {
       // Create new payroll entry ONLY if none exist
-      payroll = new Payroll({
+      const payroll = new Payroll({
         user: tellerId,
         role: user.role,
         baseSalary: user.baseSalary || 0,
@@ -707,45 +705,61 @@ async function syncPayrollFromReports(tellerId) {
         withdrawal: 0,
         createdAt: monday, // Set to Monday of the week
       });
+      await payroll.save();
       console.log(`✅ Creating new payroll for ${tellerId} for week ${monday.toISOString()}`);
     } else {
-      // Use existing payroll - always use the FIRST one (oldest)
-      payroll = existingPayrolls[0];
-      console.log(`✅ Updating existing payroll ${payroll._id} for ${tellerId} (found ${existingPayrolls.length} total)`);
-      
-      // Update with current week's totals
-      payroll.over = totalOver;
-      payroll.short = totalShort;
-      // If base salary changed or missing, sync from user record
-      if ((payroll.baseSalary || 0) !== (user.baseSalary || 0)) {
-        payroll.baseSalary = user.baseSalary || 0;
+      // Update ALL existing payrolls in the week with current week's totals
+      for (const payroll of existingPayrolls) {
+        console.log(`✅ Updating existing payroll ${payroll._id} for ${tellerId}`);
+        
+        // Update with current week's totals
+        payroll.over = totalOver;
+        payroll.short = totalShort;
+        // If base salary changed or missing, sync from user record
+        if ((payroll.baseSalary || 0) !== (user.baseSalary || 0)) {
+          payroll.baseSalary = user.baseSalary || 0;
+        }
+        if (!payroll.role && user.role) payroll.role = user.role;
       }
-      if (!payroll.role && user.role) payroll.role = user.role;
+
+      // Calculate total salary for each payroll: baseSalary + over - weeklyShortDeduction - deduction - withdrawal
+      for (const payroll of existingPayrolls) {
+        const overAmt = payroll.over || totalOver || 0;
+        const shortAmt = payroll.short || totalShort || 0; // payroll.short may already be expressed as weekly installment
+        payroll.totalSalary = (payroll.baseSalary || 0) +
+                              Number(overAmt || 0) -
+                              Number(shortAmt || 0) -
+                              (payroll.deduction || 0) -
+                              (payroll.withdrawal || 0);
+      }
+
+      // Add note about weekly payment terms if applicable
+      const hasPaymentTerms = reports.some(r => (Number(r.shortPaymentTerms) || 1) > 1);
+      if (hasPaymentTerms) {
+        const termsInfo = reports
+          .filter(r => (Number(r.shortPaymentTerms) || 1) > 1)
+          .map(r => `₱${r.short} short over ${r.shortPaymentTerms} weeks`)
+          .join(', ');
+        for (const payroll of existingPayrolls) {
+          payroll.note = `Weekly installment payment. ${termsInfo}`;
+        }
+      }
+      
+      // Save all updated payrolls
+      await Promise.all(existingPayrolls.map(p => p.save()));
     }
 
-    // Calculate total salary: baseSalary - deduction - withdrawal
-    // Short/Over amounts are tracked separately for financial reporting only
-    payroll.totalSalary = (payroll.baseSalary || 0) -
-                          (payroll.deduction || 0) -
-                          (payroll.withdrawal || 0);
+    console.log(`✅ Payroll synced for teller ${tellerId}: over=${totalOver}, short=${totalShort} (weekly with terms)`);
 
-    // Add note about weekly payment terms if applicable
-    const hasPaymentTerms = reports.some(r => (Number(r.shortPaymentTerms) || 1) > 1);
-    if (hasPaymentTerms) {
-      const termsInfo = reports
-        .filter(r => (Number(r.shortPaymentTerms) || 1) > 1)
-        .map(r => `₱${r.short} short over ${r.shortPaymentTerms} weeks`)
-        .join(', ');
-      payroll.note = `Weekly installment payment. ${termsInfo}`;
-    }
-    
-    await payroll.save();
-
-    console.log(`✅ Payroll synced for teller ${tellerId}: over=${totalOver}, short=${totalShort} (weekly with terms), total=${payroll.totalSalary}`);
-
-    // Emit real-time update
+    // Emit real-time update for all updated payrolls
     if (global.io) {
-      global.io.emit("payrollUpdated", { userId: tellerId, payrollId: payroll._id });
+      if (existingPayrolls.length > 0) {
+        existingPayrolls.forEach(payroll => {
+          global.io.emit("payrollUpdated", { userId: tellerId, payrollId: payroll._id });
+        });
+      } else {
+        global.io.emit("payrollUpdated", { userId: tellerId, payrollId: payroll._id });
+      }
     }
 
   } catch (err) {

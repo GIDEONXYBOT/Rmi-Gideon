@@ -63,7 +63,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-all relative">
-      {/* ✅ Banner message shown when midnight reset triggers */}
+      {/* ✅ Banner message shown when daily reset triggers */}
       {newDayMessage && (
         <div className="fixed top-0 left-0 w-full bg-indigo-600 text-white text-center py-2 text-sm font-medium shadow-md z-50 animate-pulse">
           {newDayMessage}

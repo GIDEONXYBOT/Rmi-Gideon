@@ -632,6 +632,10 @@ export default function TellerReports() {
       console.log("📢 Showing success alert...");
       alert("✅ REPORT SUBMITTED SUCCESSFULLY!\n\n📊 Your teller report has been submitted and is now pending supervisor verification.\n\n✨ Thank you for your submission!");
 
+      // Refetch active capital after submission
+      console.log("🔄 Refetching active capital after submission...");
+      fetchActiveCapital();
+
       console.log("🧹 Clearing form...");
       
       setForm({

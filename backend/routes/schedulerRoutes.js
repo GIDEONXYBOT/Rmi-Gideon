@@ -27,7 +27,7 @@ router.get("/", async (req, res) => {
     if (scheduled) return res.json({ resetTime: scheduled });
   } catch (err) {}
 
-  return res.json({ resetTime: "00:00" });
+  return res.json({ resetTime: "04:00" });
 });
 
 router.put("/", async (req, res) => {

@@ -366,7 +366,7 @@ app.get('/socket.io/*', (req, res) => {
 // Scheduler setup
 // import { initSupervisorResetScheduler } from "./scheduler/supervisorReset.js";
 
-const DEFAULT_RESET_TIME = process.env.RESET_TIME || "00:00";
+const DEFAULT_RESET_TIME = process.env.RESET_TIME || "04:00";
 // Temporarily disable scheduler to fix deployment
 // scheduleDailyReset(DEFAULT_RESET_TIME);
 // console.log(`🕐 Scheduler set for ${DEFAULT_RESET_TIME} Asia/Manila`);

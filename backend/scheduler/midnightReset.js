@@ -144,7 +144,7 @@ export async function midnightReset() {
     const today = now.toFormat("yyyy-MM-dd");
     const yesterday = now.minus({ days: 1 }).toFormat("yyyy-MM-dd");
 
-    console.log(`🌙 Midnight Reset Started — ${today}`);
+    console.log(`🌅 Daily Reset Started — ${today} (running at configured reset time)`);
 
     // 1) Finalize any open Teller Reports from yesterday
     const openReports = await TellerReport.find({ date: yesterday, closed: false });
@@ -201,7 +201,7 @@ export async function midnightReset() {
     // 4) Log the reset event
     await AuditLog.create({
       actorName: "system",
-      actionType: "midnight_reset",
+      actionType: "daily_reset",
       data: { date: today, auto: true },
     });
 
@@ -217,9 +217,9 @@ export async function midnightReset() {
       console.log("📡 Emitted 'systemReset' to all clients");
     }
 
-    console.log(`✅ Midnight Reset Completed — ${today}`);
+    console.log(`✅ Daily Reset Completed — ${today}`);
   } catch (err) {
-    console.error("❌ Midnight reset failed:", err);
+    console.error("❌ Daily reset failed:", err);
   }
 }
 
@@ -227,7 +227,7 @@ export async function midnightReset() {
  * Schedule the daily reset for a specific time (Asia/Manila).
  * @param {string} timeStr - "HH:MM" (24-hour)
  */
-export function scheduleDailyReset(timeStr = "00:00") {
+export function scheduleDailyReset(timeStr = "04:00") {
   const parts = String(timeStr).split(":").map((n) => parseInt(n, 10));
   const hour = Number.isFinite(parts[0]) ? parts[0] : 0;
   const minute = Number.isFinite(parts[1]) ? parts[1] : 0;
@@ -280,9 +280,9 @@ export function getScheduledTime() {
 
     // If we can't get the next invocation, return the configured time
     // This is a fallback since we know the job was scheduled with a specific time
-    return "00:00"; // Default fallback
+    return "04:00"; // Default fallback
   } catch (error) {
     console.warn("⚠️ Error getting scheduled time:", error.message);
-    return "00:00";
+    return "04:00";
   }
 }

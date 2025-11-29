@@ -6,7 +6,7 @@ import { DateTime } from "luxon";
 
 /**
  * ✅ Ensure base salary payroll exists for users who had supervisor-added capital yesterday.
- * This runs daily (from midnightReset) and creates a payroll record for the day if missing.
+ * This runs daily (from the system daily reset) and creates a payroll record for the day if missing.
  */
 export async function ensureBaseSalaryForActiveUsers() {
   try {

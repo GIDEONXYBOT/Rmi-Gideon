@@ -6,6 +6,7 @@ import TellerReport from "../models/TellerReport.js";
 import Capital from "../models/Capital.js";
 import SystemSettings from "../models/SystemSettings.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
+import { computeTotalSalary } from "../lib/payrollCalc.js";
 
 const router = express.Router();
 
@@ -327,7 +328,12 @@ router.post("/sync-teller-reports", async (req, res) => {
 
     // Calculate totals
     const totalOver = reports.reduce((sum, r) => sum + (Number(r.over) || 0), 0);
-    const totalShort = reports.reduce((sum, r) => sum + (Number(r.short) || 0), 0);
+    // For short amounts with payment terms, treat the report short as contribution toward weekly installment
+    const totalShort = reports.reduce((sum, r) => {
+      const shortAmount = Number(r.short) || 0;
+      const terms = Number(r.shortPaymentTerms) || 1;
+      return sum + (shortAmount / terms);
+    }, 0);
 
     // Find or create payroll for this user for this period
     let payroll = await Payroll.findOne({
@@ -366,11 +372,15 @@ router.post("/sync-teller-reports", async (req, res) => {
       if (!payroll.role && user.role) payroll.role = user.role;
     }
 
-    // Calculate total salary: base - deduction - withdrawal
-    // Short/Over amounts are tracked separately for financial reporting only
-    payroll.totalSalary = (payroll.baseSalary || 0) -
-                          (payroll.deduction || 0) -
-                          (payroll.withdrawal || 0);
+    // Calculate total salary using weekly semantics (totalShort here is already a weekly installment sum)
+    payroll.totalSalary = computeTotalSalary({
+      baseSalary: payroll.baseSalary,
+      over: totalOver,
+      short: totalShort,
+      deduction: payroll.deduction || 0,
+      withdrawal: payroll.withdrawal || 0,
+      shortIsInstallment: true
+    }, { period: "weekly" });
 
     await payroll.save();
 
@@ -455,11 +465,14 @@ router.post("/sync-month-all", async (req, res) => {
           if (!payroll.role && u.role) payroll.role = u.role;
         }
 
-        // Calculate total salary: base - deduction - withdrawal
-        // Short/Over amounts are tracked separately for financial reporting only
-        payroll.totalSalary = (payroll.baseSalary || 0) -
-                              (payroll.deduction || 0) -
-                              (payroll.withdrawal || 0);
+        // Calculate total salary for month-level payrolls using monthly semantics
+        payroll.totalSalary = computeTotalSalary({
+          baseSalary: payroll.baseSalary,
+          over: payroll.over || 0,
+          short: payroll.short || 0,
+          deduction: payroll.deduction || 0,
+          withdrawal: payroll.withdrawal || 0
+        }, { period: "monthly" });
         await payroll.save();
         processed += 1;
 
@@ -527,9 +540,14 @@ router.post("/sync-yesterday-capital", async (req, res) => {
             if ((p.baseSalary || 0) !== (teller.baseSalary || 0)) p.baseSalary = teller.baseSalary || 0;
             if (!p.role && teller.role) p.role = teller.role;
           }
-          // Calculate total salary: base - deduction - withdrawal
-          // Short/Over amounts are tracked separately for financial reporting only
-          p.totalSalary = (p.baseSalary || 0) - (p.deduction || 0) - (p.withdrawal || 0);
+          // Calculate total salary using monthly semantics
+          p.totalSalary = computeTotalSalary({
+            baseSalary: p.baseSalary || 0,
+            over: p.over || 0,
+            short: p.short || 0,
+            deduction: p.deduction || 0,
+            withdrawal: p.withdrawal || 0
+          }, { period: 'monthly' });
           await p.save();
           processed++;
           if (global.io) global.io.emit("payrollUpdated", { userId: teller._id, payrollId: p._id });
@@ -556,7 +574,13 @@ router.post("/sync-yesterday-capital", async (req, res) => {
             sp.over = 0;
             sp.short = 0;
           }
-          sp.totalSalary = (sp.baseSalary || 0) - (sp.deduction || 0) - (sp.withdrawal || 0);
+          sp.totalSalary = computeTotalSalary({
+            baseSalary: sp.baseSalary || 0,
+            over: sp.over || 0,
+            short: sp.short || 0,
+            deduction: sp.deduction || 0,
+            withdrawal: sp.withdrawal || 0
+          }, { period: 'monthly' });
           await sp.save();
           processed++;
           if (global.io) global.io.emit("payrollUpdated", { userId: supervisor._id, payrollId: sp._id });
@@ -571,6 +595,65 @@ router.post("/sync-yesterday-capital", async (req, res) => {
   } catch (err) {
     console.error("❌ sync-yesterday-capital failed:", err);
     res.status(500).json({ message: "Failed to sync yesterday capital" });
+  }
+});
+
+/* ========================================================
+   🔁 ADMIN: Backfill/Recalculate payroll totals (base + over - short/terms - deduction - withdrawal)
+   Optional body: { startDate, endDate } to limit scope (ISO date strings)
+   Restricted to admin/super_admin
+======================================================== */
+router.post("/backfill-recalculate", requireAuth, requireRole(['admin','super_admin']), async (req, res) => {
+  try {
+    const { startDate, endDate } = req.body || {};
+
+    const filter = {};
+    if (startDate && endDate) {
+      filter.createdAt = { $gte: new Date(startDate), $lte: new Date(endDate) };
+    }
+
+    const payrolls = await Payroll.find(filter).lean();
+    if (!payrolls || payrolls.length === 0) {
+      return res.json({ success: true, processed: 0, message: "No payrolls found to backfill" });
+    }
+
+    let processed = 0;
+    const errors = [];
+
+    for (const p of payrolls) {
+      try {
+        const payroll = await Payroll.findById(p._id);
+        if (!payroll) continue;
+
+        // Ensure baseSalary exists: prefer existing, fallback to user's baseSalary
+        if (!payroll.baseSalary || payroll.baseSalary === 0) {
+          const u = await User.findById(payroll.user).lean();
+          payroll.baseSalary = u ? (u.baseSalary || 0) : (payroll.baseSalary || 0);
+        }
+
+        // Recalculate using weekly semantics and payment terms (payroll.short is expected to be the full short amount here)
+        payroll.totalSalary = computeTotalSalary({
+          baseSalary: payroll.baseSalary || 0,
+          over: payroll.over || 0,
+          short: payroll.short || 0,
+          deduction: payroll.deduction || 0,
+          withdrawal: payroll.withdrawal || 0,
+          shortPaymentTerms: payroll.shortPaymentTerms || 1,
+          shortIsInstallment: false
+        }, { period: 'weekly' });
+
+        await payroll.save();
+        processed++;
+        if (global.io) global.io.emit("payrollUpdated", { userId: payroll.user, payrollId: payroll._id });
+      } catch (e) {
+        errors.push({ id: p._id, msg: e.message });
+      }
+    }
+
+    res.json({ success: true, processed, errors });
+  } catch (err) {
+    console.error("❌ backfill-recalculate failed:", err);
+    res.status(500).json({ message: "Failed to backfill payrolls", error: err.message });
   }
 });
 
@@ -664,7 +747,15 @@ router.put("/:id/adjust", async (req, res) => {
       const terms = payroll.shortPaymentTerms || 1;
       const weeklyShortDeduction = short / terms;
       // For adjustment with payment terms: include over and weekly short deduction
-      payroll.totalSalary = newBaseSalary + over - weeklyShortDeduction - deduction;
+      payroll.totalSalary = computeTotalSalary({
+        baseSalary: newBaseSalary,
+        over,
+        short,
+        deduction,
+        withdrawal: payroll.withdrawal || 0,
+        shortPaymentTerms: terms,
+        shortIsInstallment: false
+      }, { period: 'weekly' });
       
       // Add adjustment note about base salary change
       if (oldBaseSalary !== newBaseSalary) {
