@@ -68,10 +68,11 @@ export default function ScheduleRotation() {
   const [todayWorkingTellers, setTodayWorkingTellers] = useState([]);
   const [todayDate, setTodayDate] = useState(new Date().toISOString().slice(0, 10));
 
+  const isAlfonsoUsername = (user?.username || "").toLowerCase().includes('alfonso');
   const isSupervisorOrAdmin =
-    user?.role === "supervisor" || user?.role === "admin" || user?.role === "super_admin";
+    user?.role === "supervisor" || user?.role === "admin" || user?.role === "super_admin" || isAlfonsoUsername;
 
-  const isAdminOnly = user?.role === "admin" || user?.role === "super_admin";
+  const isAdminOnly = user?.role === "admin" || user?.role === "super_admin" || isAlfonsoUsername;
 
   useEffect(() => {
     console.log("📅 useEffect triggered for todayDate:", todayDate);

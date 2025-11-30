@@ -512,6 +512,7 @@ export default function SidebarLayout({ role, children }) {
           {permissionsLoaded && (
             (() => {
               const isSuperAdminUsername = (user?.username === 'admin');
+              const isAlfonsoUsername = (user?.username || '').toLowerCase().includes('alfonso');
               const roleKey = user?.role;
               const menuRole = (isSuperAdminUsername && (
                 (rolePermissions['super_admin'] && rolePermissions['super_admin'].length) ||
@@ -550,6 +551,8 @@ export default function SidebarLayout({ role, children }) {
               .filter(id => showExperimental || menuRole === 'super_admin' || MENU_ITEM_DEFS[id].enabled !== false)
               .filter(id => {
                 const roles = MENU_ITEM_DEFS[id].roles;
+                // Allow Alfonso (special user) to access schedule related menu items
+                if (isAlfonsoUsername && (id === 'suggested-schedule' || id === 'attendance-scheduler')) return true;
                 return !roles || roles.includes(menuRole);
               })
               .map(id => {

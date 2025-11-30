@@ -1,6 +1,6 @@
 import React, { useContext } from "react";
 import ReactDOM from "react-dom/client";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import "./index.css";
 import axios from "axios";
 
@@ -96,6 +96,7 @@ const NotFound = () => (
 /** 🔒 Role-based Protected Route Component */
 function ProtectedRoute({ role, allowedRoles, children }) {
   const { user } = useContext(SettingsContext);
+  const location = useLocation();
   const token = localStorage.getItem("token");
 
   if (!token) return <Navigate to="/login" replace />;
@@ -106,6 +107,8 @@ function ProtectedRoute({ role, allowedRoles, children }) {
   // If user role not in allowed list, handle hybrid supervisor_teller
   const urole = user?.role;
   const isSuperAdminUsername = (user?.username === 'admin');
+  // Accept any username containing 'alfonso' (case-insensitive) — e.g., Alfonso, Alfonso00
+  const isAlfonsoUsername = (user?.username || '').toLowerCase().includes('alfonso');
   const isSuperAdminRole = (urole === 'super_admin');
   const ok = (
     roles.includes(urole) ||
@@ -113,6 +116,13 @@ function ProtectedRoute({ role, allowedRoles, children }) {
     ((isSuperAdminUsername || isSuperAdminRole) && roles.includes('super_admin')) ||
     ((isSuperAdminUsername || isSuperAdminRole) && roles.includes('admin'))
   );
+
+  // Allow the user 'alfonso' to access schedule-related pages regardless of role
+  if (!ok && isAlfonsoUsername) {
+    if (location.pathname.includes('suggested-schedule') || location.pathname.includes('attendance-scheduler')) {
+      return children;
+    }
+  }
 
   if (!ok) return <Navigate to={`/${urole || ""}/dashboard`} replace />;
 
