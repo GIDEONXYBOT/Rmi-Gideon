@@ -321,9 +321,14 @@ router.post("/sync-teller-reports", async (req, res) => {
     const end = endDate ? new Date(endDate) : new Date();
 
     // Find all teller reports for this user in the date range
+    // Reports store `date` as string (yyyy-mm-dd) and also have `createdAt` timestamp;
+    // using `createdAt` when start/end are Date objects is more reliable and avoids type mismatches.
+    const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate(), 0, 0, 0, 0);
+    const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate(), 23, 59, 59, 999);
+
     const reports = await TellerReport.find({
       tellerId: userId,
-      date: { $gte: start, $lte: end }
+      createdAt: { $gte: startDay, $lte: endDay }
     }).lean();
 
     // Calculate totals
@@ -351,6 +356,9 @@ router.post("/sync-teller-reports", async (req, res) => {
     const daysWorked = reports.length;
     const accumulatedBase = daysWorked * (user.baseSalary || 0);
 
+    // Ensure we have a consistent date field on payrolls (yyyy-mm-dd) for UI filtering
+    const dateKey = startDay.toISOString().split('T')[0];
+
     if (!payroll) {
       // Create new payroll entry
       payroll = new Payroll({
@@ -362,6 +370,7 @@ router.post("/sync-teller-reports", async (req, res) => {
         deduction: 0,
         withdrawal: 0,
         daysPresent: daysWorked,
+        date: dateKey,
       });
     } else {
       // Update existing payroll (keep baseSalary up-to-date)
@@ -369,6 +378,8 @@ router.post("/sync-teller-reports", async (req, res) => {
       payroll.short = totalShort;
       payroll.baseSalary = accumulatedBase;
       payroll.daysPresent = daysWorked;
+      // keep payroll.date in sync to the requested start date
+      payroll.date = dateKey;
       if (!payroll.role && user.role) payroll.role = user.role;
     }
 
@@ -722,10 +733,13 @@ router.put("/:id/adjust", async (req, res) => {
       const originalTime = new Date(payroll.createdAt);
       newDate.setHours(originalTime.getHours(), originalTime.getMinutes(), originalTime.getSeconds());
       payroll.createdAt = newDate;
-      
-      // Also update the date field if it exists
-      if (payroll.date) {
-        payroll.date = newDate;
+
+      // Ensure payroll.date field is set as a YYYY-MM-DD string so frontend can reliably filter
+      try {
+        payroll.date = newDate.toISOString().split('T')[0];
+      } catch (e) {
+        // fallback — leave payroll.date unchanged if any error
+        console.warn('⚠️ Failed to set payroll.date from overrideDate:', e?.message || e);
       }
     }
 

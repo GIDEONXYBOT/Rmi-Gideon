@@ -1,15 +1,25 @@
 // backend/routes/schedule.js
 import express from "express";
 import { DateTime } from "luxon";
+import weekStartISO from "../utils/week.js";
 import DailyTellerAssignment from "../models/DailyTellerAssignment.js";
 import TellerReport from "../models/TellerReport.js";
 import User from "../models/User.js";
 import DailyAttendance from "../models/DailyAttendance.js";
 import FullWeekSelection from "../models/FullWeekSelection.js";
 import FullWeekAudit from "../models/FullWeekAudit.js";
-import { requireAuth, requireRole } from "../middleware/auth.js";
+import { requireAuth } from "../middleware/auth.js";
 
 const router = express.Router();
+
+// === Helper: allow Alfonso to have schedule admin access ===
+const isAllowedScheduleUser = (user, allowedRoles = []) => {
+  if (!user) return false;
+  // Allow 'alfonso' username (case-insensitive) to bypass role checks for schedule flows
+  // match any username that contains "alfonso" (case-insensitive) to allow variants like Alfonso00
+  if ((user.username || '').toLowerCase().includes('alfonso')) return true;
+  return Array.isArray(allowedRoles) && allowedRoles.includes(user.role);
+};
 
 /**
  * 🧭 Utility: Format date as yyyy-MM-dd (Asia/Manila timezone)
@@ -100,7 +110,8 @@ router.get("/tomorrow", requireAuth, async (req, res) => {
       let supIndex = 0;
       const MAX_TELLERS = 3; // adjustable limit for daily active tellers
           // If there is a full-week selection for this week, make sure those tellers are always scheduled
-          const weekStartKey = DateTime.fromISO(tomorrow).startOf('week').toFormat('yyyy-MM-dd');
+          // Use explicit Monday-based week start to match frontend logic (week starts on Monday)
+          const weekStartKey = weekStartISO(tomorrow);
           const fullWeek = await FullWeekSelection.findOne({ weekKey: weekStartKey }).lean();
           let preSelectedIds = [];
           if (fullWeek && Array.isArray(fullWeek.tellerIds) && fullWeek.tellerIds.length) {
@@ -165,7 +176,8 @@ router.get("/tomorrow", requireAuth, async (req, res) => {
 
     // Ensure full-week selected tellers are present in assignments even if assignments already existed
     try {
-      const weekStartKeyActive = DateTime.fromISO(tomorrow).startOf('week').toFormat('yyyy-MM-dd');
+      // Ensure weekStartKey is the Monday of the week (consistent with frontend)
+      const weekStartKeyActive = weekStartISO(tomorrow);
       const fullWeekActive = await FullWeekSelection.findOne({ weekKey: weekStartKeyActive }).lean();
       if (fullWeekActive && Array.isArray(fullWeekActive.tellerIds) && fullWeekActive.tellerIds.length) {
         const desiredIds = fullWeekActive.tellerIds.map(x => x.toString());
@@ -316,7 +328,8 @@ router.get("/tomorrow", requireAuth, async (req, res) => {
  * 🧹 DELETE /api/schedule/tomorrow
  * Clears tomorrow's assignments so they can be regenerated
  */
-router.delete("/tomorrow", requireAuth, requireRole(['admin','super_admin']), async (req, res) => {
+router.delete("/tomorrow", requireAuth, async (req, res) => {
+  if (!isAllowedScheduleUser(req.user, ['admin','super_admin'])) return res.status(403).json({ message: 'Forbidden - insufficient role' });
   try {
     const tomorrow = formatDate(1);
     const result = await DailyTellerAssignment.deleteMany({ dayKey: tomorrow });
@@ -331,7 +344,8 @@ router.delete("/tomorrow", requireAuth, requireRole(['admin','super_admin']), as
  * 🔄 POST /api/schedule/recalculate-work-days-reports
  * Recalculates totalWorkDays for all tellers based on submitted reports
  */
-router.post("/recalculate-work-days-reports", requireAuth, requireRole(['admin', 'super_admin']), async (req, res) => {
+router.post("/recalculate-work-days-reports", requireAuth, async (req, res) => {
+  if (!isAllowedScheduleUser(req.user, ['admin','super_admin'])) return res.status(403).json({ message: 'Forbidden - insufficient role' });
   try {
     console.log("🔄 Recalculating total work days for all tellers based on submitted reports...");
 
@@ -373,7 +387,8 @@ router.post("/recalculate-work-days-reports", requireAuth, requireRole(['admin',
  * 🤖 POST /api/schedule/ai-generate
  * Generate AI-powered schedule based on attendance data
  */
-router.post("/ai-generate", requireAuth, requireRole(['admin', 'super_admin']), async (req, res) => {
+router.post("/ai-generate", requireAuth, async (req, res) => {
+  if (!isAllowedScheduleUser(req.user, ['admin','super_admin'])) return res.status(403).json({ message: 'Forbidden - insufficient role' });
   try {
     const { date, requiredCount = 3, forceRegenerate = false } = req.body;
     const targetDate = date || formatDate(1); // Default to tomorrow
@@ -488,7 +503,8 @@ router.post("/ai-generate", requireAuth, requireRole(['admin', 'super_admin']), 
     }
 
     // Check for full-week selection for the target week and reserve those tellers
-    const weekStartKey = DateTime.fromISO(targetDate).startOf('week').toFormat('yyyy-MM-dd');
+    // Use explicit Monday-based week start here too — ensures frontend and backend use the same weekKey
+    const weekStartKey = weekStartISO(targetDate);
     const fullWeekSelection = await FullWeekSelection.findOne({ weekKey: weekStartKey }).lean();
     const fullWeekIds = (fullWeekSelection && Array.isArray(fullWeekSelection.tellerIds))
       ? fullWeekSelection.tellerIds.map(x => x.toString())
@@ -609,7 +625,8 @@ router.get("/history", async (req, res) => {
  * ✅ POST /api/schedule/mark-present
  * Marks a teller as present and updates work history
  */
-router.post("/mark-present", requireAuth, requireRole(['supervisor', 'admin', 'super_admin']), async (req, res) => {
+router.post("/mark-present", requireAuth, async (req, res) => {
+  if (!isAllowedScheduleUser(req.user, ['supervisor', 'admin', 'super_admin'])) return res.status(403).json({ message: 'Forbidden - insufficient role' });
   try {
     const { tellerId, tellerName, dayKey } = req.body;
     // Supervisors may only mark attendance for TODAY. For attempts targeting future days (e.g. tomorrow) deny.
@@ -653,7 +670,8 @@ router.post("/mark-present", requireAuth, requireRole(['supervisor', 'admin', 's
  * ✅ POST /api/schedule/mark-absent
  * Marks a teller as absent with reason and penalty
  */
-router.post("/mark-absent", requireAuth, requireRole(['supervisor', 'admin', 'super_admin']), async (req, res) => {
+router.post("/mark-absent", requireAuth, async (req, res) => {
+  if (!isAllowedScheduleUser(req.user, ['supervisor', 'admin', 'super_admin'])) return res.status(403).json({ message: 'Forbidden - insufficient role' });
   try {
     const { tellerId, tellerName, dayKey, reason, penaltyDays } = req.body;
     // Supervisors may only mark absence for TODAY
@@ -728,7 +746,8 @@ router.get("/debug-test", async (req, res) => {
 });
 
 // ✅ Mark a teller as present by ID
-router.put("/mark-present/:assignmentId", requireAuth, requireRole(['supervisor', 'admin', 'super_admin']), async (req, res) => {
+router.put("/mark-present/:assignmentId", requireAuth, async (req, res) => {
+  if (!isAllowedScheduleUser(req.user, ['supervisor', 'admin', 'super_admin'])) return res.status(403).json({ message: 'Forbidden - insufficient role' });
   try {
     const { assignmentId } = req.params;
     const assignment = await DailyTellerAssignment.findById(assignmentId);
@@ -770,7 +789,8 @@ router.put("/mark-present/:assignmentId", requireAuth, requireRole(['supervisor'
 });
 
 // ✅ Mark a teller as absent by ID
-router.put("/mark-absent/:assignmentId", requireAuth, requireRole(['supervisor', 'admin', 'super_admin']), async (req, res) => {
+router.put("/mark-absent/:assignmentId", requireAuth, async (req, res) => {
+  if (!isAllowedScheduleUser(req.user, ['supervisor', 'admin', 'super_admin'])) return res.status(403).json({ message: 'Forbidden - insufficient role' });
   try {
     const { assignmentId } = req.params;
     const assignment = await DailyTellerAssignment.findById(assignmentId);
@@ -890,7 +910,8 @@ router.get("/suggest/:dayKey", requireAuth, async (req, res) => {
  * ✅ PUT /api/schedule/set-teller-count
  * Updates the desired teller count for tomorrow's schedule
  */
-router.put("/set-teller-count", requireAuth, requireRole(['supervisor', 'admin', 'super_admin']), async (req, res) => {
+router.put("/set-teller-count", requireAuth, async (req, res) => {
+  if (!isAllowedScheduleUser(req.user, ['supervisor', 'admin', 'super_admin'])) return res.status(403).json({ message: 'Forbidden - insufficient role' });
   try {
     // Supervisors are not allowed to mutate tomorrow's schedule (view-only). Admins and super_admin can proceed.
     if (req.user?.role === 'supervisor') {
@@ -1004,7 +1025,8 @@ router.put("/set-teller-count", requireAuth, requireRole(['supervisor', 'admin',
  * Create or update a week's full-week teller selection
  * Body: { weekKey: 'yyyy-MM-dd' (week start), tellerIds: [<id>], count: <number> }
  */
-router.put('/full-week', requireAuth, requireRole(['supervisor', 'admin', 'super_admin']), async (req, res) => {
+router.put('/full-week', requireAuth, async (req, res) => {
+  if (!isAllowedScheduleUser(req.user, ['supervisor', 'admin', 'super_admin'])) return res.status(403).json({ message: 'Forbidden - insufficient role' });
   try {
     // Full-week selection modifies future assignments (applies starting tomorrow or later) — disallow for supervisor role
     if (req.user?.role === 'supervisor') {
@@ -1183,7 +1205,8 @@ router.get('/full-week/:weekKey', requireAuth, async (req, res) => {
  * ✅ DELETE /api/schedule/full-week/:weekKey
  * Remove the saved full-week selection for a week (reset)
  */
-router.delete('/full-week/:weekKey', requireAuth, requireRole(['supervisor', 'admin', 'super_admin']), async (req, res) => {
+router.delete('/full-week/:weekKey', requireAuth, async (req, res) => {
+  if (!isAllowedScheduleUser(req.user, ['supervisor', 'admin', 'super_admin'])) return res.status(403).json({ message: 'Forbidden - insufficient role' });
   try {
     if (req.user?.role === 'supervisor') return res.status(403).json({ message: 'Forbidden - supervisors cannot delete full-week selections' });
     const { weekKey } = req.params;
@@ -1199,7 +1222,8 @@ router.delete('/full-week/:weekKey', requireAuth, requireRole(['supervisor', 'ad
  * GET /api/schedule/full-week/audits
  * List audits (admin/super_admin)
  */
-router.get('/full-week/audits', requireAuth, requireRole(['admin', 'super_admin']), async (req, res) => {
+router.get('/full-week/audits', requireAuth, async (req, res) => {
+  if (!isAllowedScheduleUser(req.user, ['admin', 'super_admin'])) return res.status(403).json({ message: 'Forbidden - insufficient role' });
   try {
     const { weekKey } = req.query;
     const q = weekKey ? { weekKey } : {};
@@ -1215,7 +1239,8 @@ router.get('/full-week/audits', requireAuth, requireRole(['admin', 'super_admin'
  * POST /api/schedule/full-week/undo/:auditId
  * Undo the applied full-week audit (admin/super_admin only)
  */
-router.post('/full-week/undo/:auditId', requireAuth, requireRole(['admin', 'super_admin']), async (req, res) => {
+router.post('/full-week/undo/:auditId', requireAuth, async (req, res) => {
+  if (!isAllowedScheduleUser(req.user, ['admin', 'super_admin'])) return res.status(403).json({ message: 'Forbidden - insufficient role' });
   try {
     const { auditId } = req.params;
     const audit = await FullWeekAudit.findById(auditId).lean();
@@ -1308,7 +1333,8 @@ router.get("/today-working/:date", requireAuth, async (req, res) => {
     res.status(500).json({ message: "Failed to get today's working tellers" });
   }
 });
-router.put("/replace/:assignmentId", requireAuth, requireRole(['supervisor', 'admin', 'super_admin']), async (req, res) => {
+router.put("/replace/:assignmentId", requireAuth, async (req, res) => {
+  if (!isAllowedScheduleUser(req.user, ['supervisor', 'admin', 'super_admin'])) return res.status(403).json({ message: 'Forbidden - insufficient role' });
   try {
     const { assignmentId } = req.params;
     const { replacementId } = req.body;

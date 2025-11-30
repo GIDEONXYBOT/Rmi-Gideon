@@ -8,7 +8,8 @@
     "seed": "node seedAdmin.js",
     "migrate:menu-approvals": "node scripts/migrate-menu-approvals.js",
     "smoke:kpi": "node scripts/smoke-kpi.js",
-    "fix-base-salaries": "node fix-teller-base-salaries.js"
+    "fix-base-salaries": "node fix-teller-base-salaries.js",
+    "test": "mocha --exit \"test/**/*.test.js\""
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",
@@ -37,6 +38,8 @@
     "three": "^0.181.1"
   },
   "devDependencies": {
-    "nodemon": "^3.1.10"
+    "nodemon": "^3.1.10",
+    "mocha": "^10.2.0",
+    "chai": "^4.3.8"
   }
 }
