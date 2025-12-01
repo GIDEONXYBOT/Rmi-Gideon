@@ -49,7 +49,7 @@ if (process.env.NODE_ENV === 'production') {
     res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Cache-Control, Pragma');
     res.sendStatus(200);
   });
-// }
+}
 
 // Increase body size limits to support base64 image uploads for avatars
 app.use(express.json({ limit: '10mb' }));
