@@ -43,6 +43,9 @@ const securityMiddleware = (app) => {
         extra.split(',').map(s => s.trim()).filter(Boolean).forEach(s => allowedOrigins.push(s));
       }
 
+      console.log('🔍 CORS check for origin:', origin);
+      console.log('📋 allowedOrigins:', allowedOrigins);
+
       // Match function - supports exact origins, hostname-only and wildcard hostnames like *.yourdomain.com
       const normalizeHost = (urlOrHost) => {
         try {
