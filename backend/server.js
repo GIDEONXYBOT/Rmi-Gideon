@@ -9,7 +9,7 @@ import http from "http";
 import os from "os";
 import path from "path";
 import { fileURLToPath } from "url";
-// import securityMiddleware from './middleware/security.js';
+import securityMiddleware from './middleware/security.js';
 
 // Utility function to get local IP
 function getLocalIP() {
@@ -30,9 +30,9 @@ dotenv.config();
 const app = express();
 
 // Production Security Middleware (must be first)
-// if (process.env.NODE_ENV === 'production') {
-//   securityMiddleware(app);
-// } else {
+if (process.env.NODE_ENV === 'production') {
+  securityMiddleware(app);
+} else {
   // Development CORS (mobile-optimized)
   app.use(cors({ 
     origin: ["https://gideon-reports.pages.dev", "https://*.yourdomain.com"], // Allow specific origins
