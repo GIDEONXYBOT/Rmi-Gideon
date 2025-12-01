@@ -38,9 +38,12 @@ const securityMiddleware = (app) => {
         allowedOrigins.push(process.env.FRONTEND_URL);
       }
 
+      console.log('🔍 FRONTEND_ORIGINS env var:', process.env.FRONTEND_ORIGINS);
       const extra = process.env.FRONTEND_ORIGINS;
       if (extra) {
-        extra.split(',').map(s => s.trim()).filter(Boolean).forEach(s => allowedOrigins.push(s));
+        const originsFromEnv = extra.split(',').map(s => s.trim()).filter(Boolean);
+        console.log('📋 Origins from FRONTEND_ORIGINS:', originsFromEnv);
+        originsFromEnv.forEach(s => allowedOrigins.push(s));
       }
 
       console.log('🔍 CORS check for origin:', origin);
