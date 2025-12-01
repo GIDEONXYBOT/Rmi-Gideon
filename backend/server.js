@@ -251,6 +251,10 @@ try {
       if (path.endsWith('.png') || path.endsWith('.jpg') || path.endsWith('.jpeg') || path.endsWith('.gif')) {
         res.setHeader('Cache-Control', 'public, max-age=86400'); // 24 hours
       }
+      // Add CORS headers for static files
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     }
   }));
   // SPA fallback: send index.html for non-API routes
