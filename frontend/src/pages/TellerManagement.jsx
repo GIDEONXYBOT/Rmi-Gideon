@@ -730,15 +730,13 @@ export default function TellerManagement() {
                   <th className="border px-3 py-2 text-right">-Today</th>
                   <th className="border px-3 py-2 text-right">Remaining</th>
                   <th className="border px-3 py-2 text-center">Status</th>
-                  {user?.role === 'admin' && (
-                    <th className="border px-3 py-2 text-center">Actions</th>
-                  )}
+                  <th className="border px-3 py-2 text-center">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {tellers.length === 0 ? (
                   <tr>
-                    <td colSpan={user?.role === 'admin' ? 9 : 8} className="text-center py-10 text-gray-400">
+                    <td colSpan={user?.role === 'admin' ? 10 : 9} className="text-center py-10 text-gray-400">
                       No tellers found.
                     </td>
                   </tr>
@@ -924,33 +922,33 @@ export default function TellerManagement() {
                             "-"
                           )}
                         </td>
-                        {user?.role === 'admin' && (
-                          <td className={`border px-3 text-center ${
-                            dark ? "border-gray-700" : "border-gray-200"
-                          }`}>
-                            {editingRow === t._id ? (
-                              <div className="flex items-center justify-center gap-2">
-                                <button
-                                  onClick={() => handleSaveEdit(t._id)}
-                                  disabled={submitting}
-                                  className="px-2 py-1 rounded bg-green-600 hover:bg-green-700 text-white text-xs flex items-center gap-1"
-                                  title="Save changes"
-                                >
-                                  <Save className="w-3 h-3" />
-                                  Save
-                                </button>
-                                <button
-                                  onClick={handleCancelEdit}
-                                  disabled={submitting}
-                                  className="px-2 py-1 rounded bg-gray-600 hover:bg-gray-700 text-white text-xs flex items-center gap-1"
-                                  title="Cancel"
-                                >
-                                  <X className="w-3 h-3" />
-                                  Cancel
-                                </button>
-                              </div>
-                            ) : (
-                              <div className="flex items-center justify-center gap-2 flex-wrap">
+                        <td className={`border px-3 text-center ${
+                          dark ? "border-gray-700" : "border-gray-200"
+                        }`}>
+                          {editingRow === t._id && user?.role === 'admin' ? (
+                            <div className="flex items-center justify-center gap-2">
+                              <button
+                                onClick={() => handleSaveEdit(t._id)}
+                                disabled={submitting}
+                                className="px-2 py-1 rounded bg-green-600 hover:bg-green-700 text-white text-xs flex items-center gap-1"
+                                title="Save changes"
+                              >
+                                <Save className="w-3 h-3" />
+                                Save
+                              </button>
+                              <button
+                                onClick={handleCancelEdit}
+                                disabled={submitting}
+                                className="px-2 py-1 rounded bg-gray-600 hover:bg-gray-700 text-white text-xs flex items-center gap-1"
+                                title="Cancel"
+                              >
+                                <X className="w-3 h-3" />
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-center gap-2 flex-wrap">
+                              {user?.role === 'admin' && (
                                 <button
                                   onClick={() => handleStartEdit(t)}
                                   className="px-2 py-1 rounded bg-indigo-600 hover:bg-indigo-700 text-white text-xs flex items-center gap-1"
@@ -959,24 +957,23 @@ export default function TellerManagement() {
                                   <Edit2 className="w-3 h-3" />
                                   Edit
                                 </button>
-                                {active?.status === "active" && (
-                                  <button
-                                    onClick={() => setDeleteConfirmation({
-                                      tellerId: t._id,
-                                      tellerName: t.name || t.username,
-                                      capitalId: active._id
-                                    })}
-                                    className="px-2 py-1 rounded bg-red-600 hover:bg-red-700 text-white text-xs flex items-center gap-1"
-                                    title="Delete capital and reset base salary"
-                                  >
-                                    <Trash2 className="w-3 h-3" />
-                                    Delete
-                                  </button>
-                                )}
-                              </div>
-                            )}
-                          </td>
-                        )}
+                              )}
+                              {active?.status === "active" && (
+                                <button
+                                  onClick={() => setDeleteConfirmation({
+                                    tellerId: t._id,
+                                    tellerName: t.name || t.username,
+                                    capitalId: active._id
+                                  })}
+                                  className="px-2 py-1 rounded bg-red-600 hover:bg-red-700 text-white text-xs flex items-center gap-1"
+                                  title="Delete capital and reset base salary"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                  Delete
+                                </button>
+                              )}
+                            </div>
+                          )}
                       </tr>
                     );
                   })
