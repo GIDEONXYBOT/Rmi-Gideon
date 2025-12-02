@@ -604,7 +604,7 @@ export default function ScheduleRotation() {
                 onChange={(e) => setWorkDaysRange(e.target.value)}
                 className={`text-sm p-2 rounded-lg border ${dark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-200'}`}
               >
-                <option value="week">Last 7 days</option>
+                <option value="week">Week (Mon-Sun)</option>
                 <option value="month">This month</option>
                 <option value="year">This year</option>
                 <option value="all">All-time</option>
@@ -642,7 +642,12 @@ export default function ScheduleRotation() {
             >
               <tr>
                 <th className="p-3">Teller</th>
-                <th className="p-3">Days Worked</th>
+                <th className="p-3">
+                  Days Worked
+                  <span className="text-xs text-gray-500 font-normal ml-1">
+                    ({useCustomDateRange ? `${customRangeStart} to ${customRangeEnd}` : (workDaysRange === 'week' ? 'Mon-Sun' : workDaysRange === 'month' ? 'This month' : workDaysRange === 'year' ? 'This year' : 'All-time')})
+                  </span>
+                </th>
                 {isAdminOnly && <th className="p-3 text-center">Actions</th>}
               </tr>
             </thead>
