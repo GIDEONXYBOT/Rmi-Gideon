@@ -275,7 +275,7 @@ try {
 
 // Handle missing avatar images with default
 app.get('/uploads/avatars/*', (req, res) => {
-  const filePath = path.join(__dirname, 'uploads', req.path);
+  const filePath = path.join(__dirname, 'uploads', 'avatars', req.params[0]);
   if (fs.existsSync(filePath)) {
     res.sendFile(filePath);
   } else {
