@@ -275,7 +275,10 @@ router.get("/tomorrow", requireAuth, async (req, res) => {
     // Compute start boundary depending on range
     const startBoundary = (() => {
       try {
-        if (range === 'week') return DateTime.fromISO(tomorrow).minus({ days: 6 }).toFormat('yyyy-MM-dd');
+        if (range === 'week') {
+          // Use actual Monday of the week, not just 6 days back
+          return weekStartISO(tomorrow);
+        }
         if (range === 'month') return DateTime.fromISO(tomorrow).startOf('month').toFormat('yyyy-MM-dd');
         if (range === 'year') return DateTime.fromISO(tomorrow).startOf('year').toFormat('yyyy-MM-dd');
         return null; // 'all' - use existing totals
