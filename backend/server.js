@@ -9,6 +9,7 @@ import http from "http";
 import os from "os";
 import path from "path";
 import { fileURLToPath } from "url";
+import fs from "fs";
 import securityMiddleware from './middleware/security.js';
 
 // Utility function to get local IP
@@ -266,6 +267,21 @@ try {
 } catch (e) {
   console.warn("⚠️ Failed to configure static frontend serving:", e.message);
 }
+
+// Handle missing avatar images with default
+app.get('/uploads/avatars/*', (req, res) => {
+  const filePath = path.join(__dirname, 'uploads', req.path);
+  if (fs.existsSync(filePath)) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.sendFile(filePath);
+  } else {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Content-Type', 'image/svg+xml');
+    res.send('<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48"><circle cx="24" cy="24" r="24" fill="#e5e7eb"/><circle cx="24" cy="18" r="8" fill="#9ca3af"/><path d="M8 40c0-8.8 7.2-16 16-16s16 7.2 16 16" fill="#9ca3af"/></svg>');
+  }
+});
 
 // ======================================================
 // SOCKET + SCHEDULER SETUP

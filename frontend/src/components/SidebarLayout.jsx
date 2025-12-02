@@ -433,7 +433,9 @@ export default function SidebarLayout({ role, children }) {
                     alt="avatar"
                     onClick={(e) => { handleAvatarClick(e); }}
                     className="h-12 w-12 rounded-full object-cover cursor-pointer border-2 border-white dark:border-gray-900"
-                    onError={(e) => e.target.style.display = 'none'} // Hide on error, fallback to icon
+                    onError={(e) => {
+                      e.target.src = `data:image/svg+xml;base64,${btoa('<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48"><circle cx="24" cy="24" r="24" fill="#e5e7eb"/><circle cx="24" cy="18" r="8" fill="#9ca3af"/><path d="M8 40c0-8.8 7.2-16 16-16s16 7.2 16 16" fill="#9ca3af"/></svg>')}`;
+                    }}
                   />
                 ) : (
                   <UserCircle onClick={(e) => handleAvatarClick(e)} className="h-12 w-12 text-indigo-500 flex-shrink-0 cursor-pointer" />
