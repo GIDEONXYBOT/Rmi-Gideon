@@ -316,6 +316,7 @@ export default function SidebarLayout({ role, children }) {
     report: { to: r => `/${r}/report`, icon: <FileBarChart size={18} />, text: 'Admin Report', roles: ['admin','super_admin'] },
     cashflow: { to: r => `/${r}/cashflow`, icon: <PiggyBank size={18} />, text: 'Cash Flow' },
     payroll: { to: r => `/${r}/payroll`, icon: <Wallet size={18} />, text: 'Payroll Management' },
+    'payroll-fixer': { to: r => `/${r}/payroll-fixer`, icon: <Wallet size={18} />, text: 'Payroll Base Salary Fixer', roles: ['admin','super_admin'] },
     withdrawals: { to: r => `/${r}/withdrawals`, icon: <Wallet size={18} />, text: 'Withdrawal Approvals' },
     employees: { to: r => `/${r}/employees`, icon: <Briefcase size={18} />, text: 'Employees', roles: ['admin','super_admin'] },
     'user-approval': { to: r => `/${r}/user-approval`, icon: <Users size={18} />, text: 'User Approval', dynamicBadge: true, roles: ['admin','super_admin'] },

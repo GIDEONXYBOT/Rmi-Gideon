@@ -55,6 +55,7 @@ import AdminHistory from "./pages/AdminHistory.jsx";
 import AdminSettings from "./pages/AdminSettings.jsx";
 import AdminEmployees from "./pages/AdminEmployees.jsx";
 import PayrollManagement from "./pages/PayrollManagement.jsx";
+import PayrollBaseSalaryFixer from "./components/PayrollBaseSalaryFixer.jsx";
 import WithdrawalApprovals from "./pages/WithdrawalApprovals.jsx";
 import AdminMapEditor from "./pages/AdminMapEditor.jsx";
 import TellerBettingData from "./pages/TellerBettingData.jsx";
@@ -222,6 +223,7 @@ function App() {
                       {/* Unified: /admin/payroll shows management UI (alias for payroll-management) */}
                       <Route path="payroll" element={<PayrollManagement />} />
                       <Route path="payroll-management" element={<PayrollManagement />} />
+                      <Route path="payroll-fixer" element={<PayrollBaseSalaryFixer />} />
                       <Route path="withdrawals" element={<WithdrawalApprovals />} />
                       <Route path="assistant" element={<AdminAssistantAdmin />} />
                       <Route path="deployments" element={<DeclaratorDashboard />} />
@@ -365,6 +367,7 @@ function App() {
                       {/* Unified: /admin/payroll shows management UI (alias for payroll-management) */}
                       <Route path="payroll" element={<PayrollManagement />} />
                       <Route path="payroll-management" element={<PayrollManagement />} />
+                      <Route path="payroll-fixer" element={<PayrollBaseSalaryFixer />} />
                       <Route path="withdrawals" element={<WithdrawalApprovals />} />
                       <Route path="assistant" element={<AdminAssistantAdmin />} />
                       <Route path="deployments" element={<DeclaratorDashboard />} />
