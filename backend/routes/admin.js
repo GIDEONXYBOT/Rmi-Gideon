@@ -591,4 +591,50 @@ router.get('/payroll-audit-logs', requirePermission('employees'), async (req, re
   }
 });
 
+/**
+ * 🔍 GET EMPLOYEES WITH ZERO BASE SALARY
+ * GET /api/admin/employees-with-zero-salary
+ * Returns list of unique employees from payroll with baseSalary = 0 or null
+ */
+router.get('/employees-with-zero-salary', requirePermission('employees'), async (req, res) => {
+  try {
+    // Find payroll records with zero base salary
+    const payrolls = await Payroll.find({ 
+      baseSalary: { $in: [0, null, undefined] } 
+    }).select('tellerName name user').populate('user', 'name role baseSalary');
+
+    // Extract unique employees
+    const employeeMap = new Map();
+    
+    for (const payroll of payrolls) {
+      const empName = payroll.user?.name || payroll.tellerName || payroll.name || 'Unknown';
+      const empRole = payroll.user?.role || 'teller';
+      
+      if (!employeeMap.has(empName)) {
+        employeeMap.set(empName, {
+          name: empName,
+          role: empRole,
+          baseSalary: payroll.user?.baseSalary || 0,
+          recordCount: 1
+        });
+      } else {
+        const existing = employeeMap.get(empName);
+        existing.recordCount++;
+      }
+    }
+
+    const employees = Array.from(employeeMap.values());
+
+    res.json({
+      success: true,
+      count: employees.length,
+      employees: employees.sort((a, b) => a.name.localeCompare(b.name))
+    });
+
+  } catch (err) {
+    console.error("❌ Error fetching employees with zero salary:", err);
+    res.status(500).json({ error: "Failed to fetch employees" });
+  }
+});
+
 export default router;

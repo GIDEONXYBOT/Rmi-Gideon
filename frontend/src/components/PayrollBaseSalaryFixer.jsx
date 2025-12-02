@@ -10,19 +10,46 @@ export default function PayrollBaseSalaryFixer() {
   const { showToast } = useToast();
   const dark = settings?.theme?.mode === "dark";
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [fetchingEmployees, setFetchingEmployees] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [showAuditLog, setShowAuditLog] = useState(false);
   const [auditLogs, setAuditLogs] = useState([]);
   const [reason, setReason] = useState("");
+  const [targetEmployees, setTargetEmployees] = useState([]);
 
-  const [targetEmployees] = useState([
-    { name: "charm", role: "teller", baseSalary: 450 },
-    { name: "missy", role: "teller", baseSalary: 450 },
-    { name: "jenessa", role: "teller", baseSalary: 450 },
-    { name: "shane", role: "teller", baseSalary: 450 },
-    { name: "apple", role: "supervisor", baseSalary: 600 }
-  ]);
+  // Fetch employees with zero base salary
+  const fetchEmployeesWithZeroSalary = async () => {
+    setFetchingEmployees(true);
+    try {
+      const API_BASE = getApiUrl();
+      const res = await axios.get(`${API_BASE}/api/admin/employees-with-zero-salary`);
+      
+      if (res.data.success && res.data.employees.length > 0) {
+        setTargetEmployees(res.data.employees);
+      } else {
+        setTargetEmployees([]);
+        showToast({
+          type: "info",
+          message: "✅ No employees with zero base salary found!"
+        });
+      }
+    } catch (err) {
+      console.error("Error fetching employees:", err);
+      showToast({
+        type: "error",
+        message: "Failed to load employees"
+      });
+      setTargetEmployees([]);
+    } finally {
+      setFetchingEmployees(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchEmployeesWithZeroSalary();
+    setLoading(false);
+  }, []);
 
   // Fetch audit logs
   const fetchAuditLogs = async () => {
@@ -53,17 +80,32 @@ export default function PayrollBaseSalaryFixer() {
       return;
     }
 
+    if (targetEmployees.length === 0) {
+      showToast({
+        type: "warning",
+        message: "No employees to update."
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
       const API_BASE = getApiUrl();
+
+      // Build conditional salaries based on employee roles
+      const conditionalSalaries = {};
+      for (const emp of targetEmployees) {
+        const salary = emp.role === 'supervisor' ? 600 : 450;
+        conditionalSalaries[emp.name] = salary;
+      }
 
       const response = await axios.post(
         `${API_BASE}/api/admin/fix-payroll-base-salaries`,
         {
           targetNames: targetEmployees.map(e => e.name),
           baseSalary: 450,
-          conditionalSalaries: { apple: 600 },
+          conditionalSalaries,
           reason
         }
       );
@@ -86,8 +128,11 @@ export default function PayrollBaseSalaryFixer() {
         setReason("");
         setShowModal(false);
         
-        // Refresh audit logs
-        setTimeout(() => fetchAuditLogs(), 1000);
+        // Refresh the list and audit logs
+        setTimeout(() => {
+          fetchEmployeesWithZeroSalary();
+          fetchAuditLogs();
+        }, 1000);
       } else {
         showToast({
           type: "error",
@@ -121,70 +166,104 @@ export default function PayrollBaseSalaryFixer() {
         </button>
       </div>
 
-      {/* Employee List */}
-      <div className="mb-6">
-        <h3 className="text-lg font-semibold mb-4">Employees to Update:</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {targetEmployees.map((emp, idx) => (
-            <div
-              key={idx}
-              className={`p-4 rounded-lg border ${
-                dark
-                  ? "bg-gray-700 border-gray-600"
-                  : "bg-gray-50 border-gray-200"
-              }`}
-            >
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="font-semibold capitalize">{emp.name}</p>
-                  <p className="text-sm text-gray-500">{emp.role}</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-bold text-lg text-green-600">
-                    ₱{emp.baseSalary}
-                  </p>
-                  <p className="text-xs text-gray-500">Base Salary</p>
-                </div>
-              </div>
-            </div>
-          ))}
+      {/* Loading State */}
+      {fetchingEmployees && (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 size={32} className="animate-spin text-blue-600" />
+          <span className="ml-3">Loading employees...</span>
         </div>
-      </div>
+      )}
 
-      {/* Info Box */}
-      <div className={`p-4 rounded-lg border-l-4 border-yellow-500 mb-6 ${
-        dark ? "bg-yellow-900/20" : "bg-yellow-50"
-      }`}>
-        <div className="flex gap-3">
-          <AlertTriangle className="text-yellow-600 flex-shrink-0 mt-0.5" size={20} />
-          <div>
-            <p className="font-semibold text-yellow-800">Important:</p>
-            <p className="text-sm text-yellow-700">
-              This will update payroll records with ₱0 base salary to the correct amounts.
-              An audit log will be created and notifications will be sent to administrators.
-            </p>
+      {/* Empty State */}
+      {!fetchingEmployees && targetEmployees.length === 0 && (
+        <div className={`p-6 rounded-lg border-l-4 border-green-500 mb-6 ${
+          dark ? "bg-green-900/20" : "bg-green-50"
+        }`}>
+          <div className="flex gap-3">
+            <CheckCircle className="text-green-600 flex-shrink-0 mt-0.5" size={20} />
+            <div>
+              <p className="font-semibold text-green-800">All Set!</p>
+              <p className="text-sm text-green-700">
+                ✅ No employees with zero base salary found. All payroll records have proper base salaries.
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Action Button */}
-      <button
-        onClick={() => setShowModal(true)}
-        disabled={loading}
-        className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center gap-2"
-      >
-        {loading ? (
-          <>
-            <Loader2 size={18} className="animate-spin" />
-            Processing...
-          </>
-        ) : (
-          <>
-            <CheckCircle size={18} />
-            Execute Base Salary Fix
-          </>
-        )}
-      </button>
+      {/* Employee List */}
+      {!fetchingEmployees && targetEmployees.length > 0 && (
+        <>
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold mb-4">Employees with ₱0 Base Salary ({targetEmployees.length}):</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {targetEmployees.map((emp, idx) => (
+                <div
+                  key={idx}
+                  className={`p-4 rounded-lg border ${
+                    dark
+                      ? "bg-gray-700 border-gray-600"
+                      : "bg-gray-50 border-gray-200"
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="font-semibold capitalize">{emp.name}</p>
+                      <p className="text-sm text-gray-500">{emp.role}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-lg text-green-600">
+                        ₱{emp.baseSalary || '0'}
+                      </p>
+                      <p className="text-xs text-gray-500">Current Base</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Info Box */}
+          <div className={`p-4 rounded-lg border-l-4 border-yellow-500 mb-6 ${
+            dark ? "bg-yellow-900/20" : "bg-yellow-50"
+          }`}>
+            <div className="flex gap-3">
+              <AlertTriangle className="text-yellow-600 flex-shrink-0 mt-0.5" size={20} />
+              <div>
+                <p className="font-semibold text-yellow-800">Important:</p>
+                <p className="text-sm text-yellow-700">
+                  This will update payroll records with ₱0 base salary to the correct amounts based on employee role.
+                  An audit log will be created and notifications will be sent to administrators.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Button */}
+          <button
+            onClick={() => setShowModal(true)}
+            disabled={loading}
+            className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center gap-2"
+          >
+            {loading ? (
+              <>
+                <Loader2 size={18} className="animate-spin" />
+                Processing...
+              </>
+            ) : (
+              <>
+                <CheckCircle size={18} />
+                Execute Base Salary Fix
+              </>
+            )}
+          </button>
+        </>
+      )}
+
+      {/* Info Box (when no employees) - already shown above */}
+      {targetEmployees.length > 0 && (
+        <div className="hidden" />
+      )}
 
       {/* Confirmation Modal */}
       {showModal && (
