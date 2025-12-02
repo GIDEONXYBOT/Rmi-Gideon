@@ -28,7 +28,7 @@ export default function PayrollBaseSalaryFixer() {
   const fetchAuditLogs = async () => {
     try {
       const API_BASE = getApiUrl();
-      const res = await axios.get(`${API_BASE}/admin/payroll-audit-logs`, {
+      const res = await axios.get(`${API_BASE}/api/admin/payroll-audit-logs`, {
         params: { limit: 10, sort: -1 }
       });
       setAuditLogs(res.data || []);
@@ -59,7 +59,7 @@ export default function PayrollBaseSalaryFixer() {
       const API_BASE = getApiUrl();
 
       const response = await axios.post(
-        `${API_BASE}/admin/fix-payroll-base-salaries`,
+        `${API_BASE}/api/admin/fix-payroll-base-salaries`,
         {
           targetNames: targetEmployees.map(e => e.name),
           baseSalary: 450,
