@@ -643,9 +643,9 @@ export default function ScheduleRotation() {
 
         {/* 🆕 Filter and Navigation Controls */}
         <div className={`mb-6 p-4 rounded-lg ${dark ? "bg-gray-700" : "bg-gray-50"}`}>
-          {tomorrowAssignments.length > 0 ? (
-            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-              {/* Status Filter */}
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            {/* Status Filter */}
+            {tomorrowAssignments.length > 0 ? (
               <div className="flex items-center gap-2">
                 <span className="text-sm font-semibold">Filter:</span>
                 <div className="flex gap-2">
@@ -675,43 +675,43 @@ export default function ScheduleRotation() {
                   ))}
                 </div>
               </div>
+            ) : (
+              <p className="text-sm text-gray-500">Loading assignments...</p>
+            )}
 
-              {/* Navigation Buttons */}
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setCurrentAssignmentIndex(Math.max(0, currentAssignmentIndex - 1))}
-                  disabled={currentAssignmentIndex === 0}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                    currentAssignmentIndex === 0
-                      ? 'opacity-50 cursor-not-allowed'
-                      : dark
-                      ? 'bg-gray-600 hover:bg-gray-500 text-white'
-                      : 'bg-gray-300 hover:bg-gray-400'
-                  }`}
-                >
-                  ← Previous
-                </button>
-                <span className={`text-sm font-semibold px-3 py-1 rounded-lg ${dark ? 'bg-gray-600' : 'bg-gray-200'}`}>
-                  {currentAssignmentIndex + 1} of {filteredAssignments.length}
-                </span>
-                <button
-                  onClick={() => setCurrentAssignmentIndex(Math.min(filteredAssignments.length - 1, currentAssignmentIndex + 1))}
-                  disabled={currentAssignmentIndex >= filteredAssignments.length - 1}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                    currentAssignmentIndex >= filteredAssignments.length - 1
-                      ? 'opacity-50 cursor-not-allowed'
-                      : dark
-                      ? 'bg-gray-600 hover:bg-gray-500 text-white'
-                      : 'bg-gray-300 hover:bg-gray-400'
-                  }`}
-                >
-                  Next →
-                </button>
-              </div>
+            {/* Navigation Buttons - ALWAYS SHOW */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setCurrentAssignmentIndex(Math.max(0, currentAssignmentIndex - 1))}
+                disabled={currentAssignmentIndex === 0 || tomorrowAssignments.length === 0}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                  currentAssignmentIndex === 0 || tomorrowAssignments.length === 0
+                    ? 'opacity-50 cursor-not-allowed'
+                    : dark
+                    ? 'bg-gray-600 hover:bg-gray-500 text-white'
+                    : 'bg-gray-300 hover:bg-gray-400'
+                }`}
+              >
+                ← Previous
+              </button>
+              <span className={`text-sm font-semibold px-3 py-1 rounded-lg ${dark ? 'bg-gray-600' : 'bg-gray-200'}`}>
+                {tomorrowAssignments.length === 0 ? '0 of 0' : `${currentAssignmentIndex + 1} of ${filteredAssignments.length}`}
+              </span>
+              <button
+                onClick={() => setCurrentAssignmentIndex(Math.min(filteredAssignments.length - 1, currentAssignmentIndex + 1))}
+                disabled={currentAssignmentIndex >= filteredAssignments.length - 1 || tomorrowAssignments.length === 0}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                  currentAssignmentIndex >= filteredAssignments.length - 1 || tomorrowAssignments.length === 0
+                    ? 'opacity-50 cursor-not-allowed'
+                    : dark
+                    ? 'bg-gray-600 hover:bg-gray-500 text-white'
+                    : 'bg-gray-300 hover:bg-gray-400'
+                }`}
+              >
+                Next →
+              </button>
             </div>
-          ) : (
-            <p className="text-sm text-gray-500">Loading assignments or no data available...</p>
-          )}
+          </div>
         </div>
 
         {loading ? (
