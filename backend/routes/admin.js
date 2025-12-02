@@ -362,22 +362,18 @@ router.post('/fix-payroll-base-salaries', requirePermission('employees'), async 
     console.log(`   Performed by: ${currentUser?.name || currentUser?.email}`);
     console.log(`   Reason: ${reason || 'N/A'}`);
 
-    const db = (await Payroll.collection.db.admin().db()).db;
-    const payrollCol = db.collection('payrolls');
-
-    // Find payroll records with baseSalary = 0 or null
+    // Build query for payroll records with baseSalary = 0 or null
     const query = {
       baseSalary: { $in: [0, null, undefined] },
-      $or: targetNames.map(name => ({
-        $or: [
-          { 'user.name': { $regex: name, $options: 'i' } },
-          { tellerName: { $regex: name, $options: 'i' } },
-          { name: { $regex: name, $options: 'i' } }
-        ]
-      }))
+      $or: targetNames.flatMap(name => [
+        { 'user.name': { $regex: `^${name}$`, $options: 'i' } },
+        { tellerName: { $regex: `^${name}$`, $options: 'i' } },
+        { name: { $regex: `^${name}$`, $options: 'i' } }
+      ])
     };
 
-    const payrolls = await payrollCol.find(query).toArray();
+    // Use Mongoose model to query
+    const payrolls = await Payroll.find(query).populate('user');
     console.log(`Found ${payrolls.length} payroll records to update`);
 
     if (payrolls.length === 0) {
@@ -426,17 +422,18 @@ router.post('/fix-payroll-base-salaries', requirePermission('employees'), async 
           }
         }
 
-        const result = await payrollCol.updateOne(
-          { _id: payroll._id },
+        const result = await Payroll.findByIdAndUpdate(
+          payroll._id,
           { 
             $set: { 
               baseSalary: newBaseSalary,
               updatedAt: new Date()
             }
-          }
+          },
+          { new: true }
         );
 
-        if (result.modifiedCount > 0) {
+        if (result) {
           const name = payroll.user?.name || payroll.tellerName || payroll.name || 'Unknown';
           details.push({
             employee: name,
