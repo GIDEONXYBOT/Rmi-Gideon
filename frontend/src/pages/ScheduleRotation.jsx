@@ -40,6 +40,10 @@ export default function ScheduleRotation() {
   const [workDaysRange, setWorkDaysRange] = useState('week'); // 'week' | 'month' | 'year' | 'all'
   const [generating, setGenerating] = useState(false);
   
+  // 🆕 Navigation for tomorrow's assignments
+  const [currentAssignmentIndex, setCurrentAssignmentIndex] = useState(0);
+  const [filterStatus, setFilterStatus] = useState('present'); // 'all' | 'present' | 'absent' | 'pending'
+  
   // 🆕 Date range filter for tomorrow's schedule
   const [useCustomDateRange, setUseCustomDateRange] = useState(false);
   const [customRangeStart, setCustomRangeStart] = useState('');
@@ -516,6 +520,14 @@ export default function ScheduleRotation() {
     }
   };
 
+  // 🆕 Get filtered assignments based on status filter
+  const filteredAssignments = filterStatus === 'all' 
+    ? tomorrowAssignments 
+    : tomorrowAssignments.filter(a => (a.status || 'pending') === filterStatus);
+
+  // 🆕 Get current assignment
+  const currentAssignment = filteredAssignments[currentAssignmentIndex] || null;
+
   return (
     <div
       className={`p-6 min-h-screen ${
@@ -629,110 +641,220 @@ export default function ScheduleRotation() {
           </div>
         </div>
 
+        {/* 🆕 Filter and Navigation Controls */}
+        {tomorrowAssignments.length > 0 && (
+          <div className={`mb-6 p-4 rounded-lg ${dark ? "bg-gray-700" : "bg-gray-50"}`}>
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+              {/* Status Filter */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold">Filter:</span>
+                <div className="flex gap-2">
+                  {['all', 'present', 'absent', 'pending'].map((status) => (
+                    <button
+                      key={status}
+                      onClick={() => {
+                        setFilterStatus(status);
+                        setCurrentAssignmentIndex(0);
+                      }}
+                      className={`px-3 py-1 rounded-lg text-xs font-medium transition ${
+                        filterStatus === status
+                          ? status === 'present'
+                            ? 'bg-green-600 text-white'
+                            : status === 'absent'
+                            ? 'bg-red-600 text-white'
+                            : status === 'pending'
+                            ? 'bg-yellow-500 text-white'
+                            : 'bg-blue-600 text-white'
+                          : dark
+                          ? 'bg-gray-600 hover:bg-gray-500 text-gray-200'
+                          : 'bg-gray-300 hover:bg-gray-400'
+                      }`}
+                    >
+                      {status.charAt(0).toUpperCase() + status.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Navigation Buttons */}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setCurrentAssignmentIndex(Math.max(0, currentAssignmentIndex - 1))}
+                  disabled={currentAssignmentIndex === 0}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                    currentAssignmentIndex === 0
+                      ? 'opacity-50 cursor-not-allowed'
+                      : dark
+                      ? 'bg-gray-600 hover:bg-gray-500 text-white'
+                      : 'bg-gray-300 hover:bg-gray-400'
+                  }`}
+                >
+                  ← Previous
+                </button>
+                <span className={`text-sm font-semibold px-3 py-1 rounded-lg ${dark ? 'bg-gray-600' : 'bg-gray-200'}`}>
+                  {currentAssignmentIndex + 1} of {filteredAssignments.length}
+                </span>
+                <button
+                  onClick={() => setCurrentAssignmentIndex(Math.min(filteredAssignments.length - 1, currentAssignmentIndex + 1))}
+                  disabled={currentAssignmentIndex >= filteredAssignments.length - 1}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                    currentAssignmentIndex >= filteredAssignments.length - 1
+                      ? 'opacity-50 cursor-not-allowed'
+                      : dark
+                      ? 'bg-gray-600 hover:bg-gray-500 text-white'
+                      : 'bg-gray-300 hover:bg-gray-400'
+                  }`}
+                >
+                  Next →
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {loading ? (
           <div className="text-center text-gray-400 py-6">Loading...</div>
         ) : tomorrowAssignments.length === 0 ? (
           <div className="text-center text-gray-400 py-6">
             No teller assignments found.
           </div>
+        ) : filteredAssignments.length === 0 ? (
+          <div className="text-center text-gray-400 py-6">
+            No assignments with status: <strong>{filterStatus}</strong>
+          </div>
         ) : (
-          <table className="w-full text-sm">
-            <thead
-              className={`${dark ? "bg-gray-700" : "bg-gray-100"} text-left`}
-            >
-              <tr>
-                <th className="p-3">Teller</th>
-                <th className="p-3">
-                  Days Worked
-                  <span className="text-xs text-gray-500 font-normal ml-1">
-                    ({useCustomDateRange ? `${customRangeStart} to ${customRangeEnd}` : (workDaysRange === 'week' ? 'Mon-Sun' : workDaysRange === 'month' ? 'This month' : workDaysRange === 'year' ? 'This year' : 'All-time')})
-                  </span>
-                </th>
-                {isAdminOnly && <th className="p-3 text-center">Actions</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {tomorrowAssignments.map((a) => (
-                <tr
-                  key={a._id}
-                  className={`${
-                    dark ? "hover:bg-gray-700" : "hover:bg-gray-50"
-                  }`}
+          <div className={`p-4 rounded-lg ${dark ? "bg-gray-800" : "bg-white"}`}>
+            {/* Current Assignment Details */}
+            <div className="mb-6 p-4 rounded-lg border-2 border-indigo-500">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="text-xl font-bold">{currentAssignment?.tellerName}</h3>
+                  <p className={`text-sm mt-2 ${
+                    currentAssignment?.status === 'present'
+                      ? 'text-green-500'
+                      : currentAssignment?.status === 'absent'
+                      ? 'text-red-500'
+                      : 'text-yellow-500'
+                  }`}>
+                    Status: <span className="font-semibold">{(currentAssignment?.status || 'pending').toUpperCase()}</span>
+                  </p>
+                  <p className="text-sm mt-1 text-gray-400">
+                    Days Worked: <span className="font-semibold">{currentAssignment?.rangeWorkDays || 0} days</span>
+                  </p>
+                </div>
+                {isAdminOnly && (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => markPresent(currentAssignment?._id)}
+                      className="flex items-center gap-1 px-3 py-2 text-xs rounded-lg bg-green-600 text-white hover:opacity-90"
+                    >
+                      <Check className="w-4 h-4" /> Present
+                    </button>
+                    <button
+                      onClick={() => markAbsent(currentAssignment?._id)}
+                      className="flex items-center gap-1 px-3 py-2 text-xs rounded-lg bg-red-600 text-white hover:opacity-90"
+                    >
+                      <X className="w-4 h-4" /> Absent
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* All Assignments Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead
+                  className={`${dark ? "bg-gray-700" : "bg-gray-100"} text-left`}
                 >
-                  <td className="p-3 flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-500">
-                      <User className="w-4 h-4" />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`w-3 h-3 rounded-full ${
-                          a.status === "present"
-                            ? "bg-green-500"
-                            : a.status === "absent"
-                            ? "bg-red-500"
-                            : "bg-yellow-400"
-                        }`}
-                      ></span>
-                      <span className="font-semibold">{a.tellerName}</span>
-                      {a.isFullWeek && (
-                        <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                          Full-week
+                  <tr>
+                    <th className="p-3">Teller</th>
+                    <th className="p-3">Status</th>
+                    <th className="p-3">
+                      Days Worked
+                      <span className="text-xs text-gray-500 font-normal ml-1">
+                        ({useCustomDateRange ? `${customRangeStart} to ${customRangeEnd}` : (workDaysRange === 'week' ? 'Mon-Sun' : workDaysRange === 'month' ? 'This month' : workDaysRange === 'year' ? 'This year' : 'All-time')})
+                      </span>
+                    </th>
+                    {isAdminOnly && <th className="p-3 text-center">Actions</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredAssignments.map((a, idx) => (
+                    <tr
+                      key={a._id}
+                      onClick={() => setCurrentAssignmentIndex(idx)}
+                      className={`cursor-pointer transition ${
+                        idx === currentAssignmentIndex
+                          ? dark
+                            ? 'bg-indigo-900/50 border-l-4 border-indigo-500'
+                            : 'bg-indigo-50 border-l-4 border-indigo-500'
+                          : dark
+                          ? 'hover:bg-gray-700'
+                          : 'hover:bg-gray-50'
+                      }`}
+                    >
+                      <td className="p-3 flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-500">
+                          <User className="w-4 h-4" />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold">{a.tellerName}</span>
+                          {a.isFullWeek && (
+                            <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                              Full-week
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-3">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          a.status === 'present'
+                            ? 'bg-green-100 text-green-800'
+                            : a.status === 'absent'
+                            ? 'bg-red-100 text-red-800'
+                            : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {(a.status || 'pending').charAt(0).toUpperCase() + (a.status || 'pending').slice(1)}
                         </span>
+                      </td>
+                      <td className="p-3">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          {typeof a.rangeWorkDays !== 'undefined' ? a.rangeWorkDays : (a.totalWorkDays || 0)} days
+                        </span>
+                      </td>
+                      {isAdminOnly && (
+                        <td className="p-3 text-center">
+                          <div className="flex justify-center gap-2">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                markPresent(a._id);
+                              }}
+                              className="flex items-center gap-1 px-3 py-1 text-xs rounded-lg bg-green-600 text-white hover:opacity-90"
+                            >
+                              <Check className="w-3 h-3" /> Present
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                markAbsent(a._id);
+                              }}
+                              className="flex items-center gap-1 px-3 py-1 text-xs rounded-lg bg-red-600 text-white hover:opacity-90"
+                            >
+                              <X className="w-3 h-3" /> Absent
+                            </button>
+                          </div>
+                        </td>
                       )}
-                    </div>
-                  </td>
-                  <td className="p-3">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      {typeof a.rangeWorkDays !== 'undefined' ? a.rangeWorkDays : (a.totalWorkDays || 0)} days
-                    </span>
-                  </td>
-                  {isAdminOnly && (
-                    <td className="p-3 text-center">
-                      <div className="flex justify-center gap-2">
-                        <button
-                          onClick={() => markPresent(a._id)}
-                          className="flex items-center gap-1 px-3 py-1 text-xs rounded-lg bg-green-600 text-white hover:opacity-90"
-                        >
-                          <Check className="w-3 h-3" /> Present
-                        </button>
-                        <button
-                          onClick={() => markAbsent(a._id)}
-                          className="flex items-center gap-1 px-3 py-1 text-xs rounded-lg bg-red-600 text-white hover:opacity-90"
-                        >
-                          <X className="w-3 h-3" /> Absent
-                        </button>
-                        {/* Replace button for super_admin to select replacement for this assignment */}
-                        {user?.role === 'super_admin' && (
-                          <button
-                            onClick={async () => {
-                              // Open replacement modal for this assignment
-                              setSelectedAssignment(a);
-                              setSuggestLoading(true);
-                              setShowModal(true);
-                              try {
-                                const token = localStorage.getItem('token');
-                                const res = await axios.get(`${API}/api/schedule/suggest/${a.dayKey}`, { headers: { Authorization: `Bearer ${token}` } });
-                                setSuggestions(res.data.suggestions || []);
-                              } catch (err) {
-                                console.error('❌ Failed to fetch replacement suggestions:', err);
-                                setSuggestions([]);
-                              } finally {
-                                setSuggestLoading(false);
-                              }
-                            }}
-                            className="flex items-center gap-1 px-3 py-1 text-xs rounded-lg bg-yellow-500 text-white hover:opacity-90"
-                          >
-                            Replace
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         )}
+      </div>
       </div>
 
       {/* 🆕 Today's Working Tellers */}
