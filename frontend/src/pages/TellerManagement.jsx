@@ -974,6 +974,7 @@ export default function TellerManagement() {
                               )}
                             </div>
                           )}
+                        </td>
                       </tr>
                     );
                   })
