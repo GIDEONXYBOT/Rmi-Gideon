@@ -29,6 +29,22 @@ function getLocalIP() {
 dotenv.config();
 const app = express();
 
+// 🔧 Health check and connectivity test endpoint (before security middleware)
+app.get('/api/health', (req, res) => {
+  const clientInfo = {
+    timestamp: new Date().toISOString(),
+    clientIP: req.ip || req.connection.remoteAddress,
+    userAgent: req.headers['user-agent'],
+    origin: req.headers.origin,
+    host: req.headers.host,
+    serverIP: getLocalIP(),
+    message: 'Backend server is running'
+  };
+
+  console.log('🏥 Health check requested:', clientInfo);
+  res.json(clientInfo);
+});
+
 // Production Security Middleware (must be first)
 if (process.env.NODE_ENV === 'production') {
   securityMiddleware(app);
@@ -65,21 +81,6 @@ app.use((req, res, next) => {
     console.log(`📥 ${req.method} ${req.path} from ${req.ip || 'unknown'}`);
   }
   next();
-});
-
-// 🔧 Health check and connectivity test endpoint
-app.get('/api/health', (req, res) => {
-  const clientInfo = {
-    timestamp: new Date().toISOString(),
-    clientIP: req.ip || req.connection.remoteAddress,
-    userAgent: req.headers['user-agent'],
-    origin: req.headers.origin,
-    host: req.headers.host,
-    serverIP: getLocalIP(),
-    message: 'Backend server is running'
-  };
-  console.log('🏥 Health check requested:', clientInfo);
-  res.json(clientInfo);
 });
 
 // Database Connection
