@@ -17,6 +17,8 @@ export default function PayrollBaseSalaryFixer() {
   const [auditLogs, setAuditLogs] = useState([]);
   const [reason, setReason] = useState("");
   const [targetEmployees, setTargetEmployees] = useState([]);
+  const [showHistoricalModal, setShowHistoricalModal] = useState(false);
+  const [historicalReason, setHistoricalReason] = useState("");
 
   // Fetch employees with zero base salary
   const fetchEmployeesWithZeroSalary = async () => {
@@ -150,6 +152,72 @@ export default function PayrollBaseSalaryFixer() {
     }
   };
 
+  // Fix ALL historical payroll records
+  const handleFixAllHistorical = async () => {
+    if (!historicalReason.trim()) {
+      showToast({
+        type: "warning",
+        message: "Please provide a reason for this batch update."
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const API_BASE = getApiUrl();
+
+      const response = await axios.post(
+        `${API_BASE}/api/admin/fix-all-historical-payroll`,
+        {
+          reason: historicalReason
+        }
+      );
+
+      const data = response.data;
+
+      if (data.success) {
+        showToast({
+          type: "success",
+          message: `✅ ${data.message}`
+        });
+
+        if (data.updated > 0) {
+          showToast({
+            type: "info",
+            message: `Fixed ${data.updated} historical payroll records`
+          });
+        }
+
+        if (data.notificationSent) {
+          showToast({
+            type: "info",
+            message: "📧 Notifications sent to admin"
+          });
+        }
+
+        setHistoricalReason("");
+        setShowHistoricalModal(false);
+        
+        // Refresh audit logs
+        setTimeout(() => fetchAuditLogs(), 1000);
+      } else {
+        showToast({
+          type: "error",
+          message: data.message || "Update failed"
+        });
+      }
+    } catch (err) {
+      const errorMsg = err.response?.data?.error || err.message;
+      showToast({
+        type: "error",
+        message: `❌ ${errorMsg}`
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className={`p-6 rounded-lg ${dark ? "bg-gray-800" : "bg-white"}`}>
       <div className="flex items-center justify-between mb-6">
@@ -239,24 +307,44 @@ export default function PayrollBaseSalaryFixer() {
             </div>
           </div>
 
-          {/* Action Button */}
-          <button
-            onClick={() => setShowModal(true)}
-            disabled={loading}
-            className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center gap-2"
-          >
-            {loading ? (
-              <>
-                <Loader2 size={18} className="animate-spin" />
-                Processing...
-              </>
-            ) : (
-              <>
-                <CheckCircle size={18} />
-                Execute Base Salary Fix
-              </>
-            )}
-          </button>
+          {/* Action Buttons */}
+          <div className="flex gap-3">
+            <button
+              onClick={() => setShowModal(true)}
+              disabled={loading}
+              className="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <Loader2 size={18} className="animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <CheckCircle size={18} />
+                  Fix New Employees
+                </>
+              )}
+            </button>
+            
+            <button
+              onClick={() => setShowHistoricalModal(true)}
+              disabled={loading}
+              className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <Loader2 size={18} className="animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <RefreshCw size={18} />
+                  Fix All Historical
+                </>
+              )}
+            </button>
+          </div>
         </>
       )}
 
@@ -323,6 +411,71 @@ export default function PayrollBaseSalaryFixer() {
               >
                 {loading && <Loader2 size={16} className="animate-spin" />}
                 Confirm Update
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Historical Payroll Fix Modal */}
+      {showHistoricalModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div
+            className={`rounded-lg p-6 w-full max-w-md ${
+              dark ? "bg-gray-900" : "bg-white"
+            }`}
+          >
+            <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+              <AlertTriangle className="text-red-500" />
+              Fix All Historical Payroll
+            </h3>
+
+            <p className="text-sm mb-4 leading-relaxed">
+              This will fix <strong>ALL historical payroll records</strong> with ₱0 base salary,
+              automatically assigning the correct salary based on each employee's role:
+            </p>
+
+            <ul className="text-sm mb-4 space-y-1 ml-4 list-disc">
+              <li>Tellers: ₱450</li>
+              <li>Supervisors: ₱600</li>
+              <li>Watchers: ₱400-450</li>
+              <li>Admins: ₱0</li>
+            </ul>
+
+            <div className="mb-4">
+              <label className="block text-sm font-semibold mb-2">
+                Reason for Update:
+              </label>
+              <textarea
+                value={historicalReason}
+                onChange={(e) => setHistoricalReason(e.target.value)}
+                placeholder="e.g., Bulk fix for historical payroll records created before salary sync..."
+                className={`w-full px-3 py-2 rounded-lg border text-sm resize-none ${
+                  dark
+                    ? "bg-gray-700 border-gray-600 text-white"
+                    : "bg-gray-50 border-gray-300"
+                }`}
+                rows={3}
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowHistoricalModal(false)}
+                className={`flex-1 px-4 py-2 rounded-lg transition ${
+                  dark
+                    ? "bg-gray-700 hover:bg-gray-600"
+                    : "bg-gray-300 hover:bg-gray-400"
+                }`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleFixAllHistorical}
+                disabled={loading || !historicalReason.trim()}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              >
+                {loading ? "Processing..." : "Confirm & Fix All"}
               </button>
             </div>
           </div>

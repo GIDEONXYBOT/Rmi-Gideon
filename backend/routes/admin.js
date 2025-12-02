@@ -637,4 +637,151 @@ router.get('/employees-with-zero-salary', requirePermission('employees'), async 
   }
 });
 
+/**
+ * 🔧 FIX ALL HISTORICAL PAYROLL WITH ZERO BASE SALARY
+ * POST /api/admin/fix-all-historical-payroll
+ * Fixes ALL payroll records with baseSalary = 0 (not just specific employees)
+ */
+router.post('/fix-all-historical-payroll', requirePermission('employees'), async (req, res) => {
+  try {
+    const { reason = 'Batch fix for historical payroll records with zero base salary' } = req.body;
+    const currentUser = req.user;
+
+    console.log(`🔧 Fixing ALL historical payroll records with ₱0 base salary...`);
+    console.log(`   Performed by: ${currentUser?.name || currentUser?.email}`);
+
+    // Find ALL payroll records with zero base salary
+    const payrolls = await Payroll.find({ 
+      baseSalary: { $in: [0, null, undefined] } 
+    }).populate('user');
+
+    if (payrolls.length === 0) {
+      return res.json({
+        success: true,
+        message: 'No payroll records with ₱0 base salary found',
+        updated: 0,
+        details: []
+      });
+    }
+
+    console.log(`Found ${payrolls.length} payroll records to fix`);
+
+    // Update all payroll records
+    const details = [];
+    let updateCount = 0;
+
+    for (const payroll of payrolls) {
+      try {
+        // Determine correct salary based on user role
+        let newBaseSalary = 450; // default for tellers
+        
+        if (payroll.user) {
+          const role = payroll.user.role;
+          if (role === 'supervisor' || role === 'supervisor_teller') {
+            newBaseSalary = 600;
+          } else if (role === 'admin' || role === 'super_admin') {
+            newBaseSalary = 0;
+          } else if (role === 'head_watcher') {
+            newBaseSalary = 450;
+          } else if (role === 'sub_watcher') {
+            newBaseSalary = 400;
+          } else if (role === 'declarator') {
+            newBaseSalary = 450;
+          }
+        }
+
+        // Update the payroll record
+        const updated = await Payroll.findByIdAndUpdate(
+          payroll._id,
+          {
+            $set: {
+              baseSalary: newBaseSalary,
+              updatedAt: new Date()
+            }
+          },
+          { new: true }
+        );
+
+        if (updated) {
+          const empName = payroll.user?.name || payroll.tellerName || payroll.name || 'Unknown';
+          details.push({
+            employee: empName,
+            date: payroll.date,
+            baseSalaryBefore: payroll.baseSalary || 0,
+            baseSalaryAfter: newBaseSalary
+          });
+          updateCount++;
+          
+          if (updateCount % 100 === 0) {
+            console.log(`   ✅ Updated ${updateCount} records...`);
+          }
+        }
+      } catch (err) {
+        console.error(`Error updating payroll ${payroll._id}:`, err.message);
+      }
+    }
+
+    console.log(`✅ Completed: ${updateCount} payroll records updated`);
+
+    // Create audit log
+    const auditLog = new PayrollAuditLog({
+      actionType: 'BATCH_UPDATE',
+      performedBy: {
+        userId: currentUser._id,
+        name: currentUser.name,
+        email: currentUser.email,
+        role: currentUser.role
+      },
+      targetEmployees: Array.from(new Set(details.map(d => d.employee))).map(name => ({
+        employeeName: name,
+        affectedRecords: details.filter(d => d.employee === name).length
+      })),
+      totalRecordsUpdated: updateCount,
+      payrollsUpdated: updateCount,
+      changes: {
+        fixType: 'ALL_HISTORICAL',
+        basedOnUserRole: true
+      },
+      reason,
+      status: 'SUCCESS',
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent']
+    });
+
+    await auditLog.save();
+
+    // Send email notification
+    const notificationSent = await sendPayrollUpdateNotification({
+      recipients: [
+        process.env.ADMIN_EMAIL || currentUser.email,
+        ...(process.env.NOTIFICATION_EMAILS ? process.env.NOTIFICATION_EMAILS.split(',') : [])
+      ],
+      employeeUpdates: details.slice(0, 20), // Send first 20 in email
+      totalRecords: updateCount,
+      performedBy: currentUser.name || currentUser.email,
+      reason: `${reason} (Total: ${updateCount} records)`
+    });
+
+    res.json({
+      success: true,
+      message: `✅ Fixed ${updateCount} historical payroll records with base salaries based on employee roles`,
+      updated: updateCount,
+      details: details.slice(0, 50), // Return first 50 in response
+      auditLogId: auditLog._id,
+      notificationSent
+    });
+
+  } catch (err) {
+    console.error("❌ Error fixing historical payroll:", err);
+    
+    await sendErrorNotification(
+      process.env.ADMIN_EMAIL,
+      err,
+      { type: 'fix-all-historical-payroll' }
+    );
+
+    res.status(500).json({ error: "Failed to fix historical payroll records", details: err.message });
+  }
+});
+
 export default router;
