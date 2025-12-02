@@ -72,7 +72,8 @@ const securityMiddleware = (app) => {
 
         if (allowedHost.includes('*')) {
           // convert wildcard host (*.example.com) into a safe regex
-          const pattern = '^' + allowedHost.split('.').map(part => part === '*' ? '[^.\\/]+' : part.replace(/[-\\^$*+?.()|[\]{}]/g, '\\$&')).join('\\.') + '$';
+          const escaped = allowedHost.replace(/[-\\^$*+?.()|[\]{}]/g, '\\$&');
+          const pattern = '^' + escaped.replace('\\*', '.*') + '$';
           const re = new RegExp(pattern, 'i');
           if (re.test(originHost)) return callback(null, true);
         } else if (allowedHost === originHost) {
