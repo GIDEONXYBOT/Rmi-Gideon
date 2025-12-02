@@ -4,6 +4,8 @@ import { requirePermission } from '../middleware/permission.js';
 import User from "../models/User.js";
 import TellerReport from "../models/TellerReport.js";
 import Payroll from "../models/Payroll.js";
+import PayrollAuditLog from "../models/PayrollAuditLog.js";
+import { sendPayrollUpdateNotification, sendErrorNotification } from '../services/emailService.js';
 import bcrypt from "bcrypt";
 
 const router = express.Router();
@@ -387,6 +389,256 @@ router.post("/fix-base-salaries", requirePermission('employees'), async (req, re
   } catch (err) {
     console.error("❌ Error fixing base salaries:", err);
     res.status(500).json({ error: "Failed to fix base salaries" });
+  }
+});
+
+/**
+ * 🔧 UPDATE PAYROLL BASE SALARIES FOR EMPLOYEES WITH ₱0
+ * POST /api/admin/fix-payroll-base-salaries
+ * Body: { targetNames: [...], baseSalary: 450, conditionalSalaries: { apple: 600 }, reason: "..." }
+ */
+router.post('/fix-payroll-base-salaries', requirePermission('employees'), async (req, res) => {
+  try {
+    const { targetNames, baseSalary = 450, conditionalSalaries = {}, reason = '' } = req.body;
+    const currentUser = req.user; // From auth middleware
+
+    if (!targetNames || !Array.isArray(targetNames)) {
+      return res.status(400).json({ error: "targetNames array is required" });
+    }
+
+    console.log(`🔧 Updating payroll base salaries for: ${targetNames.join(', ')}`);
+    console.log(`   Performed by: ${currentUser?.name || currentUser?.email}`);
+    console.log(`   Reason: ${reason || 'N/A'}`);
+
+    const db = (await Payroll.collection.db.admin().db()).db;
+    const payrollCol = db.collection('payrolls');
+
+    // Find payroll records with baseSalary = 0 or null
+    const query = {
+      baseSalary: { $in: [0, null, undefined] },
+      $or: targetNames.map(name => ({
+        $or: [
+          { 'user.name': { $regex: name, $options: 'i' } },
+          { tellerName: { $regex: name, $options: 'i' } },
+          { name: { $regex: name, $options: 'i' } }
+        ]
+      }))
+    };
+
+    const payrolls = await payrollCol.find(query).toArray();
+    console.log(`Found ${payrolls.length} payroll records to update`);
+
+    if (payrolls.length === 0) {
+      const auditLog = new PayrollAuditLog({
+        actionType: 'BATCH_UPDATE',
+        performedBy: {
+          userId: currentUser._id,
+          name: currentUser.name,
+          email: currentUser.email,
+          role: currentUser.role
+        },
+        targetEmployees: targetNames.map(name => ({ employeeName: name, baseSalaryBefore: 0, baseSalaryAfter: 0, affectedRecords: 0 })),
+        totalRecordsUpdated: 0,
+        reason,
+        status: 'SUCCESS',
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent']
+      });
+
+      await auditLog.save();
+
+      return res.json({
+        success: true,
+        message: 'No payroll records found with ₱0 base salary for these employees',
+        updated: 0,
+        details: [],
+        auditLogId: auditLog._id
+      });
+    }
+
+    // Update payrolls
+    const details = [];
+    let updateErrors = [];
+
+    for (const payroll of payrolls) {
+      try {
+        // Determine the salary for this employee
+        let newBaseSalary = baseSalary;
+        const employeeName = (payroll.user?.name || payroll.tellerName || payroll.name || '').toLowerCase();
+        
+        // Check if this employee has a conditional salary
+        for (const [targetName, conditionalAmount] of Object.entries(conditionalSalaries)) {
+          if (employeeName.includes(targetName.toLowerCase())) {
+            newBaseSalary = conditionalAmount;
+            break;
+          }
+        }
+
+        const result = await payrollCol.updateOne(
+          { _id: payroll._id },
+          { 
+            $set: { 
+              baseSalary: newBaseSalary,
+              updatedAt: new Date()
+            }
+          }
+        );
+
+        if (result.modifiedCount > 0) {
+          const name = payroll.user?.name || payroll.tellerName || payroll.name || 'Unknown';
+          details.push({
+            employee: name,
+            date: payroll.date,
+            baseSalaryBefore: payroll.baseSalary || 0,
+            baseSalaryAfter: newBaseSalary,
+            updated: true
+          });
+        }
+      } catch (err) {
+        updateErrors.push({
+          payrollId: payroll._id,
+          error: err.message
+        });
+      }
+    }
+
+    // Also update user base salary
+    console.log(`\nUpdating user records...`);
+    let usersUpdated = 0;
+    const userUpdates = [];
+
+    for (const name of targetNames) {
+      try {
+        const user = await User.findOne({
+          name: { $regex: name, $options: 'i' }
+        });
+
+        if (user) {
+          // Determine salary for this user
+          let newBaseSalary = baseSalary;
+          
+          for (const [targetName, conditionalAmount] of Object.entries(conditionalSalaries)) {
+            if (user.name.toLowerCase().includes(targetName.toLowerCase())) {
+              newBaseSalary = conditionalAmount;
+              break;
+            }
+          }
+
+          if (user.baseSalary !== newBaseSalary) {
+            await User.findByIdAndUpdate(user._id, { baseSalary: newBaseSalary });
+            usersUpdated++;
+            userUpdates.push({
+              employeeName: user.name,
+              baseSalaryBefore: user.baseSalary || 0,
+              baseSalaryAfter: newBaseSalary
+            });
+            console.log(`✅ Updated user: ${user.name} → ₱${newBaseSalary}`);
+          }
+        }
+      } catch (err) {
+        updateErrors.push({
+          user: name,
+          error: err.message
+        });
+      }
+    }
+
+    // Create audit log
+    const auditLog = new PayrollAuditLog({
+      actionType: 'BATCH_UPDATE',
+      performedBy: {
+        userId: currentUser._id,
+        name: currentUser.name,
+        email: currentUser.email,
+        role: currentUser.role
+      },
+      targetEmployees: details.map(d => ({
+        employeeName: d.employee,
+        baseSalaryBefore: d.baseSalaryBefore,
+        baseSalaryAfter: d.baseSalaryAfter,
+        affectedRecords: 1
+      })),
+      totalRecordsUpdated: details.length,
+      payrollsUpdated: details.length,
+      usersUpdated,
+      changes: {
+        baseSalary: baseSalary,
+        conditionalSalaries,
+        targetEmployees: targetNames
+      },
+      reason,
+      status: updateErrors.length === 0 ? 'SUCCESS' : updateErrors.length === details.length ? 'FAILED' : 'PARTIAL',
+      errorMessage: updateErrors.length > 0 ? JSON.stringify(updateErrors) : null,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent']
+    });
+
+    await auditLog.save();
+
+    console.log(`✅ Completed: ${details.length} payroll records + ${usersUpdated} users updated`);
+
+    // Send email notification
+    const notificationSent = await sendPayrollUpdateNotification({
+      recipients: [
+        process.env.ADMIN_EMAIL || currentUser.email,
+        ...(process.env.NOTIFICATION_EMAILS ? process.env.NOTIFICATION_EMAILS.split(',') : [])
+      ],
+      employeeUpdates: [...details, ...userUpdates],
+      totalRecords: details.length + usersUpdated,
+      performedBy: currentUser.name || currentUser.email,
+      reason
+    });
+
+    if (notificationSent) {
+      await PayrollAuditLog.findByIdAndUpdate(auditLog._id, { notificationSent: true });
+    }
+
+    res.json({
+      success: true,
+      message: `Updated ${details.length} payroll records and ${usersUpdated} user records`,
+      updated: details.length,
+      usersUpdated,
+      details,
+      auditLogId: auditLog._id,
+      notificationSent
+    });
+
+  } catch (err) {
+    console.error("❌ Error updating payroll base salaries:", err);
+    
+    // Send error notification to admin
+    await sendErrorNotification(
+      process.env.ADMIN_EMAIL,
+      err,
+      { employees: req.body?.targetNames || [] }
+    );
+
+    res.status(500).json({ error: "Failed to update payroll base salaries", details: err.message });
+  }
+});
+
+/**
+ * 📋 GET PAYROLL AUDIT LOGS
+ * GET /api/admin/payroll-audit-logs
+ */
+router.get('/payroll-audit-logs', requirePermission('employees'), async (req, res) => {
+  try {
+    const { limit = 10, sort = -1, actionType = null } = req.query;
+
+    let query = {};
+    if (actionType) {
+      query.actionType = actionType;
+    }
+
+    const logs = await PayrollAuditLog.find(query)
+      .sort({ createdAt: sort })
+      .limit(parseInt(limit))
+      .lean();
+
+    res.json(logs);
+  } catch (err) {
+    console.error("❌ Error fetching audit logs:", err);
+    res.status(500).json({ error: "Failed to fetch audit logs" });
   }
 });
 
