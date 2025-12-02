@@ -642,8 +642,8 @@ export default function ScheduleRotation() {
         </div>
 
         {/* 🆕 Filter and Navigation Controls */}
-        {tomorrowAssignments.length > 0 && (
-          <div className={`mb-6 p-4 rounded-lg ${dark ? "bg-gray-700" : "bg-gray-50"}`}>
+        <div className={`mb-6 p-4 rounded-lg ${dark ? "bg-gray-700" : "bg-gray-50"}`}>
+          {tomorrowAssignments.length > 0 ? (
             <div className="flex flex-col md:flex-row items-center justify-between gap-4">
               {/* Status Filter */}
               <div className="flex items-center gap-2">
@@ -709,8 +709,10 @@ export default function ScheduleRotation() {
                 </button>
               </div>
             </div>
-          </div>
-        )}
+          ) : (
+            <p className="text-sm text-gray-500">Loading assignments or no data available...</p>
+          )}
+        </div>
 
         {loading ? (
           <div className="text-center text-gray-400 py-6">Loading...</div>
