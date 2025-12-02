@@ -45,6 +45,7 @@ const AVAILABLE_MENU_ITEMS = [
   { id: "employees", label: "Employee Management", icon: <Briefcase size={16} />, allowedRoles: ["super_admin", "admin"] },
   { id: "salary", label: "My Salary", icon: <Wallet size={16} />, allowedRoles: ["super_admin", "admin"] },
   { id: "payroll", label: "Payroll", icon: <DollarSign size={16} />, allowedRoles: ["super_admin", "admin", "supervisor", "teller"] },
+  { id: "payroll-fixer", label: "Payroll Base Salary Fixer", icon: <DollarSign size={16} />, allowedRoles: ["super_admin", "admin"] },
   { id: "my-shift", label: "My Shift", icon: <Users size={16} />, allowedRoles: ["supervisor", "supervisor_teller"] },
   { id: "history", label: "History", icon: <FileText size={16} />, allowedRoles: ["super_admin", "admin", "supervisor", "teller"] },
   { id: "teller-month", label: "Teller of the Month", icon: <Users size={16} />, allowedRoles: ["super_admin", "admin", "supervisor", "teller"] },
