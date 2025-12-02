@@ -39,6 +39,26 @@ export default function ScheduleRotation() {
   const [tellerCount, setTellerCount] = useState(3);
   const [workDaysRange, setWorkDaysRange] = useState('week'); // 'week' | 'month' | 'year' | 'all'
   const [generating, setGenerating] = useState(false);
+  
+  // 🆕 Date range filter for tomorrow's schedule
+  const [useCustomDateRange, setUseCustomDateRange] = useState(false);
+  const [customRangeStart, setCustomRangeStart] = useState('');
+  const [customRangeEnd, setCustomRangeEnd] = useState('');
+  
+  // Initialize default Monday-Sunday range
+  useEffect(() => {
+    // Calculate Monday and Sunday of current week
+    const today = new Date();
+    const day = today.getDay();
+    const diff = (day + 6) % 7; // days since Monday
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - diff);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    
+    setCustomRangeStart(monday.toISOString().slice(0, 10));
+    setCustomRangeEnd(sunday.toISOString().slice(0, 10));
+  }, []);
 
   // 🆕 Replacement modal & suggestions
   const [showModal, setShowModal] = useState(false);
@@ -147,8 +167,15 @@ export default function ScheduleRotation() {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
-      console.log('🔍 Fetching tomorrow schedule with range:', workDaysRange);
-      const res = await axios.get(`${API}/api/schedule/tomorrow?range=${workDaysRange}`, {
+      
+      // Build query with custom date range if enabled
+      let queryStr = `?range=${workDaysRange}`;
+      if (useCustomDateRange && customRangeStart && customRangeEnd) {
+        queryStr += `&startDate=${customRangeStart}&endDate=${customRangeEnd}`;
+      }
+      
+      console.log('🔍 Fetching tomorrow schedule with query:', queryStr);
+      const res = await axios.get(`${API}/api/schedule/tomorrow${queryStr}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       console.log('🔍 /api/schedule/tomorrow response:', res.data?.schedule?.map(s=>({id:s._id,tellerName:s.tellerName,rangeWorkDays:s.rangeWorkDays,range:s.range})));
@@ -556,18 +583,49 @@ export default function ScheduleRotation() {
           <Clock className="w-5 h-5 text-indigo-500" /> Tomorrow’s Assignments
           </h2>
 
-          <div className="flex items-center gap-3">
-            <label className="text-sm text-gray-400">Days worked range:</label>
-            <select
-              value={workDaysRange}
-              onChange={(e) => setWorkDaysRange(e.target.value)}
-              className={`text-sm p-2 rounded-lg border ${dark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-200'}`}
+          <div className="flex items-center gap-3 flex-wrap">
+            <label className="text-sm text-gray-400">Filter by date range:</label>
+            
+            {/* Toggle between predefined and custom range */}
+            <button
+              onClick={() => setUseCustomDateRange(!useCustomDateRange)}
+              className={`text-xs px-3 py-1.5 rounded-lg border ${
+                useCustomDateRange
+                  ? 'bg-indigo-600 text-white border-indigo-600'
+                  : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600'
+              }`}
             >
-              <option value="week">Last 7 days</option>
-              <option value="month">This month</option>
-              <option value="year">This year</option>
-              <option value="all">All-time</option>
-            </select>
+              {useCustomDateRange ? 'Custom Range' : 'Use Custom'}
+            </button>
+
+            {!useCustomDateRange ? (
+              <select
+                value={workDaysRange}
+                onChange={(e) => setWorkDaysRange(e.target.value)}
+                className={`text-sm p-2 rounded-lg border ${dark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-200'}`}
+              >
+                <option value="week">Last 7 days</option>
+                <option value="month">This month</option>
+                <option value="year">This year</option>
+                <option value="all">All-time</option>
+              </select>
+            ) : (
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={customRangeStart}
+                  onChange={(e) => setCustomRangeStart(e.target.value)}
+                  className={`text-sm p-2 rounded-lg border ${dark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-200'}`}
+                />
+                <span className="text-gray-400">to</span>
+                <input
+                  type="date"
+                  value={customRangeEnd}
+                  onChange={(e) => setCustomRangeEnd(e.target.value)}
+                  className={`text-sm p-2 rounded-lg border ${dark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-200'}`}
+                />
+              </div>
+            )}
           </div>
         </div>
 
@@ -1002,7 +1060,7 @@ export default function ScheduleRotation() {
       {showModal && isAdminOnly && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
           <div
-            className={`rounded-2xl shadow-lg p-6 w-full max-w-md ${
+            className={`rounded-2xl shadow-lg p-6 w-full max-w-2xl ${
               dark ? "bg-gray-800 text-gray-100" : "bg-white text-gray-900"
             }`}
           >
@@ -1018,32 +1076,65 @@ export default function ScheduleRotation() {
                 No available tellers to suggest.
               </div>
             ) : (
-              <ul className="divide-y divide-gray-200 max-h-60 overflow-y-auto">
+              <ul className="divide-y divide-gray-200 max-h-96 overflow-y-auto">
                 {suggestions.map((teller) => (
                   <li
                     key={teller._id}
-                    className="flex justify-between items-center py-3"
+                    className={`py-4 ${dark ? "hover:bg-gray-700" : "hover:bg-gray-50"}`}
                   >
-                    <div className="flex-1">
-                      <p className="font-semibold">{teller.name}</p>
-                      <div className="flex gap-3 text-xs text-gray-500 mt-1">
-                        <span>Last Worked: {teller.lastWorked || "Never"}</span>
+                    <div className="flex justify-between items-start gap-3 mb-2">
+                      <div className="flex-1">
+                        <p className="font-semibold text-sm">{teller.name || teller.username}</p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Total days worked (this week): <strong>{teller.weeklyWorkedDays || 0}</strong>
+                        </p>
                       </div>
-                      {teller.skipUntil && (
-                        <div className="flex items-center gap-3 mt-1">
-                          <p className="text-xs text-red-500">⚠️ Penalty until: {teller.skipUntil}</p>
-                          {isAdminOnly && (
-                            <button onClick={() => removePenalty(teller._id)} className="text-xs px-2 py-1 bg-red-600 text-white rounded-lg hover:opacity-90">Remove Penalty</button>
-                          )}
+                      <button
+                        onClick={() => handleReplace(teller._id)}
+                        className="bg-indigo-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-indigo-700 whitespace-nowrap"
+                      >
+                        Select
+                      </button>
+                    </div>
+
+                    {/* Daily breakdown */}
+                    {teller.dailyWorkedDays && (
+                      <div className="mt-2 bg-gray-100/50 dark:bg-gray-700/30 rounded p-2">
+                        <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Days breakdown (Mon-Sun):</p>
+                        <div className="grid grid-cols-7 gap-1">
+                          {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day) => (
+                            <div key={day} className="text-center">
+                              <div className="text-xs font-semibold text-gray-600 dark:text-gray-300">
+                                {day.slice(0, 3)}
+                              </div>
+                              <div className={`text-xs font-bold rounded py-1 ${
+                                teller.dailyWorkedDays[day] > 0
+                                  ? 'bg-green-500 text-white'
+                                  : 'bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300'
+                              }`}>
+                                {teller.dailyWorkedDays[day] || 0}
+                              </div>
+                            </div>
+                          ))}
                         </div>
+                      </div>
+                    )}
+
+                    {/* Last worked and penalty info */}
+                    <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                      {teller.lastWorked && (
+                        <span>Last Worked: {new Date(teller.lastWorked).toLocaleDateString()}</span>
                       )}
                     </div>
-                    <button
-                      onClick={() => handleReplace(teller._id)}
-                      className="bg-indigo-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-indigo-700 ml-3"
-                    >
-                      Select
-                    </button>
+
+                    {teller.skipUntil && (
+                      <div className="flex items-center gap-3 mt-2">
+                        <p className="text-xs text-red-500">⚠️ Penalty until: {new Date(teller.skipUntil).toLocaleDateString()}</p>
+                        {isAdminOnly && (
+                          <button onClick={() => removePenalty(teller._id)} className="text-xs px-2 py-1 bg-red-600 text-white rounded-lg hover:opacity-90">Remove Penalty</button>
+                        )}
+                      </div>
+                    )}
                   </li>
                 ))}
               </ul>

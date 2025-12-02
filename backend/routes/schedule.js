@@ -827,17 +827,34 @@ router.put("/mark-absent/:assignmentId", requireAuth, async (req, res) => {
 
 /**
  * ✅ SUGGESTED TELLERS (with work history based on weekly reports)
+ * Query params: startDate, endDate (optional, format: yyyy-MM-dd)
+ * If not provided, defaults to Monday-Sunday of the current week
  */
 router.get("/suggest/:dayKey", requireAuth, async (req, res) => {
   try {
     const { dayKey } = req.params;
+    const { startDate, endDate } = req.query;
 
-    // Calculate date range for past 7 days
-    const targetDate = DateTime.fromISO(dayKey);
-    const weekStart = targetDate.minus({ days: 7 }).toFormat("yyyy-MM-dd");
-    const weekEnd = targetDate.toFormat("yyyy-MM-dd");
-
-    console.log(`📊 Calculating weekly worked days from ${weekStart} to ${weekEnd}`);
+    // Determine date range
+    let weekStart, weekEnd;
+    
+    if (startDate && endDate) {
+      // Use provided range
+      weekStart = startDate;
+      weekEnd = endDate;
+      console.log(`📊 Using provided date range: ${weekStart} to ${weekEnd}`);
+    } else {
+      // Default: calculate Monday to Sunday of the week containing dayKey
+      const targetDate = DateTime.fromISO(dayKey).setZone("Asia/Manila");
+      // Get Monday of this week (day 1 is Monday)
+      const mondayOfWeek = targetDate.startOf('week').toFormat("yyyy-MM-dd");
+      // Get Sunday of this week
+      const sundayOfWeek = targetDate.endOf('week').toFormat("yyyy-MM-dd");
+      
+      weekStart = mondayOfWeek;
+      weekEnd = sundayOfWeek;
+      console.log(`📊 Calculating weekly worked days from ${weekStart} to ${weekEnd} (Monday-Sunday)`);
+    }
 
     const assigned = await DailyTellerAssignment.find({ dayKey }).distinct("tellerId");
 
@@ -854,17 +871,42 @@ router.get("/suggest/:dayKey", requireAuth, async (req, res) => {
       .select("_id name username contact status lastWorked skipUntil lastAbsentReason")
       .lean();
 
-    // Calculate weekly worked days for each teller based on their reports
+    // Helper function to get day of week name
+    const getDayOfWeek = (dateStr) => {
+      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const d = new Date(dateStr + 'T00:00:00Z');
+      return days[d.getUTCDay()];
+    };
+
+    // Calculate daily and weekly worked days for each teller based on their reports
     const suggestionsWithWeeklyData = await Promise.all(
       availableTellers.map(async (teller) => {
-        // Count reports submitted by this teller in the past 7 days
-        const weeklyReportsCount = await TellerReport.countDocuments({
-          tellerId: teller._id,
-          date: {
-            $gte: weekStart,
-            $lte: weekEnd
-          }
-        });
+        // Count reports for each day of the week
+        const dailyWorkedDays = {};
+        let totalWeeklyDays = 0;
+
+        // Generate all dates in the range
+        const allDates = [];
+        let currentDate = DateTime.fromISO(weekStart);
+        const endDateTime = DateTime.fromISO(weekEnd);
+        
+        while (currentDate <= endDateTime) {
+          const dateStr = currentDate.toFormat("yyyy-MM-dd");
+          allDates.push(dateStr);
+          currentDate = currentDate.plus({ days: 1 });
+        }
+
+        // Count reports for each day
+        for (const dateStr of allDates) {
+          const reportCount = await TellerReport.countDocuments({
+            tellerId: teller._id,
+            date: dateStr
+          });
+          
+          const dayName = getDayOfWeek(dateStr);
+          dailyWorkedDays[dayName] = reportCount;
+          totalWeeklyDays += reportCount;
+        }
 
         // Get the most recent report date for lastWorked
         const latestReport = await TellerReport.findOne({
@@ -880,22 +922,25 @@ router.get("/suggest/:dayKey", requireAuth, async (req, res) => {
 
         return {
           ...teller,
-          weeklyWorkedDays: weeklyReportsCount,
-          lastWorked: latestReport ? latestReport.date : teller.lastWorked || null
+          weeklyWorkedDays: totalWeeklyDays,
+          dailyWorkedDays, // { Monday: 1, Tuesday: 0, Wednesday: 1, etc. }
+          lastWorked: latestReport ? latestReport.date : teller.lastWorked || null,
+          dateRange: { startDate: weekStart, endDate: weekEnd }
         };
       })
     );
 
     // Sort by weekly worked days (ascending - least worked first for fair rotation)
     const suggestions = suggestionsWithWeeklyData
-      .sort((a, b) => a.weeklyWorkedDays - b.weeklyWorkedDays)
-      .slice(0, 10); // Limit to 10 suggestions
+      .sort((a, b) => a.weeklyWorkedDays - b.weeklyWorkedDays);
+    // Removed: .slice(0, 10) - now show ALL available tellers
 
     console.log(`📊 Found ${suggestions.length} suggested tellers with weekly data`);
 
     res.json({
       success: true,
       suggestions,
+      dateRange: { startDate: weekStart, endDate: weekEnd },
       message: suggestions.length
         ? "Suggested replacement tellers found (based on weekly reports)"
         : "No available tellers to suggest",
