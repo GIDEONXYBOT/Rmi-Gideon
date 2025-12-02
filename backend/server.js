@@ -246,6 +246,15 @@ try {
   // app.use(express.static(distPath));
   // Serve uploaded assets (avatars, maps, etc.) from /uploads with caching
   const uploadsPath = path.resolve(__dirname, 'uploads');
+  
+  // Add CORS headers for all /uploads requests
+  app.use('/uploads', (req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    next();
+  });
+  
   app.use('/uploads', express.static(uploadsPath, {
     maxAge: '1d', // Cache for 1 day
     setHeaders: (res, path) => {
@@ -253,10 +262,6 @@ try {
       if (path.endsWith('.png') || path.endsWith('.jpg') || path.endsWith('.jpeg') || path.endsWith('.gif')) {
         res.setHeader('Cache-Control', 'public, max-age=86400'); // 24 hours
       }
-      // Add CORS headers for static files
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Access-Control-Allow-Methods', 'GET');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     }
   }));
   // SPA fallback: send index.html for non-API routes
@@ -272,12 +277,8 @@ try {
 app.get('/uploads/avatars/*', (req, res) => {
   const filePath = path.join(__dirname, 'uploads', req.path);
   if (fs.existsSync(filePath)) {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     res.sendFile(filePath);
   } else {
-    res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Content-Type', 'image/svg+xml');
     res.send('<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48"><circle cx="24" cy="24" r="24" fill="#e5e7eb"/><circle cx="24" cy="18" r="8" fill="#9ca3af"/><path d="M8 40c0-8.8 7.2-16 16-16s16 7.2 16 16" fill="#9ca3af"/></svg>');
   }
