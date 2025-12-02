@@ -989,4 +989,57 @@ router.get("/capital/check-today/:userId", async (req, res) => {
   }
 });
 
+/* ======================================================
+   🗑️ DELETE CAPITAL FOR A TELLER (SUPERVISOR/ADMIN)
+   ====================================================== */
+router.delete("/:tellerId/capital/:capitalId", async (req, res) => {
+  try {
+    const { tellerId, capitalId } = req.params;
+
+    // Find and delete the capital record
+    const capitalToDelete = await Capital.findOneAndDelete({
+      _id: capitalId,
+      tellerId: tellerId
+    });
+
+    if (!capitalToDelete) {
+      return res.status(404).json({ error: "Capital record not found" });
+    }
+
+    // Reset base salary to 0 for this teller
+    const teller = await User.findById(tellerId);
+    if (teller) {
+      teller.baseCapital = 0;
+      await teller.save();
+      console.log(`✅ Reset base salary to 0 for teller ${tellerId}`);
+    }
+
+    // Delete all transactions related to this capital record
+    const transactionResult = await Transaction.deleteMany({
+      tellerId: tellerId,
+      type: { $in: ["capital", "additional", "remittance"] },
+      capitalId: capitalId
+    });
+
+    console.log(`✅ Deleted capital ${capitalId} for teller ${tellerId}, removed ${transactionResult.deletedCount} transactions`);
+
+    // Emit socket events
+    if (req.app && req.app.io) {
+      req.app.io.emit("tellerManagementUpdated");
+      req.app.io.emit("transactionUpdated");
+      req.app.io.emit("capitalDeleted", { tellerId, capitalId });
+    }
+
+    res.json({
+      success: true,
+      message: "Capital deleted successfully and base salary reset",
+      capitalDeleted: capitalToDelete,
+      transactionsDeleted: transactionResult.deletedCount
+    });
+  } catch (err) {
+    console.error("❌ Error deleting capital:", err);
+    res.status(500).json({ error: "Failed to delete capital" });
+  }
+});
+
 export default router;

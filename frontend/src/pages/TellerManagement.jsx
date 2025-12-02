@@ -15,6 +15,8 @@ import {
   Edit2,
   Save,
   X,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
 
 const DEV_SUPERVISOR_ID = import.meta.env.VITE_DEV_SUPERVISOR_ID || "690ec9c92dfa944ee4054180"; // safe dev fallback
@@ -38,6 +40,8 @@ export default function TellerManagement() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]); // Date filter
   const [editingRow, setEditingRow] = useState(null); // Track which row is being edited
   const [editValues, setEditValues] = useState({}); // Store edit values
+  const [deleteConfirmation, setDeleteConfirmation] = useState(null); // { tellerId, tellerName, capitalId } or null
+  const [deleting, setDeleting] = useState(false); // Loading state for delete action
   const formRef = useRef(null);
 
   // ✅ Helper function to format number with commas
@@ -293,6 +297,33 @@ export default function TellerManagement() {
       showToast({ type: "error", message: "Failed to update teller data" });
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  // ✅ Delete Capital Handler
+  const handleDeleteCapital = async () => {
+    if (!deleteConfirmation) return;
+    
+    setDeleting(true);
+    try {
+      const token = localStorage.getItem('token');
+      const headers = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+      
+      const { tellerId, capitalId } = deleteConfirmation;
+      
+      await axios.delete(
+        `${getApiUrl()}/api/teller-management/${tellerId}/capital/${capitalId}`,
+        headers
+      );
+
+      showToast({ type: "success", message: `Capital removed and base salary reset to 0 for ${deleteConfirmation.tellerName}` });
+      setDeleteConfirmation(null);
+      fetchTellers();
+    } catch (err) {
+      console.error("❌ Delete error:", err?.response?.data || err);
+      showToast({ type: "error", message: "Failed to delete capital" });
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -919,14 +950,30 @@ export default function TellerManagement() {
                                 </button>
                               </div>
                             ) : (
-                              <button
-                                onClick={() => handleStartEdit(t)}
-                                className="px-2 py-1 rounded bg-indigo-600 hover:bg-indigo-700 text-white text-xs flex items-center gap-1 mx-auto"
-                                title="Edit values"
-                              >
-                                <Edit2 className="w-3 h-3" />
-                                Edit
-                              </button>
+                              <div className="flex items-center justify-center gap-2 flex-wrap">
+                                <button
+                                  onClick={() => handleStartEdit(t)}
+                                  className="px-2 py-1 rounded bg-indigo-600 hover:bg-indigo-700 text-white text-xs flex items-center gap-1"
+                                  title="Edit values"
+                                >
+                                  <Edit2 className="w-3 h-3" />
+                                  Edit
+                                </button>
+                                {active?.status === "active" && (
+                                  <button
+                                    onClick={() => setDeleteConfirmation({
+                                      tellerId: t._id,
+                                      tellerName: t.name || t.username,
+                                      capitalId: active._id
+                                    })}
+                                    className="px-2 py-1 rounded bg-red-600 hover:bg-red-700 text-white text-xs flex items-center gap-1"
+                                    title="Delete capital and reset base salary"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                    Delete
+                                  </button>
+                                )}
+                              </div>
                             )}
                           </td>
                         )}
@@ -939,6 +986,66 @@ export default function TellerManagement() {
           </div>
         )}
       </div>
+
+      {/* 🗑️ Delete Confirmation Modal */}
+      {deleteConfirmation && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className={`rounded-lg shadow-2xl max-w-md w-full p-6 ${
+            dark ? "bg-gray-800 border border-gray-700" : "bg-white border border-gray-200"
+          }`}>
+            <div className="flex items-center gap-3 mb-4">
+              <AlertTriangle className="w-6 h-6 text-red-500 flex-shrink-0" />
+              <h2 className="text-lg font-semibold">Delete Capital?</h2>
+            </div>
+
+            <p className={`mb-4 text-sm ${dark ? "text-gray-300" : "text-gray-700"}`}>
+              Are you sure you want to delete the capital for <strong>{deleteConfirmation.tellerName}</strong>?
+            </p>
+
+            <div className={`p-3 rounded-lg mb-4 border ${
+              dark ? "bg-red-900/20 border-red-700/50 text-red-300" : "bg-red-50 border-red-200 text-red-700"
+            }`}>
+              <p className="text-sm font-medium">This will:</p>
+              <ul className="text-xs mt-2 space-y-1 list-disc list-inside">
+                <li>Remove the active capital record</li>
+                <li>Reset base salary to ₱0</li>
+                <li>Delete all related transactions</li>
+              </ul>
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setDeleteConfirmation(null)}
+                disabled={deleting}
+                className={`px-4 py-2 rounded text-sm font-medium ${
+                  dark 
+                    ? "bg-gray-700 hover:bg-gray-600 text-gray-100" 
+                    : "bg-gray-200 hover:bg-gray-300 text-gray-900"
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteCapital}
+                disabled={deleting}
+                className="px-4 py-2 rounded text-sm font-medium bg-red-600 hover:bg-red-700 text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {deleting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    Delete Capital
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
