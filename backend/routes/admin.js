@@ -832,4 +832,94 @@ router.post("/restore-tellers", requireRole(['admin', 'super_admin']), async (re
   }
 });
 
+/* ========================================================
+   🆕 POST /api/admin/create-shane-marie-payroll
+   Create Shane Marie Quijano with payroll records
+======================================================== */
+router.post("/create-shane-marie-payroll", requireRole(['admin', 'super_admin']), async (req, res) => {
+  try {
+    console.log('\n📝 Creating Shane Marie Quijano with payroll records...\n');
+    
+    let shaneMarie = await User.findOne({ $or: [{ username: '017.marie' }, { name: /shane.*marie/i }] });
+    
+    if (!shaneMarie) {
+      const hashedPassword = await bcrypt.hash('password123', 10);
+      shaneMarie = new User({
+        name: 'Shane Marie Quijano',
+        username: '017.marie',
+        employeeId: '017.marie',
+        email: '017.marie@rmi.com',
+        password: hashedPassword,
+        role: 'teller',
+        status: 'approved',
+        baseSalary: 450,
+        totalWorkDays: 0,
+        lastWorked: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+      
+      await shaneMarie.save();
+      console.log(`✅ Created user: ${shaneMarie.name}`);
+    } else {
+      console.log(`✅ Found existing user: ${shaneMarie.name}`);
+    }
+    
+    // Delete existing payroll records
+    await Payroll.deleteMany({ user: shaneMarie._id });
+    console.log(`✅ Cleared existing payroll records\n`);
+    
+    // Create payroll records
+    const payrollData = [
+      { date: '2025-11-28', baseSalary: 450, over: 373, short: 0, description: '11/28/2025' },
+      { date: '2025-11-29', baseSalary: 450, over: 174, short: 0, description: '11/29/2025' },
+      { date: '2025-12-03', baseSalary: 450, over: 0, short: 0, description: '12/3/2025 (no report yet)' }
+    ];
+    
+    const createdPayrolls = [];
+    for (const data of payrollData) {
+      const totalSalary = computeTotalSalary({
+        baseSalary: data.baseSalary,
+        over: data.over,
+        short: data.short,
+        deduction: 0,
+        withdrawal: 0,
+        shortIsInstallment: true
+      }, { period: 'daily' });
+      
+      const payroll = new Payroll({
+        user: shaneMarie._id,
+        role: shaneMarie.role,
+        baseSalary: data.baseSalary,
+        over: data.over,
+        short: data.short,
+        daysPresent: 1,
+        totalSalary: totalSalary,
+        deduction: 0,
+        withdrawal: 0,
+        date: new Date(data.date),
+        approved: false,
+        locked: false,
+        note: data.description,
+        withdrawn: false,
+        adjustments: []
+      });
+      
+      await payroll.save();
+      createdPayrolls.push(payroll);
+      console.log(`✅ ${data.description}: ₱${totalSalary}`);
+    }
+    
+    res.json({
+      success: true,
+      message: 'Shane Marie Quijano created with payroll records',
+      user: shaneMarie,
+      payrollRecords: createdPayrolls
+    });
+  } catch (err) {
+    console.error('❌ Error:', err.message);
+    res.status(500).json({ success: false, message: 'Failed to create Shane Marie payroll', error: err.message });
+  }
+});
+
 export default router;
