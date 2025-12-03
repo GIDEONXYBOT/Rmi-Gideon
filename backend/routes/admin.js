@@ -784,4 +784,52 @@ router.post('/fix-all-historical-payroll', requirePermission('employees'), async
   }
 });
 
+/**
+ * 🆕 POST /api/admin/restore-tellers
+ * Restore tellers from provided list (admin only)
+ */
+router.post("/restore-tellers", requireRole(['admin', 'super_admin']), async (req, res) => {
+  try {
+    const { tellers } = req.body;
+    
+    if (!Array.isArray(tellers) || tellers.length === 0) {
+      return res.status(400).json({ error: "Tellers array required" });
+    }
+
+    console.log(`🔄 Restoring ${tellers.length} tellers...`);
+
+    // Clear existing tellers
+    await User.deleteMany({ role: "teller" });
+    console.log("✅ Cleared existing tellers");
+
+    const hashedPassword = await bcrypt.hash("password123", 10);
+    const now = new Date();
+
+    const usersToInsert = tellers.map(t => ({
+      name: typeof t === 'string' ? t : t.name || t.username,
+      username: (typeof t === 'string' ? t.toLowerCase() : (t.username || t.name || t).toLowerCase()).replace(/\s+/g, ''),
+      email: `${(typeof t === 'string' ? t.toLowerCase() : (t.username || t.name || t).toLowerCase()).replace(/\s+/g, '')}@rmi.com`,
+      password: hashedPassword,
+      role: "teller",
+      status: "approved",
+      totalWorkDays: 0,
+      lastWorked: now,
+      createdAt: now,
+      updatedAt: now,
+    }));
+
+    const result = await User.insertMany(usersToInsert);
+    console.log(`✅ Successfully restored ${result.length} tellers`);
+
+    res.json({
+      success: true,
+      message: `Successfully restored ${result.length} tellers`,
+      tellers: result.map(u => ({ _id: u._id, name: u.name, username: u.username, role: u.role, status: u.status }))
+    });
+  } catch (err) {
+    console.error("❌ Failed to restore tellers:", err.message);
+    res.status(500).json({ error: "Failed to restore tellers", details: err.message });
+  }
+});
+
 export default router;
