@@ -230,13 +230,8 @@ export default function SupervisorReports({ userRole }) {
     }
 
     try {
-      // Prepare data in TSV format (better for Google Sheets)
+      // Prepare data - only the 5 essential columns
       const headers = ["Teller Name", "System Balance", "Cash on Hand", "Short", "Over"];
-      
-      // Add Total Bet column for admin/super_admin
-      if (userRole === "admin" || userRole === "super_admin") {
-        headers.push("Total Bet");
-      }
 
       const rows = reportData.tellers.map(t => {
         const row = [
@@ -246,11 +241,6 @@ export default function SupervisorReports({ userRole }) {
           Number(t.short || 0),
           Number(t.over || 0)
         ];
-        
-        if (userRole === "admin" || userRole === "super_admin") {
-          row.push(Number(t.totalBet || 0));
-        }
-        
         return row;
       });
 
@@ -262,10 +252,6 @@ export default function SupervisorReports({ userRole }) {
       totalRow.push(tellersList.reduce((sum, t) => sum + Number(t.short || 0), 0));
       totalRow.push(tellersList.reduce((sum, t) => sum + Number(t.over || 0), 0));
       
-      if (userRole === "admin" || userRole === "super_admin") {
-        totalRow.push(tellersList.reduce((sum, t) => sum + Number(t.totalBet || 0), 0));
-      }
-      
       rows.push(totalRow);
 
       // Get supervisor name
@@ -273,36 +259,25 @@ export default function SupervisorReports({ userRole }) {
         ? user?.name || user?.username 
         : supervisors.find(s => s._id === selectedSupervisor)?.name || "Unknown";
 
-      // Convert to TSV (Tab-Separated Values) for proper Google Sheets formatting
-      // TSV is better than CSV because it handles commas in data and aligns properly in sheets
+      // Convert to TSV (Tab-Separated Values) - simple format for pasting
+      // Only include headers and data rows, no title or date
       const tsvContent = [
         headers,
         ...rows
       ].map(row => 
-        row.map(cell => {
-          // Escape quotes and wrap cells with special characters
-          const cellStr = String(cell);
-          if (cellStr.includes('\t') || cellStr.includes('\n') || cellStr.includes('"')) {
-            return '"' + cellStr.replace(/"/g, '""') + '"';
-          }
-          return cellStr;
-        }).join('\t')
+        row.map(cell => String(cell)).join('\t')
       ).join('\n');
 
       // Get custom Google Sheets URL from settings or localStorage
       const customSheetUrl = settings?.googleSheetsUrl || localStorage.getItem('googleSheetsUrl') || '';
 
       // Try to copy to clipboard
-      let clipboardSuccess = false;
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(tsvContent).then(() => {
-          clipboardSuccess = true;
           const targetUrl = customSheetUrl || "https://sheets.google.com/";
           showToast({ 
             type: "success", 
-            message: customSheetUrl 
-              ? "Data copied to clipboard! Opening your Google Sheet. Paste with Ctrl+V" 
-              : "Data copied to clipboard! Opening Google Sheets. Paste with Ctrl+V" 
+            message: "✅ Data copied! Ready to paste into Google Sheets (Ctrl+V)" 
           });
           // Open custom sheet or Google Sheets homepage
           window.open(targetUrl, "_blank");
@@ -318,7 +293,7 @@ export default function SupervisorReports({ userRole }) {
 
       function downloadAsCSV() {
         try {
-          // For download, use CSV format for compatibility
+          // For download, use CSV format with title for context
           const csvContent = [
             [`Supervisor Report - ${supervisorName}`],
             [`Date: ${new Date().toLocaleDateString()}`],
@@ -347,7 +322,7 @@ export default function SupervisorReports({ userRole }) {
           URL.revokeObjectURL(url);
           showToast({ 
             type: "success", 
-            message: "Report downloaded as CSV. You can import it to Google Sheets." 
+            message: "✅ Report downloaded as CSV" 
           });
           // Still open the target sheet
           const targetUrl = customSheetUrl || "https://sheets.google.com/";
