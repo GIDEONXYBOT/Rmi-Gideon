@@ -96,6 +96,7 @@ export default function ScheduleRotation() {
     user?.role === "supervisor" || user?.role === "admin" || user?.role === "super_admin" || isAlfonsoUsername;
 
   const isAdminOnly = user?.role === "admin" || user?.role === "super_admin" || isAlfonsoUsername;
+  const isSuperAdminOnly = user?.role === "admin" || user?.role === "super_admin" || isAlfonsoUsername;
 
   useEffect(() => {
     console.log("ðŸ“… useEffect triggered for todayDate:", todayDate);
@@ -783,22 +784,30 @@ export default function ScheduleRotation() {
                     Days Worked: <span className="font-semibold">{currentAssignment?.rangeWorkDays || 0} days</span>
                   </p>
                 </div>
-                {isAdminOnly && (
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleReplaceTeller(currentAssignment)}
-                      className="flex items-center gap-1 px-3 py-2 text-xs rounded-lg bg-blue-600 text-white hover:opacity-90"
-                    >
-                      <Check className="w-4 h-4" /> Replace
-                    </button>
-                    <button
-                      onClick={() => markAbsent(currentAssignment?._id)}
-                      className="flex items-center gap-1 px-3 py-2 text-xs rounded-lg bg-red-600 text-white hover:opacity-90"
-                    >
-                      <X className="w-4 h-4" /> Absent
-                    </button>
-                  </div>
-                )}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => markPresent(currentAssignment?._id)}
+                    className="flex items-center gap-1 px-3 py-2 text-xs rounded-lg bg-green-600 text-white hover:opacity-90"
+                  >
+                    <CheckCircle className="w-4 h-4" /> Present
+                  </button>
+                  {isSuperAdminOnly && (
+                    <>
+                      <button
+                        onClick={() => handleReplaceTeller(currentAssignment)}
+                        className="flex items-center gap-1 px-3 py-2 text-xs rounded-lg bg-blue-600 text-white hover:opacity-90"
+                      >
+                        <Check className="w-4 h-4" /> Replace
+                      </button>
+                      <button
+                        onClick={() => markAbsent(currentAssignment?._id)}
+                        className="flex items-center gap-1 px-3 py-2 text-xs rounded-lg bg-red-600 text-white hover:opacity-90"
+                      >
+                        <X className="w-4 h-4" /> Absent
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -870,21 +879,34 @@ export default function ScheduleRotation() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleReplaceTeller(a);
+                                markPresent(a._id);
                               }}
-                              className="flex items-center gap-1 px-3 py-1 text-xs rounded-lg bg-blue-600 text-white hover:opacity-90"
+                              className="flex items-center gap-1 px-3 py-1 text-xs rounded-lg bg-green-600 text-white hover:opacity-90"
                             >
-                              <Check className="w-3 h-3" /> Replace
+                              <CheckCircle className="w-3 h-3" /> Present
                             </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                markAbsent(a._id);
-                              }}
-                              className="flex items-center gap-1 px-3 py-1 text-xs rounded-lg bg-red-600 text-white hover:opacity-90"
-                            >
-                              <X className="w-3 h-3" /> Absent
-                            </button>
+                            {isSuperAdminOnly && (
+                              <>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleReplaceTeller(a);
+                                  }}
+                                  className="flex items-center gap-1 px-3 py-1 text-xs rounded-lg bg-blue-600 text-white hover:opacity-90"
+                                >
+                                  <Check className="w-3 h-3" /> Replace
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    markAbsent(a._id);
+                                  }}
+                                  className="flex items-center gap-1 px-3 py-1 text-xs rounded-lg bg-red-600 text-white hover:opacity-90"
+                                >
+                                  <X className="w-3 h-3" /> Absent
+                                </button>
+                              </>
+                            )}
                           </div>
                         </td>
                       )}
