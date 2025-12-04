@@ -441,6 +441,25 @@ export default function ScheduleRotation() {
     }
   };
 
+  const handleReplaceTeller = async (assignment) => {
+    setSelectedAssignment(assignment);
+    setSuggestLoading(true);
+    setShowModal(true);
+    
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get(`${API}/api/schedule/suggest/${assignment.dayKey}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSuggestions(res.data.suggestions || []);
+    } catch (err) {
+      console.error("❌ Error fetching replacement suggestions:", err);
+      showToast({ type: "error", message: "Failed to load replacement suggestions." });
+    } finally {
+      setSuggestLoading(false);
+    }
+  };
+
   const markPresent = async (assignmentId) => {
     try {
       const assignment = tomorrowAssignments.find((a) => a._id === assignmentId);
@@ -807,7 +826,7 @@ export default function ScheduleRotation() {
                 {isAdminOnly && (
                   <div className="flex gap-2">
                     <button
-                      onClick={() => markPresent(currentAssignment?._id)}
+                      onClick={() => handleReplaceTeller(currentAssignment)}
                       className="flex items-center gap-1 px-3 py-2 text-xs rounded-lg bg-blue-600 text-white hover:opacity-90"
                     >
                       <Check className="w-4 h-4" /> Replace
@@ -891,7 +910,7 @@ export default function ScheduleRotation() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                markPresent(a._id);
+                                handleReplaceTeller(a);
                               }}
                               className="flex items-center gap-1 px-3 py-1 text-xs rounded-lg bg-blue-600 text-white hover:opacity-90"
                             >
