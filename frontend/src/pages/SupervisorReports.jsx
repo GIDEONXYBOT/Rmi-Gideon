@@ -230,7 +230,7 @@ export default function SupervisorReports({ userRole }) {
     }
 
     try {
-      // Prepare data in CSV format
+      // Prepare data in TSV format (better for Google Sheets)
       const headers = ["Teller Name", "System Balance", "Cash on Hand", "Short", "Over"];
       
       // Add Total Bet column for admin/super_admin
@@ -273,14 +273,21 @@ export default function SupervisorReports({ userRole }) {
         ? user?.name || user?.username 
         : supervisors.find(s => s._id === selectedSupervisor)?.name || "Unknown";
 
-      // Convert to CSV
-      const csvContent = [
-        [`Supervisor Report - ${supervisorName}`],
-        [`Date: ${new Date().toLocaleDateString()}`],
-        [],
+      // Convert to TSV (Tab-Separated Values) for proper Google Sheets formatting
+      // TSV is better than CSV because it handles commas in data and aligns properly in sheets
+      const tsvContent = [
         headers,
         ...rows
-      ].map(row => row.join(",")).join("\n");
+      ].map(row => 
+        row.map(cell => {
+          // Escape quotes and wrap cells with special characters
+          const cellStr = String(cell);
+          if (cellStr.includes('\t') || cellStr.includes('\n') || cellStr.includes('"')) {
+            return '"' + cellStr.replace(/"/g, '""') + '"';
+          }
+          return cellStr;
+        }).join('\t')
+      ).join('\n');
 
       // Get custom Google Sheets URL from settings or localStorage
       const customSheetUrl = settings?.googleSheetsUrl || localStorage.getItem('googleSheetsUrl') || '';
@@ -288,14 +295,14 @@ export default function SupervisorReports({ userRole }) {
       // Try to copy to clipboard
       let clipboardSuccess = false;
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(csvContent).then(() => {
+        navigator.clipboard.writeText(tsvContent).then(() => {
           clipboardSuccess = true;
           const targetUrl = customSheetUrl || "https://sheets.google.com/";
           showToast({ 
             type: "success", 
             message: customSheetUrl 
-              ? "Data copied! Opening your Google Sheet. Paste with Ctrl+V" 
-              : "Data copied! Opening Google Sheets. Paste with Ctrl+V" 
+              ? "Data copied to clipboard! Opening your Google Sheet. Paste with Ctrl+V" 
+              : "Data copied to clipboard! Opening Google Sheets. Paste with Ctrl+V" 
           });
           // Open custom sheet or Google Sheets homepage
           window.open(targetUrl, "_blank");
@@ -311,6 +318,23 @@ export default function SupervisorReports({ userRole }) {
 
       function downloadAsCSV() {
         try {
+          // For download, use CSV format for compatibility
+          const csvContent = [
+            [`Supervisor Report - ${supervisorName}`],
+            [`Date: ${new Date().toLocaleDateString()}`],
+            [],
+            headers,
+            ...rows
+          ].map(row => 
+            row.map(cell => {
+              const cellStr = String(cell);
+              if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
+                return '"' + cellStr.replace(/"/g, '""') + '"';
+              }
+              return cellStr;
+            }).join(',')
+          ).join('\n');
+
           const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
           const link = document.createElement("a");
           const url = URL.createObjectURL(blob);
