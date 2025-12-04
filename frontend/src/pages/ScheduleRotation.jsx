@@ -775,9 +775,9 @@ export default function ScheduleRotation() {
                   <div className="flex gap-2">
                     <button
                       onClick={() => markPresent(currentAssignment?._id)}
-                      className="flex items-center gap-1 px-3 py-2 text-xs rounded-lg bg-green-600 text-white hover:opacity-90"
+                      className="flex items-center gap-1 px-3 py-2 text-xs rounded-lg bg-blue-600 text-white hover:opacity-90"
                     >
-                      <Check className="w-4 h-4" /> Present
+                      <Check className="w-4 h-4" /> Replace
                     </button>
                     <button
                       onClick={() => markAbsent(currentAssignment?._id)}
@@ -860,9 +860,9 @@ export default function ScheduleRotation() {
                                 e.stopPropagation();
                                 markPresent(a._id);
                               }}
-                              className="flex items-center gap-1 px-3 py-1 text-xs rounded-lg bg-green-600 text-white hover:opacity-90"
+                              className="flex items-center gap-1 px-3 py-1 text-xs rounded-lg bg-blue-600 text-white hover:opacity-90"
                             >
-                              <Check className="w-3 h-3" /> Present
+                              <Check className="w-3 h-3" /> Replace
                             </button>
                             <button
                               onClick={(e) => {
