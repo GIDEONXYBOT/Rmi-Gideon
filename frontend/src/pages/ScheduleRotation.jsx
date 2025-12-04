@@ -42,7 +42,6 @@ export default function ScheduleRotation() {
   
   // ðŸ†• Navigation for tomorrow's assignments
   const [currentAssignmentIndex, setCurrentAssignmentIndex] = useState(0);
-  const [filterStatus, setFilterStatus] = useState('present'); // 'all' | 'present' | 'absent' | 'pending'
   
   // ðŸ†• Date range filter for tomorrow's schedule
   const [useCustomDateRange, setUseCustomDateRange] = useState(false);
@@ -566,10 +565,8 @@ export default function ScheduleRotation() {
     }
   };
 
-  // ðŸ†• Get filtered assignments based on status filter
-  const filteredAssignments = filterStatus === 'all' 
-    ? tomorrowAssignments 
-    : tomorrowAssignments.filter(a => (a.status || 'pending') === filterStatus);
+  // ðŸ†• No filter - show all assignments
+  const filteredAssignments = tomorrowAssignments;
 
   // ðŸ†• Get current assignment
   const currentAssignment = filteredAssignments[currentAssignmentIndex] || null;
@@ -720,43 +717,10 @@ export default function ScheduleRotation() {
           </div>
         </div>
 
-        {/* ðŸ†• Filter and Navigation Controls */}
+        {/* ðŸ†• Navigation Controls (Filter Removed) */}
         <div className={`mb-6 p-4 rounded-lg ${dark ? "bg-gray-700" : "bg-gray-50"}`}>
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            {/* Status Filter */}
-            {tomorrowAssignments.length > 0 ? (
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold">Filter:</span>
-                <div className="flex gap-2">
-                  {['all', 'present', 'absent', 'pending'].map((status) => (
-                    <button
-                      key={status}
-                      onClick={() => {
-                        setFilterStatus(status);
-                        setCurrentAssignmentIndex(0);
-                      }}
-                      className={`px-3 py-1 rounded-lg text-xs font-medium transition ${
-                        filterStatus === status
-                          ? status === 'present'
-                            ? 'bg-green-600 text-white'
-                            : status === 'absent'
-                            ? 'bg-red-600 text-white'
-                            : status === 'pending'
-                            ? 'bg-yellow-500 text-white'
-                            : 'bg-blue-600 text-white'
-                          : dark
-                          ? 'bg-gray-600 hover:bg-gray-500 text-gray-200'
-                          : 'bg-gray-300 hover:bg-gray-400'
-                      }`}
-                    >
-                      {status.charAt(0).toUpperCase() + status.slice(1)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <p className="text-sm text-gray-500">Loading assignments...</p>
-            )}
+            {/* Status Filter - REMOVED */}
 
             {/* Navigation Buttons - ALWAYS SHOW */}
             <div className="flex items-center gap-3">
@@ -798,10 +762,6 @@ export default function ScheduleRotation() {
         ) : tomorrowAssignments.length === 0 ? (
           <div className="text-center text-gray-400 py-6">
             No teller assignments found.
-          </div>
-        ) : filteredAssignments.length === 0 ? (
-          <div className="text-center text-gray-400 py-6">
-            No assignments with status: <strong>{filterStatus}</strong>
           </div>
         ) : (
           <div className={`p-4 rounded-lg ${dark ? "bg-gray-800" : "bg-white"}`}>
