@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext } from "react";
+﻿import React, { useEffect, useState, useContext } from "react";
 import axios from "axios";
 import { SettingsContext } from "../context/SettingsContext";
 import { useToast } from "../context/ToastContext";
@@ -40,11 +40,11 @@ export default function ScheduleRotation() {
   const [workDaysRange, setWorkDaysRange] = useState('week'); // 'week' | 'month' | 'year' | 'all'
   const [generating, setGenerating] = useState(false);
   
-  // 🆕 Navigation for tomorrow's assignments
+  // ðŸ†• Navigation for tomorrow's assignments
   const [currentAssignmentIndex, setCurrentAssignmentIndex] = useState(0);
   const [filterStatus, setFilterStatus] = useState('present'); // 'all' | 'present' | 'absent' | 'pending'
   
-  // 🆕 Date range filter for tomorrow's schedule
+  // ðŸ†• Date range filter for tomorrow's schedule
   const [useCustomDateRange, setUseCustomDateRange] = useState(false);
   const [customRangeStart, setCustomRangeStart] = useState('');
   const [customRangeEnd, setCustomRangeEnd] = useState('');
@@ -64,18 +64,18 @@ export default function ScheduleRotation() {
     setCustomRangeEnd(sunday.toISOString().slice(0, 10));
   }, []);
 
-  // 🆕 Replacement modal & suggestions
+  // ðŸ†• Replacement modal & suggestions
   const [showModal, setShowModal] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [selectedAssignment, setSelectedAssignment] = useState(null);
   const [suggestLoading, setSuggestLoading] = useState(false);
 
-  // 🆕 Absent reason modal
+  // ðŸ†• Absent reason modal
   const [showAbsentModal, setShowAbsentModal] = useState(false);
   const [absentReason, setAbsentReason] = useState("");
   const [penaltyDays, setPenaltyDays] = useState(0);
 
-  // 🆕 Suggested tellers card
+  // ðŸ†• Suggested tellers card
   const [suggestedTellers, setSuggestedTellers] = useState([]);
   const [allTellers, setAllTellers] = useState([]);
   // Full-week selection state
@@ -88,7 +88,7 @@ export default function ScheduleRotation() {
   const [applying, setApplying] = useState(false);
   const [lastAuditId, setLastAuditId] = useState(null);
 
-  // 🆕 Today's working tellers
+  // ðŸ†• Today's working tellers
   const [todayWorkingTellers, setTodayWorkingTellers] = useState([]);
   const [todayDate, setTodayDate] = useState(new Date().toISOString().slice(0, 10));
 
@@ -99,7 +99,7 @@ export default function ScheduleRotation() {
   const isAdminOnly = user?.role === "admin" || user?.role === "super_admin" || isAlfonsoUsername;
 
   useEffect(() => {
-    console.log("📅 useEffect triggered for todayDate:", todayDate);
+    console.log("ðŸ“… useEffect triggered for todayDate:", todayDate);
     fetchData();
     fetchSuggestedTellers();
     if (isSupervisorOrAdmin) {
@@ -121,12 +121,12 @@ export default function ScheduleRotation() {
     }
   }, [todayDate, workDaysRange]);
 
-  // ✅ Real-time socket listener
+  // âœ… Real-time socket listener
   useEffect(() => {
     const socket = getSocket();
     if (socket) {
       socket.on("scheduleUpdated", (update) => {
-        console.log("🔄 Schedule update:", update);
+        console.log("ðŸ”„ Schedule update:", update);
         setTomorrowAssignments((prev) =>
           prev.map((t) =>
             t.tellerId === update.tellerId
@@ -157,7 +157,7 @@ export default function ScheduleRotation() {
     const socket = getSocket();
     if (!socket) return;
     const handler = (payload) => {
-      console.log('🔁 Penalty cleared event received:', payload);
+      console.log('ðŸ” Penalty cleared event received:', payload);
       // refresh list and schedule
       fetchAllTellers();
       fetchData();
@@ -166,7 +166,7 @@ export default function ScheduleRotation() {
     return () => socket.off('userPenaltyCleared', handler);
   }, [weekStartKey]);
 
-  // ✅ Fetch schedule data
+  // âœ… Fetch schedule data
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -174,7 +174,7 @@ export default function ScheduleRotation() {
       
       // If custom date range is enabled, fetch from that range
       if (useCustomDateRange && customRangeStart && customRangeEnd) {
-        console.log('🔍 Fetching assignments for custom range:', customRangeStart, 'to', customRangeEnd);
+        console.log('ðŸ” Fetching assignments for custom range:', customRangeStart, 'to', customRangeEnd);
         
         // Parse the date range
         const startDate = new Date(customRangeStart);
@@ -191,35 +191,35 @@ export default function ScheduleRotation() {
             });
             if (res.data.schedule && res.data.schedule.length > 0) {
               allAssignments.push(...res.data.schedule);
-              console.log(`  ✅ ${dateStr}: ${res.data.schedule.length} assignments`);
+              console.log(`  âœ… ${dateStr}: ${res.data.schedule.length} assignments`);
             }
           } catch (err) {
-            console.log(`  ⚠️ ${dateStr}: No data or error`);
+            console.log(`  âš ï¸ ${dateStr}: No data or error`);
           }
           currentDate.setDate(currentDate.getDate() + 1);
         }
         
-        console.log('🔍 Total assignments in range:', allAssignments.length);
+        console.log('ðŸ” Total assignments in range:', allAssignments.length);
         setTomorrowAssignments(allAssignments);
       } else {
         // Default: fetch tomorrow's schedule
         let queryStr = `?range=${workDaysRange}`;
-        console.log('🔍 Fetching tomorrow schedule with query:', queryStr);
+        console.log('ðŸ” Fetching tomorrow schedule with query:', queryStr);
         const res = await axios.get(`${API}/api/schedule/tomorrow${queryStr}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        console.log('🔍 /api/schedule/tomorrow response:', res.data?.schedule?.map(s=>({id:s._id,tellerName:s.tellerName,rangeWorkDays:s.rangeWorkDays,range:s.range})));
+        console.log('ðŸ” /api/schedule/tomorrow response:', res.data?.schedule?.map(s=>({id:s._id,tellerName:s.tellerName,rangeWorkDays:s.rangeWorkDays,range:s.range})));
         setTomorrowAssignments(res.data.schedule || []);
       }
     } catch (err) {
-      console.error("❌ Failed to fetch schedule:", err);
+      console.error("âŒ Failed to fetch schedule:", err);
       showToast({ type: "error", message: "Failed to load schedule data." });
     } finally {
       setLoading(false);
     }
   };
 
-  // ✅ Fetch suggested tellers (visible card)
+  // âœ… Fetch suggested tellers (visible card)
   const fetchSuggestedTellers = async () => {
     try {
       const tomorrow = new Date();
@@ -232,11 +232,11 @@ export default function ScheduleRotation() {
       });
       setSuggestedTellers(res.data.suggestions || []);
     } catch (err) {
-      console.error("❌ Failed to load suggested tellers:", err);
+      console.error("âŒ Failed to load suggested tellers:", err);
     }
   };
 
-  // ✅ Fetch all tellers for directory
+  // âœ… Fetch all tellers for directory
   const fetchAllTellers = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -249,7 +249,7 @@ export default function ScheduleRotation() {
       );
       setAllTellers(tellersOnly || []);
     } catch (err) {
-      console.error("❌ Failed to load all tellers:", err);
+      console.error("âŒ Failed to load all tellers:", err);
       setAllTellers([]);
     }
   };
@@ -264,28 +264,28 @@ export default function ScheduleRotation() {
       await fetchAllTellers();
       await fetchData();
     } catch (err) {
-      console.error('❌ Failed to remove penalty', err);
+      console.error('âŒ Failed to remove penalty', err);
       showToast({ type: 'error', message: 'Failed to remove penalty' });
     }
   };
 
-  // 🆕 Fetch today's working tellers based on submitted reports
+  // ðŸ†• Fetch today's working tellers based on submitted reports
   const fetchTodayWorkingTellers = async () => {
     try {
-      console.log("🔍 Fetching working tellers for date:", todayDate);
+      console.log("ðŸ” Fetching working tellers for date:", todayDate);
       const token = localStorage.getItem("token");
       const res = await axios.get(`${API}/api/schedule/today-working/${todayDate}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      console.log("📊 Working tellers response:", res.data);
+      console.log("ðŸ“Š Working tellers response:", res.data);
       setTodayWorkingTellers(res.data.tellers || []);
     } catch (err) {
-      console.error("❌ Failed to load today's working tellers:", err);
+      console.error("âŒ Failed to load today's working tellers:", err);
       setTodayWorkingTellers([]);
     }
   };
 
-  // ✅ Fetch saved full-week selection for the active week
+  // âœ… Fetch saved full-week selection for the active week
   const fetchFullWeekSelection = async (weekKeyParam = weekStartKey) => {
     if (!weekKeyParam) return;
     try {
@@ -300,12 +300,12 @@ export default function ScheduleRotation() {
         setFullWeekCount(0);
       }
     } catch (err) {
-      console.error("❌ Failed to fetch full-week selection:", err);
+      console.error("âŒ Failed to fetch full-week selection:", err);
     }
   };
 
   const handleGenerateTomorrow = async () => {
-    if (!window.confirm("Generate tomorrow’s schedule now?")) return;
+    if (!window.confirm("Generate tomorrowâ€™s schedule now?")) return;
     try {
       setGenerating(true);
       const token = localStorage.getItem("token");
@@ -315,13 +315,13 @@ export default function ScheduleRotation() {
       setTomorrowAssignments(res.data.schedule || []);
       showToast({
         type: "success",
-        message: "Tomorrow’s schedule generated successfully.",
+        message: "Tomorrowâ€™s schedule generated successfully.",
       });
     } catch (err) {
-      console.error("❌ Failed to generate tomorrow’s schedule:", err);
+      console.error("âŒ Failed to generate tomorrowâ€™s schedule:", err);
       showToast({
         type: "error",
-        message: "Failed to generate tomorrow’s schedule.",
+        message: "Failed to generate tomorrowâ€™s schedule.",
       });
     } finally {
       setGenerating(false);
@@ -374,7 +374,7 @@ export default function ScheduleRotation() {
       // Apply immediately for the current week (from tomorrow through Sunday)
       await applyFullWeekSelection();
     } catch (err) {
-      console.error('❌ Failed to save full-week selection', err);
+      console.error('âŒ Failed to save full-week selection', err);
       showToast({ type: 'error', message: 'Failed to save full-week selection' });
     }
   };
@@ -397,7 +397,7 @@ export default function ScheduleRotation() {
         showToast({ type: 'error', message: 'Failed to apply full-week selection' });
       }
     } catch (err) {
-      console.error('❌ Failed to apply full-week selection', err);
+      console.error('âŒ Failed to apply full-week selection', err);
       showToast({ type: 'error', message: 'Failed to apply full-week selection' });
     } finally {
       setApplying(false);
@@ -418,7 +418,7 @@ export default function ScheduleRotation() {
         showToast({ type: 'error', message: 'Failed to undo' });
       }
     } catch (err) {
-      console.error('❌ Undo failed', err);
+      console.error('âŒ Undo failed', err);
       showToast({ type: 'error', message: 'Undo failed' });
     }
   };
@@ -436,7 +436,7 @@ export default function ScheduleRotation() {
       await fetchData();
       showToast({ type: 'success', message: 'Full-week selection reset for this week' });
     } catch (err) {
-      console.error('❌ Failed to reset full-week selection', err);
+      console.error('âŒ Failed to reset full-week selection', err);
       showToast({ type: 'error', message: 'Failed to reset selection' });
     }
   };
@@ -454,7 +454,7 @@ export default function ScheduleRotation() {
       fetchData();
       fetchSuggestedTellers();
     } catch (err) {
-      console.error("❌ Error marking present:", err);
+      console.error("âŒ Error marking present:", err);
       showToast({ type: "error", message: "Failed to mark present." });
     }
   };
@@ -510,7 +510,7 @@ export default function ScheduleRotation() {
       fetchData();
       fetchSuggestedTellers();
     } catch (err) {
-      console.error("❌ Error marking absent:", err);
+      console.error("âŒ Error marking absent:", err);
       showToast({ type: "error", message: "Failed to mark absent." });
       setSuggestLoading(false);
     }
@@ -535,7 +535,7 @@ export default function ScheduleRotation() {
       fetchData();
       fetchSuggestedTellers();
     } catch (err) {
-      console.error("❌ Error assigning replacement:", err);
+      console.error("âŒ Error assigning replacement:", err);
       showToast({ type: "error", message: "Failed to assign replacement." });
     }
   };
@@ -547,12 +547,12 @@ export default function ScheduleRotation() {
     }
   };
 
-  // 🆕 Get filtered assignments based on status filter
+  // ðŸ†• Get filtered assignments based on status filter
   const filteredAssignments = filterStatus === 'all' 
     ? tomorrowAssignments 
     : tomorrowAssignments.filter(a => (a.status || 'pending') === filterStatus);
 
-  // 🆕 Get current assignment
+  // ðŸ†• Get current assignment
   const currentAssignment = filteredAssignments[currentAssignmentIndex] || null;
 
   return (
@@ -569,7 +569,7 @@ export default function ScheduleRotation() {
             Teller Schedule Rotation
           </h1>
           <p className="text-sm opacity-70">
-            Manage tomorrow’s teller assignments and track attendance.
+            Manage tomorrowâ€™s teller assignments and track attendance.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -611,16 +611,49 @@ export default function ScheduleRotation() {
         </div>
       </div>
 
-      {/* Tomorrow’s Schedule */}
+      {/* Tomorrowâ€™s Schedule */}
       <div
         className={`rounded-lg shadow p-4 mb-8 ${
           dark ? "bg-gray-800" : "bg-white"
         }`}
       >
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold flex items-center gap-2">
-          <Clock className="w-5 h-5 text-indigo-500" /> Tomorrow’s Assignments
-          </h2>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => {
+                const newDate = new Date(useCustomDateRange && customRangeStart ? customRangeStart : new Date());
+                newDate.setDate(newDate.getDate() - 1);
+                const newDateStr = newDate.toISOString().slice(0, 10);
+                setUseCustomDateRange(true);
+                setCustomRangeStart(newDateStr);
+                setCustomRangeEnd(newDateStr);
+              }}
+              className="px-3 py-1.5 text-sm bg-gray-600 text-white rounded-lg hover:opacity-90"
+            >
+              ← Previous Day
+            </button>
+            
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <Clock className="w-5 h-5 text-indigo-500" /> 
+              {useCustomDateRange && customRangeStart ? 
+                `Assignments for ${new Date(customRangeStart).toLocaleDateString()}` 
+                : "Tomorrow's Assignments"}
+            </h2>
+            
+            <button
+              onClick={() => {
+                const newDate = new Date(useCustomDateRange && customRangeEnd ? customRangeEnd : new Date());
+                newDate.setDate(newDate.getDate() + 1);
+                const newDateStr = newDate.toISOString().slice(0, 10);
+                setUseCustomDateRange(true);
+                setCustomRangeStart(newDateStr);
+                setCustomRangeEnd(newDateStr);
+              }}
+              className="px-3 py-1.5 text-sm bg-gray-600 text-white rounded-lg hover:opacity-90"
+            >
+              Next Day →
+            </button>
+          </div>
 
           <div className="flex items-center gap-3 flex-wrap">
             <label className="text-sm text-gray-400">Filter by date range:</label>
@@ -668,7 +701,7 @@ export default function ScheduleRotation() {
           </div>
         </div>
 
-        {/* 🆕 Filter and Navigation Controls */}
+        {/* ðŸ†• Filter and Navigation Controls */}
         <div className={`mb-6 p-4 rounded-lg ${dark ? "bg-gray-700" : "bg-gray-50"}`}>
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             {/* Status Filter */}
@@ -719,7 +752,7 @@ export default function ScheduleRotation() {
                     : 'bg-gray-300 hover:bg-gray-400'
                 }`}
               >
-                ← Previous
+                â† Previous
               </button>
               <span className={`text-sm font-semibold px-3 py-1 rounded-lg ${dark ? 'bg-gray-600' : 'bg-gray-200'}`}>
                 {tomorrowAssignments.length === 0 ? '0 of 0' : `${currentAssignmentIndex + 1} of ${filteredAssignments.length}`}
@@ -735,7 +768,7 @@ export default function ScheduleRotation() {
                     : 'bg-gray-300 hover:bg-gray-400'
                 }`}
               >
-                Next →
+                Next â†’
               </button>
             </div>
           </div>
@@ -885,7 +918,7 @@ export default function ScheduleRotation() {
         )}
       </div>
 
-      {/* 🆕 Today's Working Tellers */}
+      {/* ðŸ†• Today's Working Tellers */}
       <div
         className={`p-4 mb-6 rounded-xl ${
           dark ? "bg-gray-800" : "bg-white"
@@ -902,18 +935,18 @@ export default function ScheduleRotation() {
                 const newDate = new Date(todayDate);
                 newDate.setDate(newDate.getDate() - 1);
                 const newDateStr = newDate.toISOString().slice(0, 10);
-                console.log("⬅️ Previous Day clicked, setting date to:", newDateStr);
+                console.log("â¬…ï¸ Previous Day clicked, setting date to:", newDateStr);
                 setTodayDate(newDateStr);
               }}
               className="px-3 py-1 text-sm bg-gray-600 text-white rounded-lg hover:opacity-90"
             >
-              ← Previous Day
+              â† Previous Day
             </button>
             <button
               onClick={() => {
                 const today = new Date();
                 const todayStr = today.toISOString().slice(0, 10);
-                console.log("🏠 Today clicked, setting date to:", todayStr);
+                console.log("ðŸ  Today clicked, setting date to:", todayStr);
                 setTodayDate(todayStr);
               }}
               className="px-3 py-1 text-sm bg-indigo-600 text-white rounded-lg hover:opacity-90"
@@ -925,12 +958,12 @@ export default function ScheduleRotation() {
                 const newDate = new Date(todayDate);
                 newDate.setDate(newDate.getDate() + 1);
                 const newDateStr = newDate.toISOString().slice(0, 10);
-                console.log("➡️ Next Day clicked, setting date to:", newDateStr);
+                console.log("âž¡ï¸ Next Day clicked, setting date to:", newDateStr);
                 setTodayDate(newDateStr);
               }}
               className="px-3 py-1 text-sm bg-gray-600 text-white rounded-lg hover:opacity-90"
             >
-              Next Day →
+              Next Day â†’
             </button>
             <button
               onClick={fetchTodayWorkingTellers}
@@ -1008,8 +1041,8 @@ export default function ScheduleRotation() {
         )}
       </div>
 
-      {/* 🆕 All Tellers Directory */}
-      {/* 🆕 Full-week Selection */}
+      {/* ðŸ†• All Tellers Directory */}
+      {/* ðŸ†• Full-week Selection */}
       {isAdminOnly && (
         <div className={`rounded-lg shadow p-4 mb-8 ${dark ? "bg-gray-800" : "bg-white"}`}>
           <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
@@ -1017,7 +1050,7 @@ export default function ScheduleRotation() {
           </h2>
 
           <div className="mb-3 text-sm text-gray-400">
-            Week starting: <strong>{weekStartKey || '—'}</strong>
+            Week starting: <strong>{weekStartKey || 'â€”'}</strong>
           </div>
 
           <div className="flex gap-3 items-center mb-4">
@@ -1097,7 +1130,7 @@ export default function ScheduleRotation() {
                     </div>
                     {teller.skipUntil && new Date(teller.skipUntil) > new Date() && (
                       <p className="text-xs text-red-500 mt-1">
-                        ⚠️ Penalty until: {new Date(teller.skipUntil).toLocaleDateString()}
+                        âš ï¸ Penalty until: {new Date(teller.skipUntil).toLocaleDateString()}
                       </p>
                     )}
                   </div>
@@ -1124,7 +1157,7 @@ export default function ScheduleRotation() {
         </div>
       )}
 
-      {/* 🆕 Absent Reason Modal */}
+      {/* ðŸ†• Absent Reason Modal */}
       {showAbsentModal && isAdminOnly && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
           <div
@@ -1188,7 +1221,7 @@ export default function ScheduleRotation() {
               </select>
               {penaltyDays > 0 && (
                 <p className="text-xs text-orange-500 mt-1">
-                  ⚠️ Teller will be skipped from schedule for {penaltyDays} day(s)
+                  âš ï¸ Teller will be skipped from schedule for {penaltyDays} day(s)
                 </p>
               )}
             </div>
@@ -1211,7 +1244,7 @@ export default function ScheduleRotation() {
         </div>
       )}
 
-      {/* 🆕 Replacement Modal */}
+      {/* ðŸ†• Replacement Modal */}
       {showModal && isAdminOnly && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
           <div
@@ -1284,7 +1317,7 @@ export default function ScheduleRotation() {
 
                     {teller.skipUntil && (
                       <div className="flex items-center gap-3 mt-2">
-                        <p className="text-xs text-red-500">⚠️ Penalty until: {new Date(teller.skipUntil).toLocaleDateString()}</p>
+                        <p className="text-xs text-red-500">âš ï¸ Penalty until: {new Date(teller.skipUntil).toLocaleDateString()}</p>
                         {isAdminOnly && (
                           <button onClick={() => removePenalty(teller._id)} className="text-xs px-2 py-1 bg-red-600 text-white rounded-lg hover:opacity-90">Remove Penalty</button>
                         )}
@@ -1307,7 +1340,7 @@ export default function ScheduleRotation() {
         </div>
       )}
 
-      {/* 🆕 Full-week Preview Modal */}
+      {/* ðŸ†• Full-week Preview Modal */}
       {showPreviewModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
           <div className={`rounded-2xl shadow-lg p-6 w-full max-w-3xl ${dark ? "bg-gray-800 text-gray-100" : "bg-white text-gray-900"}`}>
@@ -1328,7 +1361,7 @@ export default function ScheduleRotation() {
                         <ul className="mt-2 space-y-1 text-sm">
                           {p.replacements.map((r, idx) => (
                             <li key={idx} className="flex items-center justify-between">
-                              <div>{r.from?.name || r.from?.id} → <strong>{(allTellers.find(t=>t._id===r.to.id)?.name) || r.to.id}</strong></div>
+                              <div>{r.from?.name || r.from?.id} â†’ <strong>{(allTellers.find(t=>t._id===r.to.id)?.name) || r.to.id}</strong></div>
                               <div className="text-xs text-gray-400">assignmentId: {r.assignmentId}</div>
                             </li>
                           ))}
@@ -1366,3 +1399,4 @@ export default function ScheduleRotation() {
     </div>
   );
 }
+
