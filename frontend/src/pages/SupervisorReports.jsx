@@ -230,77 +230,87 @@ export default function SupervisorReports({ userRole }) {
     }
 
     try {
-      // Prepare data - only the 5 essential columns
-      const headers = ["Teller Name", "System Balance", "Cash on Hand", "Short", "Over"];
+      // Prepare data - IMPORTANT: Use tab character for proper column separation
+      const headers = "Teller Name\tSystem Balance\tCash on Hand\tShort\tOver";
 
       const rows = reportData.tellers.map(t => {
-        const row = [
+        return [
           t.tellerName || "",
           Number(t.systemBalance || 0),
           Number(t.cashOnHand || 0),
           Number(t.short || 0),
           Number(t.over || 0)
-        ];
-        return row;
+        ].join('\t');
       });
 
       // Add totals row
-      const totalRow = ["TOTAL"];
       const tellersList = reportData.tellers || [];
-      totalRow.push(tellersList.reduce((sum, t) => sum + Number(t.systemBalance || 0), 0));
-      totalRow.push(tellersList.reduce((sum, t) => sum + Number(t.cashOnHand || 0), 0));
-      totalRow.push(tellersList.reduce((sum, t) => sum + Number(t.short || 0), 0));
-      totalRow.push(tellersList.reduce((sum, t) => sum + Number(t.over || 0), 0));
-      
-      rows.push(totalRow);
+      const totalRow = [
+        "TOTAL",
+        tellersList.reduce((sum, t) => sum + Number(t.systemBalance || 0), 0),
+        tellersList.reduce((sum, t) => sum + Number(t.cashOnHand || 0), 0),
+        tellersList.reduce((sum, t) => sum + Number(t.short || 0), 0),
+        tellersList.reduce((sum, t) => sum + Number(t.over || 0), 0)
+      ].join('\t');
 
       // Get supervisor name
       const supervisorName = userRole === "supervisor" 
         ? user?.name || user?.username 
         : supervisors.find(s => s._id === selectedSupervisor)?.name || "Unknown";
 
-      // Convert to TSV (Tab-Separated Values) - simple format for pasting
-      // Only include headers and data rows, no title or date
-      const tsvContent = [
+      // Create clipboard content: headers + all rows separated by newlines
+      const clipboardContent = [
         headers,
-        ...rows
-      ].map(row => 
-        row.map(cell => String(cell)).join('\t')
-      ).join('\n');
+        ...rows,
+        totalRow
+      ].join('\n');
 
       // Get custom Google Sheets URL from settings or localStorage
       const customSheetUrl = settings?.googleSheetsUrl || localStorage.getItem('googleSheetsUrl') || '';
 
       // Try to copy to clipboard
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(tsvContent).then(() => {
+        navigator.clipboard.writeText(clipboardContent).then(() => {
           const targetUrl = customSheetUrl || "https://sheets.google.com/";
           showToast({ 
             type: "success", 
-            message: "✅ Data copied! Ready to paste into Google Sheets (Ctrl+V)" 
+            message: "✅ Copied! Paste into Google Sheets with Ctrl+V" 
           });
-          // Open custom sheet or Google Sheets homepage
+          // Open Google Sheets
           window.open(targetUrl, "_blank");
         }).catch((clipboardErr) => {
           console.warn("Clipboard write failed:", clipboardErr);
-          // Fallback to download
           downloadAsCSV();
         });
       } else {
-        // Clipboard not available, download directly
         downloadAsCSV();
       }
 
       function downloadAsCSV() {
         try {
-          // For download, use CSV format with title for context
-          const csvContent = [
-            [`Supervisor Report - ${supervisorName}`],
-            [`Date: ${new Date().toLocaleDateString()}`],
+          // For download, create proper CSV format
+          const csvRows = [
+            ["Supervisor Report - " + supervisorName],
+            ["Date: " + new Date().toLocaleDateString()],
             [],
-            headers,
-            ...rows
-          ].map(row => 
+            ["Teller Name", "System Balance", "Cash on Hand", "Short", "Over"],
+            ...reportData.tellers.map(t => [
+              t.tellerName || "",
+              Number(t.systemBalance || 0),
+              Number(t.cashOnHand || 0),
+              Number(t.short || 0),
+              Number(t.over || 0)
+            ]),
+            [
+              "TOTAL",
+              tellersList.reduce((sum, t) => sum + Number(t.systemBalance || 0), 0),
+              tellersList.reduce((sum, t) => sum + Number(t.cashOnHand || 0), 0),
+              tellersList.reduce((sum, t) => sum + Number(t.short || 0), 0),
+              tellersList.reduce((sum, t) => sum + Number(t.over || 0), 0)
+            ]
+          ];
+
+          const csvContent = csvRows.map(row => 
             row.map(cell => {
               const cellStr = String(cell);
               if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
@@ -322,11 +332,8 @@ export default function SupervisorReports({ userRole }) {
           URL.revokeObjectURL(url);
           showToast({ 
             type: "success", 
-            message: "✅ Report downloaded as CSV" 
+            message: "✅ CSV downloaded" 
           });
-          // Still open the target sheet
-          const targetUrl = customSheetUrl || "https://sheets.google.com/";
-          window.open(targetUrl, "_blank");
         } catch (downloadErr) {
           console.error("Download failed:", downloadErr);
           showToast({ type: "error", message: "Failed to download report" });
