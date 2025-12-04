@@ -328,6 +328,44 @@ router.get("/tomorrow", requireAuth, async (req, res) => {
 });
 
 /**
+ * ✅ GET /api/schedule/by-date/:dateStr
+ * Fetch assignments for a specific date (past or future)
+ * Params: dateStr (yyyy-MM-dd format)
+ */
+router.get("/by-date/:dateStr", requireAuth, async (req, res) => {
+  try {
+    const { dateStr } = req.params;
+    console.log("📅 Fetching assignments for date:", dateStr);
+
+    // Validate date format
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      return res.status(400).json({ message: "Invalid date format. Use yyyy-MM-dd" });
+    }
+
+    // Fetch assignments for the specified date
+    let assignments = await DailyTellerAssignment.find({ dayKey: dateStr })
+      .populate("tellerId", "name username role baseSalary")
+      .populate("supervisorId", "name username role")
+      .lean();
+
+    // If no assignments exist for this date, return empty list
+    // (Don't auto-generate, just return what exists)
+    res.json({ 
+      success: true, 
+      date: dateStr, 
+      schedule: assignments || [],
+      message: assignments.length === 0 ? "No assignments for this date" : "OK"
+    });
+  } catch (err) {
+    console.error("❌ Error fetching schedule for date:", err);
+    res.status(500).json({
+      message: "Failed to fetch schedule for date",
+      error: err.message,
+    });
+  }
+});
+
+/**
  * 🧹 DELETE /api/schedule/tomorrow
  * Clears tomorrow's assignments so they can be regenerated
  */

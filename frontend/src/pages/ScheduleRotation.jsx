@@ -172,18 +172,45 @@ export default function ScheduleRotation() {
       setLoading(true);
       const token = localStorage.getItem("token");
       
-      // Build query with custom date range if enabled
-      let queryStr = `?range=${workDaysRange}`;
+      // If custom date range is enabled, fetch from that range
       if (useCustomDateRange && customRangeStart && customRangeEnd) {
-        queryStr += `&startDate=${customRangeStart}&endDate=${customRangeEnd}`;
+        console.log('🔍 Fetching assignments for custom range:', customRangeStart, 'to', customRangeEnd);
+        
+        // Parse the date range
+        const startDate = new Date(customRangeStart);
+        const endDate = new Date(customRangeEnd);
+        const allAssignments = [];
+        
+        // Fetch assignments for each day in the range
+        const currentDate = new Date(startDate);
+        while (currentDate <= endDate) {
+          const dateStr = currentDate.toISOString().slice(0, 10);
+          try {
+            const res = await axios.get(`${API}/api/schedule/by-date/${dateStr}`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.data.schedule && res.data.schedule.length > 0) {
+              allAssignments.push(...res.data.schedule);
+              console.log(`  ✅ ${dateStr}: ${res.data.schedule.length} assignments`);
+            }
+          } catch (err) {
+            console.log(`  ⚠️ ${dateStr}: No data or error`);
+          }
+          currentDate.setDate(currentDate.getDate() + 1);
+        }
+        
+        console.log('🔍 Total assignments in range:', allAssignments.length);
+        setTomorrowAssignments(allAssignments);
+      } else {
+        // Default: fetch tomorrow's schedule
+        let queryStr = `?range=${workDaysRange}`;
+        console.log('🔍 Fetching tomorrow schedule with query:', queryStr);
+        const res = await axios.get(`${API}/api/schedule/tomorrow${queryStr}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        console.log('🔍 /api/schedule/tomorrow response:', res.data?.schedule?.map(s=>({id:s._id,tellerName:s.tellerName,rangeWorkDays:s.rangeWorkDays,range:s.range})));
+        setTomorrowAssignments(res.data.schedule || []);
       }
-      
-      console.log('🔍 Fetching tomorrow schedule with query:', queryStr);
-      const res = await axios.get(`${API}/api/schedule/tomorrow${queryStr}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      console.log('🔍 /api/schedule/tomorrow response:', res.data?.schedule?.map(s=>({id:s._id,tellerName:s.tellerName,rangeWorkDays:s.rangeWorkDays,range:s.range})));
-      setTomorrowAssignments(res.data.schedule || []);
     } catch (err) {
       console.error("❌ Failed to fetch schedule:", err);
       showToast({ type: "error", message: "Failed to load schedule data." });
