@@ -154,11 +154,13 @@ export async function midnightReset() {
       await r.save();
     }
 
-    // 2) Mark all yesterday's teller assignments as completed
-    await DailyTellerAssignment.updateMany(
-      { dayKey: yesterday },
-      { $set: { completed: true } }
-    );
+    // 2) 🔄 PERSIST: Don't mark assignments as completed so they stay visible in schedule
+    // Previously this marked yesterday's assignments as completed, causing them to disappear
+    // Now we keep them as scheduled/active so supervisors can reference them
+    // await DailyTellerAssignment.updateMany(
+    //   { dayKey: yesterday },
+    //   { $set: { completed: true } }
+    // );
 
     // 3) Reset supervisor reports (clear submitted status for new day)
     const resetCount = await SupervisorReport.updateMany(
