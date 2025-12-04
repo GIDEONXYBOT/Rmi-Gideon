@@ -285,33 +285,32 @@ export default function SupervisorReports({ userRole }) {
       // Get custom Google Sheets URL from settings or localStorage
       const customSheetUrl = settings?.googleSheetsUrl || localStorage.getItem('googleSheetsUrl') || '';
 
-      // Try to copy to clipboard, with fallback to download
-      const copyToClipboard = async () => {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          try {
-            await navigator.clipboard.writeText(csvContent);
-            const targetUrl = customSheetUrl || "https://sheets.google.com/";
-            showToast({ 
-              type: "success", 
-              message: customSheetUrl 
-                ? "Data copied! Opening your Google Sheet. Paste with Ctrl+V" 
-                : "Data copied! Opening Google Sheets. Paste with Ctrl+V" 
-            });
-            // Open custom sheet or Google Sheets homepage
-            window.open(targetUrl, "_blank");
-            return true;
-          } catch (clipboardErr) {
-            console.warn("Clipboard write failed:", clipboardErr);
-            return false;
-          }
-        }
-        return false;
-      };
+      // Try to copy to clipboard
+      let clipboardSuccess = false;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(csvContent).then(() => {
+          clipboardSuccess = true;
+          const targetUrl = customSheetUrl || "https://sheets.google.com/";
+          showToast({ 
+            type: "success", 
+            message: customSheetUrl 
+              ? "Data copied! Opening your Google Sheet. Paste with Ctrl+V" 
+              : "Data copied! Opening Google Sheets. Paste with Ctrl+V" 
+          });
+          // Open custom sheet or Google Sheets homepage
+          window.open(targetUrl, "_blank");
+        }).catch((clipboardErr) => {
+          console.warn("Clipboard write failed:", clipboardErr);
+          // Fallback to download
+          downloadAsCSV();
+        });
+      } else {
+        // Clipboard not available, download directly
+        downloadAsCSV();
+      }
 
-      // Try clipboard first, then fallback to download
-      copyToClipboard().then(success => {
-        if (!success) {
-          // Fallback: download as CSV file
+      function downloadAsCSV() {
+        try {
           const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
           const link = document.createElement("a");
           const url = URL.createObjectURL(blob);
@@ -329,8 +328,11 @@ export default function SupervisorReports({ userRole }) {
           // Still open the target sheet
           const targetUrl = customSheetUrl || "https://sheets.google.com/";
           window.open(targetUrl, "_blank");
+        } catch (downloadErr) {
+          console.error("Download failed:", downloadErr);
+          showToast({ type: "error", message: "Failed to download report" });
         }
-      });
+      }
       
     } catch (err) {
       console.error("Export error:", err);
