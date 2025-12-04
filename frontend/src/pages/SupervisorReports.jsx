@@ -230,115 +230,63 @@ export default function SupervisorReports({ userRole }) {
     }
 
     try {
-      // Prepare data - IMPORTANT: Use tab character for proper column separation
-      const headers = "Teller Name\tSystem Balance\tCash on Hand\tShort\tOver";
-
-      const rows = reportData.tellers.map(t => {
-        return [
-          t.tellerName || "",
-          Number(t.systemBalance || 0),
-          Number(t.cashOnHand || 0),
-          Number(t.short || 0),
-          Number(t.over || 0)
-        ].join('\t');
-      });
-
-      // Add totals row
-      const tellersList = reportData.tellers || [];
-      const totalRow = [
-        "TOTAL",
-        tellersList.reduce((sum, t) => sum + Number(t.systemBalance || 0), 0),
-        tellersList.reduce((sum, t) => sum + Number(t.cashOnHand || 0), 0),
-        tellersList.reduce((sum, t) => sum + Number(t.short || 0), 0),
-        tellersList.reduce((sum, t) => sum + Number(t.over || 0), 0)
-      ].join('\t');
-
       // Get supervisor name
       const supervisorName = userRole === "supervisor" 
         ? user?.name || user?.username 
         : supervisors.find(s => s._id === selectedSupervisor)?.name || "Unknown";
 
-      // Create clipboard content: headers + all rows separated by newlines
-      const clipboardContent = [
+      // Prepare headers
+      const headers = ["Teller Name", "System Balance", "Cash on Hand", "Short", "Over"];
+
+      // Prepare data rows
+      const csvRows = [
+        ["Supervisor Report - " + supervisorName],
+        ["Date: " + new Date().toLocaleDateString()],
+        [],
         headers,
-        ...rows,
-        totalRow
-      ].join('\n');
+        ...reportData.tellers.map(t => [
+          t.tellerName || "",
+          Number(t.systemBalance || 0),
+          Number(t.cashOnHand || 0),
+          Number(t.short || 0),
+          Number(t.over || 0)
+        ]),
+        [
+          "TOTAL",
+          reportData.tellers.reduce((sum, t) => sum + Number(t.systemBalance || 0), 0),
+          reportData.tellers.reduce((sum, t) => sum + Number(t.cashOnHand || 0), 0),
+          reportData.tellers.reduce((sum, t) => sum + Number(t.short || 0), 0),
+          reportData.tellers.reduce((sum, t) => sum + Number(t.over || 0), 0)
+        ]
+      ];
 
-      // Get custom Google Sheets URL from settings or localStorage
-      const customSheetUrl = settings?.googleSheetsUrl || localStorage.getItem('googleSheetsUrl') || '';
+      // Create CSV content
+      const csvContent = csvRows.map(row => 
+        row.map(cell => {
+          const cellStr = String(cell);
+          if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
+            return '"' + cellStr.replace(/"/g, '""') + '"';
+          }
+          return cellStr;
+        }).join(',')
+      ).join('\n');
 
-      // Try to copy to clipboard
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(clipboardContent).then(() => {
-          const targetUrl = customSheetUrl || "https://sheets.google.com/";
-          showToast({ 
-            type: "success", 
-            message: "✅ Copied! Paste into Google Sheets with Ctrl+V" 
-          });
-          // Open Google Sheets
-          window.open(targetUrl, "_blank");
-        }).catch((clipboardErr) => {
-          console.warn("Clipboard write failed:", clipboardErr);
-          downloadAsCSV();
-        });
-      } else {
-        downloadAsCSV();
-      }
-
-      function downloadAsCSV() {
-        try {
-          // For download, create proper CSV format
-          const csvRows = [
-            ["Supervisor Report - " + supervisorName],
-            ["Date: " + new Date().toLocaleDateString()],
-            [],
-            ["Teller Name", "System Balance", "Cash on Hand", "Short", "Over"],
-            ...reportData.tellers.map(t => [
-              t.tellerName || "",
-              Number(t.systemBalance || 0),
-              Number(t.cashOnHand || 0),
-              Number(t.short || 0),
-              Number(t.over || 0)
-            ]),
-            [
-              "TOTAL",
-              tellersList.reduce((sum, t) => sum + Number(t.systemBalance || 0), 0),
-              tellersList.reduce((sum, t) => sum + Number(t.cashOnHand || 0), 0),
-              tellersList.reduce((sum, t) => sum + Number(t.short || 0), 0),
-              tellersList.reduce((sum, t) => sum + Number(t.over || 0), 0)
-            ]
-          ];
-
-          const csvContent = csvRows.map(row => 
-            row.map(cell => {
-              const cellStr = String(cell);
-              if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
-                return '"' + cellStr.replace(/"/g, '""') + '"';
-              }
-              return cellStr;
-            }).join(',')
-          ).join('\n');
-
-          const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-          const link = document.createElement("a");
-          const url = URL.createObjectURL(blob);
-          link.setAttribute("href", url);
-          link.setAttribute("download", `supervisor_report_${supervisorName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`);
-          link.style.visibility = "hidden";
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          URL.revokeObjectURL(url);
-          showToast({ 
-            type: "success", 
-            message: "✅ CSV downloaded" 
-          });
-        } catch (downloadErr) {
-          console.error("Download failed:", downloadErr);
-          showToast({ type: "error", message: "Failed to download report" });
-        }
-      }
+      // Create blob and download
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", `supervisor_report_${supervisorName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      showToast({ 
+        type: "success", 
+        message: "✅ Report downloaded! Import CSV to Google Sheets" 
+      });
       
     } catch (err) {
       console.error("Export error:", err);
