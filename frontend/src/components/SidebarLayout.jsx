@@ -366,7 +366,7 @@ export default function SidebarLayout({ role, children }) {
     supervisor: ['dashboard','upload','feed','users','supervisor-report','teller-reports','teller-reports-viewer','teller-management','staff-performance','teller-month','history','payroll','suggested-schedule','key-performance-indicator','deployments','live-map'],
     supervisor_teller: ['dashboard','upload','feed','users','supervisor-report','teller-reports','teller-reports-viewer','teller-management','staff-performance','teller-month','history','payroll','suggested-schedule','deployments','live-map'],
     teller: ['dashboard','upload','feed','users','teller-reports','history','payroll','teller-month','suggested-schedule','deployments','live-map'],
-    declarator: ['deployments','upload','feed','users','settings','live-map','map-editor'],
+    declarator: ['dashboard','upload','feed','users','deployments','suggested-schedule','live-map','map-editor','settings'],
   };
 
   const [permissionsLoaded, setPermissionsLoaded] = useState(false);

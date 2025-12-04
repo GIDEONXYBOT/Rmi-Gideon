@@ -97,6 +97,7 @@ export default function ScheduleRotation() {
 
   const isAdminOnly = user?.role === "admin" || user?.role === "super_admin" || isAlfonsoUsername;
   const isSuperAdminOnly = user?.role === "admin" || user?.role === "super_admin" || isAlfonsoUsername;
+  const isDeclaratorViewOnly = user?.role === "declarator";
 
   useEffect(() => {
     console.log("ðŸ“… useEffect triggered for todayDate:", todayDate);
@@ -784,30 +785,32 @@ export default function ScheduleRotation() {
                     Days Worked: <span className="font-semibold">{currentAssignment?.rangeWorkDays || 0} days</span>
                   </p>
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => markPresent(currentAssignment?._id)}
-                    className="flex items-center gap-1 px-3 py-2 text-xs rounded-lg bg-green-600 text-white hover:opacity-90"
-                  >
-                    <CheckCircle className="w-4 h-4" /> Present
-                  </button>
-                  {isSuperAdminOnly && (
-                    <>
-                      <button
-                        onClick={() => handleReplaceTeller(currentAssignment)}
-                        className="flex items-center gap-1 px-3 py-2 text-xs rounded-lg bg-blue-600 text-white hover:opacity-90"
-                      >
-                        <Check className="w-4 h-4" /> Replace
-                      </button>
-                      <button
-                        onClick={() => markAbsent(currentAssignment?._id)}
-                        className="flex items-center gap-1 px-3 py-2 text-xs rounded-lg bg-red-600 text-white hover:opacity-90"
-                      >
-                        <X className="w-4 h-4" /> Absent
-                      </button>
-                    </>
-                  )}
-                </div>
+                {!isDeclaratorViewOnly && (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => markPresent(currentAssignment?._id)}
+                      className="flex items-center gap-1 px-3 py-2 text-xs rounded-lg bg-green-600 text-white hover:opacity-90"
+                    >
+                      <CheckCircle className="w-4 h-4" /> Present
+                    </button>
+                    {isSuperAdminOnly && (
+                      <>
+                        <button
+                          onClick={() => handleReplaceTeller(currentAssignment)}
+                          className="flex items-center gap-1 px-3 py-2 text-xs rounded-lg bg-blue-600 text-white hover:opacity-90"
+                        >
+                          <Check className="w-4 h-4" /> Replace
+                        </button>
+                        <button
+                          onClick={() => markAbsent(currentAssignment?._id)}
+                          className="flex items-center gap-1 px-3 py-2 text-xs rounded-lg bg-red-600 text-white hover:opacity-90"
+                        >
+                          <X className="w-4 h-4" /> Absent
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -826,7 +829,7 @@ export default function ScheduleRotation() {
                         ({useCustomDateRange ? `${customRangeStart} to ${customRangeEnd}` : (workDaysRange === 'week' ? 'Mon-Sun' : workDaysRange === 'month' ? 'This month' : workDaysRange === 'year' ? 'This year' : 'All-time')})
                       </span>
                     </th>
-                    {isAdminOnly && <th className="p-3 text-center">Actions</th>}
+                    {!isDeclaratorViewOnly && isAdminOnly && <th className="p-3 text-center">Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -873,7 +876,7 @@ export default function ScheduleRotation() {
                           {typeof a.rangeWorkDays !== 'undefined' ? a.rangeWorkDays : (a.totalWorkDays || 0)} days
                         </span>
                       </td>
-                      {isAdminOnly && (
+                      {!isDeclaratorViewOnly && isAdminOnly && (
                         <td className="p-3 text-center">
                           <div className="flex justify-center gap-2">
                             <button
