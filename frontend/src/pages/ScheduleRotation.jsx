@@ -884,7 +884,6 @@ export default function ScheduleRotation() {
           </div>
         )}
       </div>
-      </div>
 
       {/* 🆕 Today's Working Tellers */}
       <div
