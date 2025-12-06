@@ -466,53 +466,38 @@ export default function SupervisorReports({ userRole }) {
         [],
         headers,
         ...rows
-      ].map(row => row.join(",")).join("\n");
-
-      const customSheetUrl = settings?.googleSheetsUrl || localStorage.getItem('googleSheetsUrl') || '';
-
-      const copyToClipboard = async () => {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          try {
-            await navigator.clipboard.writeText(csvContent);
-            const targetUrl = customSheetUrl || "https://sheets.google.com/";
-            showToast({ 
-              type: "success", 
-              message: "Merged report copied! Opening Google Sheet. Paste with Ctrl+V" 
-            });
-            window.open(targetUrl, "_blank");
-            return true;
-          } catch (clipboardErr) {
-            console.warn("Clipboard write failed:", clipboardErr);
-            return false;
+      ].map(row => 
+        row.map(cell => {
+          const cellStr = String(cell);
+          if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
+            return '"' + cellStr.replace(/"/g, '""') + '"';
           }
-        }
-        return false;
-      };
+          return cellStr;
+        }).join(',')
+      ).join('\n');
 
-      copyToClipboard().then(success => {
-        if (!success) {
-          const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-          const link = document.createElement("a");
-          const url = URL.createObjectURL(blob);
-          link.setAttribute("href", url);
-          link.setAttribute("download", `consolidated_report_${new Date().toISOString().split('T')[0]}.csv`);
-          link.style.visibility = "hidden";
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          URL.revokeObjectURL(url);
-          showToast({ 
-            type: "success", 
-            message: "Report downloaded as CSV." 
-          });
-          const targetUrl = customSheetUrl || "https://sheets.google.com/";
-          window.open(targetUrl, "_blank");
-        }
+      // Auto-download CSV file
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", `consolidated_report_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      showToast({ 
+        type: "success", 
+        message: "✅ Consolidated report downloaded as CSV!" 
       });
       
     } catch (err) {
       console.error("Export error:", err);
       showToast({ type: "error", message: "Failed to export report" });
+    }
+  }
     }
   }
 
