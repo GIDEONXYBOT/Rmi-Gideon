@@ -8,6 +8,7 @@ import User from "../models/User.js";
 import DailyAttendance from "../models/DailyAttendance.js";
 import FullWeekSelection from "../models/FullWeekSelection.js";
 import FullWeekAudit from "../models/FullWeekAudit.js";
+import SuggestedTellerAssignment from "../models/SuggestedTellerAssignment.js";
 import { requireAuth } from "../middleware/auth.js";
 
 const router = express.Router();
@@ -868,13 +869,32 @@ router.put("/mark-absent/:assignmentId", requireAuth, async (req, res) => {
 
 /**
  * ✅ SUGGESTED TELLERS (with work history based on weekly reports)
+ * GET /api/schedule/suggest/:dayKey
+ * Fetches or generates and caches suggested tellers for a specific day
  * Query params: startDate, endDate (optional, format: yyyy-MM-dd)
- * If not provided, defaults to Monday-Sunday of the current week
+ * If not provided, defaults to Monday-Sunday of the week containing dayKey
+ * NOTE: No authentication restriction - all roles can view
  */
-router.get("/suggest/:dayKey", requireAuth, async (req, res) => {
+router.get("/suggest/:dayKey", async (req, res) => {
   try {
     const { dayKey } = req.params;
     const { startDate, endDate } = req.query;
+
+    // Check if suggestions already exist in database for this dayKey
+    const existingSuggestions = await SuggestedTellerAssignment.findOne({ dayKey }).lean();
+    if (existingSuggestions && existingSuggestions.suggestions && existingSuggestions.suggestions.length > 0) {
+      console.log(`✅ Found cached suggestions for ${dayKey} (${existingSuggestions.suggestions.length} tellers)`);
+      return res.json({
+        success: true,
+        suggestions: existingSuggestions.suggestions,
+        dateRange: existingSuggestions.dateRange,
+        cached: true,
+        message: `Cached suggested tellers found (based on weekly reports)`,
+      });
+    }
+
+    // If not cached, generate new suggestions
+    console.log(`🔄 Generating new suggestions for ${dayKey}...`);
 
     // Determine date range
     let weekStart, weekEnd;
@@ -978,10 +998,28 @@ router.get("/suggest/:dayKey", requireAuth, async (req, res) => {
 
     console.log(`📊 Found ${suggestions.length} suggested tellers with weekly data`);
 
+    // Save suggestions to database for future retrieval
+    try {
+      await SuggestedTellerAssignment.findOneAndUpdate(
+        { dayKey },
+        {
+          dayKey,
+          suggestions,
+          dateRange: { startDate: weekStart, endDate: weekEnd },
+        },
+        { upsert: true, new: true }
+      );
+      console.log(`💾 Saved ${suggestions.length} suggestions for ${dayKey}`);
+    } catch (err) {
+      console.warn(`⚠️ Failed to cache suggestions:`, err.message);
+      // Don't fail the request, just continue
+    }
+
     res.json({
       success: true,
       suggestions,
       dateRange: { startDate: weekStart, endDate: weekEnd },
+      cached: false,
       message: suggestions.length
         ? "Suggested replacement tellers found (based on weekly reports)"
         : "No available tellers to suggest",
