@@ -38,6 +38,9 @@ export default function TellerManagement() {
   const [submitting, setSubmitting] = useState(false);
   const [actionPickerFor, setActionPickerFor] = useState(null); // tellerId showing action picker in overview
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]); // Date filter
+  const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]); // Date range start
+  const [endDate, setEndDate] = useState(new Date().toISOString().split("T")[0]); // Date range end
+  const [showDateRange, setShowDateRange] = useState(false); // Toggle between single date and range
   const [editingRow, setEditingRow] = useState(null); // Track which row is being edited
   const [editValues, setEditValues] = useState({}); // Store edit values
   const [deleteConfirmation, setDeleteConfirmation] = useState(null); // { tellerId, tellerName, capitalId } or null
@@ -109,12 +112,22 @@ export default function TellerManagement() {
       if (supervisorId && typeof supervisorId === 'object') supervisorId = supervisorId._id || supervisorId.id || String(supervisorId);
       if (!supervisorId) { setTellers([]); return; }
       
-      // Add dateKey parameter to filter by date
+      // Add date range parameters if viewing historical data
       const token = localStorage.getItem('token');
       const headers = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
       
+      const params = { supervisorId };
+      if (showDateRange && startDate && endDate) {
+        // Use date range for historical view
+        params.startDate = startDate;
+        params.endDate = endDate;
+      } else {
+        // Use single date (default current behavior)
+        params.dateKey = selectedDate;
+      }
+      
       const res = await axios.get(`${getApiUrl()}/api/teller-management/tellers`, { 
-        params: { supervisorId, dateKey: selectedDate },
+        params,
         ...headers
       });
       const data = Array.isArray(res.data) ? res.data : (res.data?.tellers || res.data?.reports || []);
@@ -184,7 +197,7 @@ export default function TellerManagement() {
       };
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?._id, selectedDate]); // Added selectedDate dependency
+  }, [user?._id, selectedDate, startDate, endDate, showDateRange]); // Added date range dependencies
 
   const handleSubmit = async () => {
     if (selectedTellers.length === 0 || !amount) {
@@ -342,17 +355,62 @@ export default function TellerManagement() {
         <div className="flex items-center gap-3">
           {/* Date Filter */}
           <div className="flex items-center gap-2">
-            <label className="text-sm font-medium">Date:</label>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className={`px-3 py-1 rounded border text-sm ${
-                dark 
-                  ? "bg-gray-800 border-gray-600 text-gray-100" 
-                  : "bg-white border-gray-300 text-gray-900"
-              }`}
-            />
+            {!showDateRange ? (
+              <>
+                <label className="text-sm font-medium">Date:</label>
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className={`px-3 py-1 rounded border text-sm ${
+                    dark 
+                      ? "bg-gray-800 border-gray-600 text-gray-100" 
+                      : "bg-white border-gray-300 text-gray-900"
+                  }`}
+                />
+                {user?.role === 'super_admin' && (
+                  <button
+                    onClick={() => setShowDateRange(true)}
+                    className="px-3 py-1 rounded bg-gray-500 hover:bg-gray-600 text-white text-sm"
+                    title="View historical data by date range"
+                  >
+                    📅 Range
+                  </button>
+                )}
+              </>
+            ) : (
+              <>
+                <label className="text-sm font-medium">From:</label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className={`px-3 py-1 rounded border text-sm ${
+                    dark 
+                      ? "bg-gray-800 border-gray-600 text-gray-100" 
+                      : "bg-white border-gray-300 text-gray-900"
+                  }`}
+                />
+                <label className="text-sm font-medium">To:</label>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className={`px-3 py-1 rounded border text-sm ${
+                    dark 
+                      ? "bg-gray-800 border-gray-600 text-gray-100" 
+                      : "bg-white border-gray-300 text-gray-900"
+                  }`}
+                />
+                <button
+                  onClick={() => setShowDateRange(false)}
+                  className="px-3 py-1 rounded bg-gray-500 hover:bg-gray-600 text-white text-sm"
+                  title="Back to single date view"
+                >
+                  📅 Single
+                </button>
+              </>
+            )}
           </div>
 
           <button
@@ -701,11 +759,18 @@ export default function TellerManagement() {
               </span>
             )}
           </h2>
-          {selectedDate !== new Date().toISOString().split("T")[0] && (
+          {selectedDate !== new Date().toISOString().split("T")[0] && !showDateRange && (
             <span className={`text-sm px-3 py-1 rounded-full font-medium ${
               dark ? "bg-amber-900 text-amber-200" : "bg-amber-100 text-amber-800"
             }`}>
               📅 Viewing: {new Date(selectedDate + 'T00:00:00').toLocaleDateString()}
+            </span>
+          )}
+          {showDateRange && startDate && endDate && (
+            <span className={`text-sm px-3 py-1 rounded-full font-medium ${
+              dark ? "bg-blue-900 text-blue-200" : "bg-blue-100 text-blue-800"
+            }`}>
+              📅 Historical View: {new Date(startDate + 'T00:00:00').toLocaleDateString()} - {new Date(endDate + 'T00:00:00').toLocaleDateString()}
             </span>
           )}
         </div>

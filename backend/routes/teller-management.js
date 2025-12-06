@@ -526,28 +526,36 @@ router.get("/:tellerId/details", async (req, res) => {
    ====================================================== */
 router.get("/tellers", async (req, res) => {
   try {
-    const { supervisorId, dateKey } = req.query;
+    const { supervisorId, dateKey, startDate, endDate } = req.query;
     if (!supervisorId) return res.status(400).json({ error: "Missing supervisorId" });
 
     if (!mongoose.Types.ObjectId.isValid(supervisorId)) {
       return res.status(400).json({ error: "Invalid supervisorId" });
     }
 
-    // Get today's date if no dateKey provided
-    const now = DateTime.now().setZone("Asia/Manila");
-    const targetDate = dateKey || now.toFormat("yyyy-MM-dd");
+    // Determine date range for querying
+    let queryStartOfDay, queryEndOfDay;
+    
+    if (startDate && endDate) {
+      // Use provided date range
+      queryStartOfDay = DateTime.fromFormat(startDate, 'yyyy-MM-dd', { zone: 'Asia/Manila' }).startOf('day').toUTC();
+      queryEndOfDay = DateTime.fromFormat(endDate, 'yyyy-MM-dd', { zone: 'Asia/Manila' }).plus({ days: 1 }).startOf('day').toUTC();
+    } else {
+      // Use single dateKey (backward compatibility)
+      const now = DateTime.now().setZone("Asia/Manila");
+      const targetDate = dateKey || now.toFormat("yyyy-MM-dd");
+      queryStartOfDay = DateTime.fromFormat(targetDate, 'yyyy-MM-dd', { zone: 'Asia/Manila' }).startOf('day').toUTC();
+      queryEndOfDay = queryStartOfDay.plus({ days: 1 });
+    }
 
     // Fetch all tellers assigned to this supervisor
     const assignedTellers = await User.find({ role: { $in: ["teller", "supervisor_teller"] }, supervisorId }).lean();
 
-    // Also find supervisors who received capital from this supervisor today
-    const startOfDay = DateTime.fromFormat(targetDate, 'yyyy-MM-dd', { zone: 'Asia/Manila' }).startOf('day').toUTC();
-    const endOfDay = startOfDay.plus({ days: 1 });
-
+    // Also find supervisors who received capital from this supervisor within the date range
     const capitalRecipients = await Transaction.find({
       supervisorId: new mongoose.Types.ObjectId(supervisorId),
       type: { $in: ['capital', 'additional'] },
-      createdAt: { $gte: startOfDay.toJSDate(), $lt: endOfDay.toJSDate() }
+      createdAt: { $gte: queryStartOfDay.toJSDate(), $lt: queryEndOfDay.toJSDate() }
     }).distinct('tellerId');
 
     // Get supervisor users who received capital today
@@ -571,13 +579,10 @@ router.get("/tellers", async (req, res) => {
     const data = (await Promise.all(
       allTellers.map(async (t) => {
         try {
-          // Fetch transactions for this teller within the Manila day
-          const startOfDay = DateTime.fromFormat(targetDate, 'yyyy-MM-dd', { zone: 'Asia/Manila' }).startOf('day').toUTC();
-          const endOfDay = startOfDay.plus({ days: 1 });
-
+          // Fetch transactions for this teller within the date range
           const transactions = await Transaction.find({
             tellerId: t._id,
-            createdAt: { $gte: startOfDay.toJSDate(), $lt: endOfDay.toJSDate() }
+            createdAt: { $gte: queryStartOfDay.toJSDate(), $lt: queryEndOfDay.toJSDate() }
           }).lean();
 
           const activeCapital = (await Capital.findOne({ tellerId: t._id, status: "active" }).lean()) || null;
@@ -594,7 +599,7 @@ router.get("/tellers", async (req, res) => {
           // Balance: base + additional - remitted (auto-calculated by Capital model, but we recalc for safety)
           const balance = baseCapital + additionalCapital - remitted;
 
-          // Calculate today's transactions (additional and remittance made today)
+          // Calculate transactions within the date range (additional and remittance)
           const additionalToday = transactions
             .filter(tx => tx.type === 'additional')
             .reduce((sum, tx) => sum + (tx.amount || 0), 0);
@@ -603,19 +608,22 @@ router.get("/tellers", async (req, res) => {
             .filter(tx => tx.type === 'remittance')
             .reduce((sum, tx) => sum + (tx.amount || 0), 0);
 
-          // Show users if they have transactions today OR capital created today OR received capital from this supervisor today
-          const manilaStart = DateTime.fromFormat(targetDate, 'yyyy-MM-dd', { zone: 'Asia/Manila' }).startOf('day');
-          const manilaEnd = manilaStart.plus({ days: 1 });
-          const capitalCreatedToday = !!activeCapital && DateTime.fromJSDate(activeCapital.createdAt).setZone('Asia/Manila') >= manilaStart && DateTime.fromJSDate(activeCapital.createdAt).setZone('Asia/Manila') < manilaEnd;
-          const hasTransactionsToday = transactions.length > 0;
+          // Show users if they have transactions in date range OR capital created in date range OR received capital from this supervisor in date range
+          const capitalCreatedInRange = !!activeCapital && DateTime.fromJSDate(activeCapital.createdAt).setZone('Asia/Manila') >= DateTime.fromJSDate(queryStartOfDay.toJSDate()).setZone('Asia/Manila') && DateTime.fromJSDate(activeCapital.createdAt).setZone('Asia/Manila') < DateTime.fromJSDate(queryEndOfDay.toJSDate()).setZone('Asia/Manila');
+          const hasTransactionsInRange = transactions.length > 0;
 
-          // Check if this user received capital/additional from the requesting supervisor today
+          // Check if this user received capital/additional from the requesting supervisor in the date range
           // This is true if the user is in the capitalRecipients list we found earlier
           const receivedCapitalFromSupervisor = capitalRecipients.some(id => id.toString() === t._id.toString());
 
-          if (!hasTransactionsToday && !capitalCreatedToday && !receivedCapitalFromSupervisor) {
-            return null; // filtered out - no activity with this supervisor today
+          if (!hasTransactionsInRange && !capitalCreatedInRange && !receivedCapitalFromSupervisor) {
+            return null; // filtered out - no activity in this date range
           }
+
+          // Format date range for response
+          const dateRangeLabel = startDate && endDate && startDate !== endDate 
+            ? `${startDate} to ${endDate}` 
+            : (dateKey || DateTime.now().setZone("Asia/Manila").toFormat("yyyy-MM-dd"));
 
           return {
             _id: t._id,
@@ -624,15 +632,15 @@ router.get("/tellers", async (req, res) => {
             role: t.role,
             supervisorName,
             activeCapital,
-            hasTransactionsToday,
-            capitalCreatedToday,
+            hasTransactionsInRange,
+            capitalCreatedInRange,
             baseCapital,
             additionalCapital,
             remitted,
             balance,
             additionalToday,
             remittanceToday,
-            dateKey: targetDate,
+            dateRange: dateRangeLabel,
           };
         } catch (innerErr) {
           // Log per-item error but don't fail entire request

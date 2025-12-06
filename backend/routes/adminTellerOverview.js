@@ -11,12 +11,27 @@ const router = express.Router();
 
 /**
  * GET /api/admin/teller-overview
- * Get comprehensive teller data for a specific date with summary
+ * Get comprehensive teller data for a specific date or date range with summary
  */
 router.get("/teller-overview", async (req, res) => {
   try {
-    const { date } = req.query;
-    const targetDate = date || DateTime.now().setZone("Asia/Manila").toFormat("yyyy-MM-dd");
+    const { date, startDate, endDate } = req.query;
+    
+    // Determine date range for querying
+    let queryStartOfDay, queryEndOfDay, targetDate;
+    
+    if (startDate && endDate) {
+      // Use provided date range for historical view
+      queryStartOfDay = DateTime.fromFormat(startDate, 'yyyy-MM-dd', { zone: 'Asia/Manila' }).startOf('day').toUTC();
+      queryEndOfDay = DateTime.fromFormat(endDate, 'yyyy-MM-dd', { zone: 'Asia/Manila' }).plus({ days: 1 }).startOf('day').toUTC();
+      targetDate = `${startDate} to ${endDate}`;
+    } else {
+      // Use single date (backward compatibility)
+      targetDate = date || DateTime.now().setZone("Asia/Manila").toFormat("yyyy-MM-dd");
+      const targetDay = DateTime.fromFormat(targetDate, "yyyy-MM-dd", { zone: "Asia/Manila" });
+      queryStartOfDay = targetDay.startOf("day").toUTC();
+      queryEndOfDay = queryStartOfDay.plus({ days: 1 });
+    }
     
     console.log(`📊 Admin fetching teller overview for date: ${targetDate}`);
 
@@ -47,10 +62,11 @@ router.get("/teller-overview", async (req, res) => {
     const tellerIds = users.filter(u => u.role === 'teller').map(u => u._id);
     const supervisorIds = users.filter(u => u.role === 'supervisor').map(u => u._id);
     
-    // Get teller reports for the date
+    // Get teller reports for the date (or date range - use the start date for backward compatibility)
+    const singleDate = startDate || date || DateTime.now().setZone("Asia/Manila").toFormat("yyyy-MM-dd");
     const tellerReports = await TellerReport.find({
       tellerId: { $in: tellerIds },
-      date: targetDate
+      date: singleDate
     }).lean();
 
     // Get capital records for each teller (get ACTIVE records, regardless of date)
@@ -70,16 +86,14 @@ router.get("/teller-overview", async (req, res) => {
       });
     }
 
-    // Get transactions for the date to see additional capital and remittances
-    const targetDay = DateTime.fromFormat(targetDate, "yyyy-MM-dd", { zone: "Asia/Manila" });
-    const transactionsStart = targetDay.startOf("day").toUTC();
-    const transactionsEnd = transactionsStart.plus({ days: 1 });
+    // Get transactions for the date range to see additional capital and remittances
+    // queryStartOfDay and queryEndOfDay are already set at the beginning of the function
 
     const transactions = await Transaction.find({
       tellerId: { $in: tellerIds },
       createdAt: {
-        $gte: transactionsStart.toJSDate(),
-        $lt: transactionsEnd.toJSDate()
+        $gte: queryStartOfDay.toJSDate(),
+        $lt: queryEndOfDay.toJSDate()
       }
     }).lean();
 
