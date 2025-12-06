@@ -16,6 +16,7 @@ import { SettingsContext } from "../context/SettingsContext";
 import { useToast } from "../context/ToastContext";
 import { getApiUrl } from "../utils/apiConfig";
 import { getGlobalSocket } from "../utils/globalSocket";
+import PlanAbsence from "../components/PlanAbsence";
 
 function Money({ value }) {
   // format currency quick helper
@@ -353,24 +354,27 @@ export default function Dashboard({ overrideRole }) {
           )}
 
           {role === "teller" && (
-            <div className="p-4 rounded-lg shadow" style={{ background: cardBg }}>
-              <h3 className="font-semibold mb-2">Personal Summary</h3>
-              <div className="grid md:grid-cols-4 gap-4">
-                <div>
-                  <div className="text-xs text-gray-400">Reports</div>
-                  <div className="font-bold">{summary.reportsCount}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-gray-400">Over</div>
-                  <div className="font-bold">{Money({ value: teamStats.reduce((a, t) => a + (t.over || 0), 0) })}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-gray-400">Short</div>
-                  <div className="font-bold">{Money({ value: teamStats.reduce((a, t) => a + (t.short || 0), 0) })}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-gray-400">Salary</div>
-                  <div className="font-bold">{Money({ value: summary.totalPayroll })}</div>
+            <div>
+              <PlanAbsence />
+              <div className="p-4 rounded-lg shadow mt-6" style={{ background: cardBg }}>
+                <h3 className="font-semibold mb-2">Personal Summary</h3>
+                <div className="grid md:grid-cols-4 gap-4">
+                  <div>
+                    <div className="text-xs text-gray-400">Reports</div>
+                    <div className="font-bold">{summary.reportsCount}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-400">Over</div>
+                    <div className="font-bold">{Money({ value: teamStats.reduce((a, t) => a + (t.over || 0), 0) })}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-400">Short</div>
+                    <div className="font-bold">{Money({ value: teamStats.reduce((a, t) => a + (t.short || 0), 0) })}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-400">Salary</div>
+                    <div className="font-bold">{Money({ value: summary.totalPayroll })}</div>
+                  </div>
                 </div>
               </div>
             </div>

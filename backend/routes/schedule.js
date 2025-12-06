@@ -9,6 +9,7 @@ import DailyAttendance from "../models/DailyAttendance.js";
 import FullWeekSelection from "../models/FullWeekSelection.js";
 import FullWeekAudit from "../models/FullWeekAudit.js";
 import SuggestedTellerAssignment from "../models/SuggestedTellerAssignment.js";
+import PlannedAbsence from "../models/PlannedAbsence.js";
 import { requireAuth } from "../middleware/auth.js";
 
 const router = express.Router();
@@ -69,7 +70,7 @@ router.get("/tomorrow", requireAuth, async (req, res) => {
 
       // Fetch approved tellers (include supervisor_teller acting as teller) 
       // Exclude those with active penalties (skipUntil >= tomorrow)
-      const tellers = await User.find({ 
+      let tellers = await User.find({ 
         role: { $in: ["teller", "supervisor_teller"] }, 
         status: "approved",
         $or: [
@@ -80,6 +81,44 @@ router.get("/tomorrow", requireAuth, async (req, res) => {
         .populate("supervisorId", "name role")
         .sort({ lastWorked: 1, totalWorkDays: 1 }) // Prioritize least worked
         .lean();
+
+      // 📅 Filter out tellers with planned absences for tomorrow
+      const plannedAbsences = await PlannedAbsence.find({
+        tellerId: { $in: tellers.map(t => t._id) },
+        $or: [
+          // Exact date range match
+          {
+            startDate: { $lte: tomorrow },
+            endDate: { $gte: tomorrow },
+            isRecurring: false,
+          },
+          // Recurring absence on this day of week
+          {
+            isRecurring: true,
+            startDate: { $lte: tomorrow },
+            endDate: { $gte: tomorrow },
+          },
+        ],
+      }).lean();
+
+      const absentTellerIds = new Set(plannedAbsences.map(pa => pa.tellerId.toString()));
+      
+      // Filter out tellers who are absent and check day-of-week for recurring
+      const dayOfWeek = new Date(tomorrow + "T00:00:00Z").toLocaleDateString("en-US", {
+        weekday: "long",
+      });
+
+      tellers = tellers.filter(t => {
+        const tellerIdStr = t._id.toString();
+        const isAbsent = plannedAbsences.some(pa => 
+          pa.tellerId.toString() === tellerIdStr && 
+          (pa.isRecurring ? pa.daysOfWeek.includes(dayOfWeek) : true)
+        );
+        if (isAbsent) {
+          console.log(`⏭️ Teller ${t.name || t.username} has planned absence for ${tomorrow}`);
+        }
+        return !isAbsent;
+      });
 
       if (!tellers.length) {
         console.warn("⚠️ No approved tellers found — cannot generate schedule");
@@ -1505,4 +1544,153 @@ router.put("/replace/:assignmentId", requireAuth, async (req, res) => {
   }
 });
 
+/**
+ * ✅ POST /api/schedule/plan-absence
+ * Teller plans to be absent for specific days/week
+ */
+router.post("/plan-absence", requireAuth, async (req, res) => {
+  try {
+    const { startDate, endDate, reason, daysOfWeek, isRecurring } = req.body;
+    const tellerId = req.user._id;
+    const tellerName = req.user.name || req.user.username;
+
+    // Validate dates
+    if (!startDate || !endDate) {
+      return res.status(400).json({ message: "startDate and endDate are required" });
+    }
+
+    // Create planned absence record
+    const absence = new PlannedAbsence({
+      tellerId,
+      tellerName,
+      startDate,
+      endDate,
+      reason: reason || "Personal",
+      daysOfWeek: daysOfWeek || [], // e.g., ['Monday', 'Wednesday']
+      isRecurring: isRecurring || false,
+    });
+
+    await absence.save();
+    console.log(`📅 Teller ${tellerName} planned absence from ${startDate} to ${endDate}`);
+
+    // Emit real-time update
+    if (global.io) {
+      global.io.emit("absencePlanned", {
+        tellerId: tellerId.toString(),
+        tellerName,
+        startDate,
+        endDate,
+        daysOfWeek,
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "Absence planned successfully",
+      absence,
+    });
+  } catch (err) {
+    console.error("❌ Plan absence error:", err);
+    res.status(500).json({ message: "Failed to plan absence" });
+  }
+});
+
+/**
+ * ✅ GET /api/schedule/planned-absences
+ * Get current user's planned absences
+ */
+router.get("/planned-absences", requireAuth, async (req, res) => {
+  try {
+    const tellerId = req.user._id;
+    const absences = await PlannedAbsence.find({ tellerId }).sort({ startDate: -1 }).lean();
+
+    res.json({
+      success: true,
+      absences,
+    });
+  } catch (err) {
+    console.error("❌ Fetch absences error:", err);
+    res.status(500).json({ message: "Failed to fetch absences" });
+  }
+});
+
+/**
+ * ✅ GET /api/schedule/check-absence/:dateStr
+ * Check if teller is absent on a specific date
+ * Can be called without auth for checking during schedule generation
+ */
+router.get("/check-absence/:tellerId/:dateStr", async (req, res) => {
+  try {
+    const { tellerId, dateStr } = req.params;
+
+    // Get day of week for the date
+    const dayOfWeek = new Date(dateStr + "T00:00:00Z").toLocaleDateString("en-US", {
+      weekday: "long",
+    });
+
+    // Check for exact date match or recurring absence on that day
+    const absence = await PlannedAbsence.findOne({
+      tellerId,
+      $or: [
+        // Exact date range match
+        {
+          startDate: { $lte: dateStr },
+          endDate: { $gte: dateStr },
+          isRecurring: false,
+        },
+        // Recurring absence on this day of week
+        {
+          isRecurring: true,
+          daysOfWeek: dayOfWeek,
+          startDate: { $lte: dateStr },
+          endDate: { $gte: dateStr },
+        },
+      ],
+    }).lean();
+
+    res.json({
+      success: true,
+      isAbsent: !!absence,
+      absence: absence || null,
+      dayOfWeek,
+    });
+  } catch (err) {
+    console.error("❌ Check absence error:", err);
+    res.status(500).json({ message: "Failed to check absence" });
+  }
+});
+
+/**
+ * ✅ DELETE /api/schedule/cancel-absence/:absenceId
+ * Cancel a planned absence
+ */
+router.delete("/cancel-absence/:absenceId", requireAuth, async (req, res) => {
+  try {
+    const { absenceId } = req.params;
+    const tellerId = req.user._id;
+
+    // Verify ownership
+    const absence = await PlannedAbsence.findById(absenceId);
+    if (!absence) {
+      return res.status(404).json({ message: "Absence not found" });
+    }
+
+    if (absence.tellerId.toString() !== tellerId.toString()) {
+      return res.status(403).json({ message: "Forbidden - not your absence" });
+    }
+
+    await PlannedAbsence.findByIdAndDelete(absenceId);
+    console.log(`✅ Cancelled absence for ${absence.tellerName}`);
+
+    res.json({
+      success: true,
+      message: "Absence cancelled successfully",
+    });
+  } catch (err) {
+    console.error("❌ Cancel absence error:", err);
+    res.status(500).json({ message: "Failed to cancel absence" });
+  }
+});
+
 export default router;
+
