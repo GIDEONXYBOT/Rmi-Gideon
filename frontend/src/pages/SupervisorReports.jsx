@@ -568,8 +568,6 @@ export default function SupervisorReports({ userRole }) {
       showToast({ type: "error", message: "Failed to export report: " + err.message });
     }
   }
-    }
-  }
 
   // Print merged report
   function handlePrintMergedReport() {
