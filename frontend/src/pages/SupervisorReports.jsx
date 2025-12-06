@@ -282,35 +282,46 @@ export default function SupervisorReports({ userRole }) {
 
       console.log("✏️ CSV content created, length:", csvContent.length);
 
-      // Robust download with proper timing
+      // Download using data URI as fallback method
       const fileName = `supervisor_report_${supervisorName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
-      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-      const link = document.createElement("a");
-      const url = URL.createObjectURL(blob);
       
-      console.log("🔗 Blob created, URL:", url);
-      
-      link.href = url;
-      link.download = fileName;
-      link.style.display = "none";
-      document.body.appendChild(link);
-      
-      console.log("📍 Link appended to DOM");
-      
-      setTimeout(() => {
-        console.log("⬇️ Triggering download...");
+      // Try Blob method first
+      try {
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        
+        console.log("🔗 Blob created, URL:", url);
+        
+        link.href = url;
+        link.download = fileName;
+        link.style.display = "none";
+        document.body.appendChild(link);
+        
+        console.log("📍 Link appended to DOM");
+        
+        setTimeout(() => {
+          console.log("⬇️ Triggering download...");
+          link.click();
+          setTimeout(() => { 
+            document.body.removeChild(link); 
+            URL.revokeObjectURL(url);
+            console.log("🧹 Cleanup done");
+          }, 500);
+        }, 100);
+      } catch (blobErr) {
+        console.warn("⚠️ Blob method failed, trying data URI:", blobErr);
+        // Fallback: use data URI
+        const dataUri = "data:text/csv;charset=utf-8," + encodeURIComponent(csvContent);
+        const link = document.createElement("a");
+        link.href = dataUri;
+        link.download = fileName;
         link.click();
-      }, 100);
-      
-      setTimeout(() => { 
-        document.body.removeChild(link); 
-        URL.revokeObjectURL(url);
-        console.log("🧹 Cleanup done");
-      }, 200);
+      }
       
       showToast({ 
         type: "success", 
-        message: "✅ Report downloaded! Import CSV to Google Sheets" 
+        message: "✅ CSV file downloading..." 
       });
       
     } catch (err) {
@@ -510,35 +521,46 @@ export default function SupervisorReports({ userRole }) {
 
       console.log("✏️ CSV content created, length:", csvContent.length);
 
-      // Robust download with proper timing
+      // Download using data URI as fallback method
       const fileName = `consolidated_report_${new Date().toISOString().split('T')[0]}.csv`;
-      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-      const link = document.createElement("a");
-      const url = URL.createObjectURL(blob);
       
-      console.log("🔗 Blob created, URL:", url);
-      
-      link.href = url;
-      link.download = fileName;
-      link.style.display = "none";
-      document.body.appendChild(link);
-      
-      console.log("📍 Link appended to DOM");
-      
-      setTimeout(() => {
-        console.log("⬇️ Triggering download...");
+      // Try Blob method first
+      try {
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        
+        console.log("🔗 Blob created, URL:", url);
+        
+        link.href = url;
+        link.download = fileName;
+        link.style.display = "none";
+        document.body.appendChild(link);
+        
+        console.log("📍 Link appended to DOM");
+        
+        setTimeout(() => {
+          console.log("⬇️ Triggering download...");
+          link.click();
+          setTimeout(() => { 
+            document.body.removeChild(link); 
+            URL.revokeObjectURL(url);
+            console.log("🧹 Cleanup done");
+          }, 500);
+        }, 100);
+      } catch (blobErr) {
+        console.warn("⚠️ Blob method failed, trying data URI:", blobErr);
+        // Fallback: use data URI
+        const dataUri = "data:text/csv;charset=utf-8," + encodeURIComponent(csvContent);
+        const link = document.createElement("a");
+        link.href = dataUri;
+        link.download = fileName;
         link.click();
-      }, 100);
-      
-      setTimeout(() => { 
-        document.body.removeChild(link); 
-        URL.revokeObjectURL(url);
-        console.log("🧹 Cleanup done");
-      }, 200);
+      }
       
       showToast({ 
         type: "success", 
-        message: "✅ Consolidated report downloaded as CSV!" 
+        message: "✅ CSV file downloading..." 
       });
       
     } catch (err) {
