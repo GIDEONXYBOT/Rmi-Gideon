@@ -271,17 +271,17 @@ export default function SupervisorReports({ userRole }) {
         }).join(',')
       ).join('\n');
 
-      // Create blob and download
+      // Robust download with proper timing
+      const fileName = `supervisor_report_${supervisorName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       const link = document.createElement("a");
       const url = URL.createObjectURL(blob);
-      link.setAttribute("href", url);
-      link.setAttribute("download", `supervisor_report_${supervisorName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`);
-      link.style.visibility = "hidden";
+      link.href = url;
+      link.download = fileName;
+      link.style.display = "none";
       document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      setTimeout(() => link.click(), 100);
+      setTimeout(() => { document.body.removeChild(link); URL.revokeObjectURL(url); }, 200);
       
       showToast({ 
         type: "success", 
@@ -476,17 +476,17 @@ export default function SupervisorReports({ userRole }) {
         }).join(',')
       ).join('\n');
 
-      // Auto-download CSV file
+      // Robust download with proper timing
+      const fileName = `consolidated_report_${new Date().toISOString().split('T')[0]}.csv`;
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       const link = document.createElement("a");
       const url = URL.createObjectURL(blob);
-      link.setAttribute("href", url);
-      link.setAttribute("download", `consolidated_report_${new Date().toISOString().split('T')[0]}.csv`);
-      link.style.visibility = "hidden";
+      link.href = url;
+      link.download = fileName;
+      link.style.display = "none";
       document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      setTimeout(() => link.click(), 100);
+      setTimeout(() => { document.body.removeChild(link); URL.revokeObjectURL(url); }, 200);
       
       showToast({ 
         type: "success", 
