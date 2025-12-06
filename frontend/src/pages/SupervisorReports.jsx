@@ -224,16 +224,23 @@ export default function SupervisorReports({ userRole }) {
   }
 
   function handleExportToGoogleSheets() {
+    console.log("🔵 Export clicked - reportData:", reportData);
+    
     if (!reportData || !reportData.tellers || reportData.tellers.length === 0) {
+      console.warn("⚠️ No report data to export");
       showToast({ type: "warning", message: "No report data to export" });
       return;
     }
 
     try {
+      console.log("📥 Starting export...");
+      
       // Get supervisor name
       const supervisorName = userRole === "supervisor" 
         ? user?.name || user?.username 
         : supervisors.find(s => s._id === selectedSupervisor)?.name || "Unknown";
+
+      console.log("👤 Supervisor:", supervisorName);
 
       // Prepare headers
       const headers = ["Teller Name", "System Balance", "Cash on Hand", "Short", "Over"];
@@ -260,6 +267,8 @@ export default function SupervisorReports({ userRole }) {
         ]
       ];
 
+      console.log("📊 CSV rows prepared:", csvRows.length);
+
       // Create CSV content
       const csvContent = csvRows.map(row => 
         row.map(cell => {
@@ -271,17 +280,33 @@ export default function SupervisorReports({ userRole }) {
         }).join(',')
       ).join('\n');
 
+      console.log("✏️ CSV content created, length:", csvContent.length);
+
       // Robust download with proper timing
       const fileName = `supervisor_report_${supervisorName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       const link = document.createElement("a");
       const url = URL.createObjectURL(blob);
+      
+      console.log("🔗 Blob created, URL:", url);
+      
       link.href = url;
       link.download = fileName;
       link.style.display = "none";
       document.body.appendChild(link);
-      setTimeout(() => link.click(), 100);
-      setTimeout(() => { document.body.removeChild(link); URL.revokeObjectURL(url); }, 200);
+      
+      console.log("📍 Link appended to DOM");
+      
+      setTimeout(() => {
+        console.log("⬇️ Triggering download...");
+        link.click();
+      }, 100);
+      
+      setTimeout(() => { 
+        document.body.removeChild(link); 
+        URL.revokeObjectURL(url);
+        console.log("🧹 Cleanup done");
+      }, 200);
       
       showToast({ 
         type: "success", 
@@ -289,8 +314,8 @@ export default function SupervisorReports({ userRole }) {
       });
       
     } catch (err) {
-      console.error("Export error:", err);
-      showToast({ type: "error", message: "Failed to export report" });
+      console.error("❌ Export error:", err);
+      showToast({ type: "error", message: "Failed to export report: " + err.message });
     }
   }
 
@@ -429,12 +454,17 @@ export default function SupervisorReports({ userRole }) {
 
   // Export merged report to Google Sheets
   function handleExportMergedReport() {
+    console.log("🔵 Merged export clicked - mergedReportData:", mergedReportData);
+    
     if (!mergedReportData || !mergedReportData.tellers || mergedReportData.tellers.length === 0) {
+      console.warn("⚠️ No merged report data to export");
       showToast({ type: "warning", message: "No merged report data to export" });
       return;
     }
 
     try {
+      console.log("📥 Starting merged export...");
+      
       const headers = ["Supervisor", "Teller Name", "System Balance", "Cash on Hand", "Short", "Over"];
       
       const rows = mergedReportData.tellers.map(t => [
@@ -456,6 +486,8 @@ export default function SupervisorReports({ userRole }) {
         mergedReportData.totalOver
       ]);
 
+      console.log("📊 Rows prepared:", rows.length);
+
       // Convert to CSV
       const csvContent = [
         [`Consolidated Supervisor Report`],
@@ -476,17 +508,33 @@ export default function SupervisorReports({ userRole }) {
         }).join(',')
       ).join('\n');
 
+      console.log("✏️ CSV content created, length:", csvContent.length);
+
       // Robust download with proper timing
       const fileName = `consolidated_report_${new Date().toISOString().split('T')[0]}.csv`;
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       const link = document.createElement("a");
       const url = URL.createObjectURL(blob);
+      
+      console.log("🔗 Blob created, URL:", url);
+      
       link.href = url;
       link.download = fileName;
       link.style.display = "none";
       document.body.appendChild(link);
-      setTimeout(() => link.click(), 100);
-      setTimeout(() => { document.body.removeChild(link); URL.revokeObjectURL(url); }, 200);
+      
+      console.log("📍 Link appended to DOM");
+      
+      setTimeout(() => {
+        console.log("⬇️ Triggering download...");
+        link.click();
+      }, 100);
+      
+      setTimeout(() => { 
+        document.body.removeChild(link); 
+        URL.revokeObjectURL(url);
+        console.log("🧹 Cleanup done");
+      }, 200);
       
       showToast({ 
         type: "success", 
@@ -494,8 +542,8 @@ export default function SupervisorReports({ userRole }) {
       });
       
     } catch (err) {
-      console.error("Export error:", err);
-      showToast({ type: "error", message: "Failed to export report" });
+      console.error("❌ Export error:", err);
+      showToast({ type: "error", message: "Failed to export report: " + err.message });
     }
   }
     }
