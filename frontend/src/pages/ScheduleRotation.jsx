@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { getSocket } from "../socket";
 import { getApiUrl } from "../utils/apiConfig";
+import PlanAbsence from "../components/PlanAbsence";
 
 const API = getApiUrl();
 
@@ -639,7 +640,12 @@ export default function ScheduleRotation() {
         </div>
       </div>
 
-      {/* Tomorrow’s Schedule */}
+      {/* Plan Absence Section */}
+      <div className="mb-8">
+        <PlanAbsence />
+      </div>
+
+            {/* Tomorrow’s Schedule */}
       <div
         className={`rounded-lg shadow p-4 mb-8 ${
           dark ? "bg-gray-800" : "bg-white"
@@ -1413,6 +1419,7 @@ export default function ScheduleRotation() {
     </div>
   );
 }
+
 
 
 
