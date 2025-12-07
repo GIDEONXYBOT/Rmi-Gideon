@@ -335,7 +335,7 @@ export default function SidebarLayout({ role, children }) {
     'manage-betting': { to: r => `/${r}/manage-betting`, icon: <Settings size={18} />, text: 'Manage Betting Data', roles: ['admin','super_admin'] },
     'teller-mappings': { to: r => `/${r}/teller-mappings`, icon: <Link size={18} />, text: 'Teller Mappings', roles: ['super_admin'] },
     'betting-analytics': { to: r => `/${r}/betting-analytics`, icon: <BarChart3 size={18} />, text: 'Betting Analytics', roles: ['admin','super_admin'] },
-    'betting-event-report': { to: r => `/${r}/betting-event-report`, icon: <TrendingUp size={18} />, text: 'Betting Event Report', roles: ['super_admin','admin'] },
+    'betting-event-report': { to: r => `/${r}/betting-event-report`, icon: <TrendingUp size={18} />, text: 'Betting Event Report', roles: ['super_admin','admin','supervisor'] },
     'key-performance-indicator': { to: r => `/${r}/key-performance-indicator`, icon: <BarChart3 size={18} />, text: 'Key Performance Indicator', roles: ['admin','super_admin','supervisor'] },
     upload: { to: r => `/upload`, icon: <Camera size={18} />, text: 'Upload', roles: ['admin','super_admin','supervisor','teller','declarator','supervisor_teller'] },
     feed: { to: r => `/feed`, icon: <FileText size={18} />, text: 'Feed', roles: ['admin','super_admin','supervisor','teller','declarator','supervisor_teller'] },

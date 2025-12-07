@@ -290,6 +290,9 @@ function App() {
                       <Route path="map-editor" element={<AdminMapEditor />} />
                       <Route path="key-performance-indicator" element={<KeyPerformanceIndicator />} />
                       
+                      {/* 🎯 Betting Event Report */}
+                      <Route path="betting-event-report" element={<BettingEventReport />} />
+                      
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </SidebarLayout>
