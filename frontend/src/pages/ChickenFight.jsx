@@ -637,7 +637,24 @@ export default function ChickenFight() {
               MERON WINS
             </button>
 
-            <div className="text-6xl font-bold text-center mt-4">0</div>
+            {/* Meron Fight Results */}
+            <div className="mt-4 p-3 bg-red-600 rounded text-center">
+              <div className="flex gap-1 flex-wrap justify-center">
+                {(() => {
+                  const meronFights = fights.filter(f => {
+                    const entry = entries.find(e => e.entryName === f.entryName);
+                    return entry?.gameType === '2wins';
+                  });
+                  return meronFights.length > 0 ? (
+                    meronFights.map((fight, idx) => (
+                      <span key={idx} className="text-4xl font-bold">{fight.result}</span>
+                    ))
+                  ) : (
+                    <span className="text-4xl font-bold text-gray-300">0</span>
+                  );
+                })()}
+              </div>
+            </div>
           </div>
 
           {/* Fight Number Column */}
@@ -720,7 +737,24 @@ export default function ChickenFight() {
               WALA WINS
             </button>
 
-            <div className="text-6xl font-bold text-center mt-4">0</div>
+            {/* Wala Fight Results */}
+            <div className="mt-4 p-3 bg-blue-600 rounded text-center">
+              <div className="flex gap-1 flex-wrap justify-center">
+                {(() => {
+                  const walaFights = fights.filter(f => {
+                    const entry = entries.find(e => e.entryName === f.entryName);
+                    return entry?.gameType === '3wins';
+                  });
+                  return walaFights.length > 0 ? (
+                    walaFights.map((fight, idx) => (
+                      <span key={idx} className="text-4xl font-bold">{fight.result}</span>
+                    ))
+                  ) : (
+                    <span className="text-4xl font-bold text-gray-300">0</span>
+                  );
+                })()}
+              </div>
+            </div>
           </div>
         </div>
 
