@@ -262,6 +262,7 @@ router.put('/game/results', checkAdminRole, async (req, res) => {
           status = 'champion';
           prize = 5000;
         }
+        // 2-Wins: No insurance, only champion status
       } else if (gameType === '3wins') {
         const allWins = legResults.every(leg => leg.result === 'win');
         const winCount = legResults.filter(leg => leg.result === 'win').length;
