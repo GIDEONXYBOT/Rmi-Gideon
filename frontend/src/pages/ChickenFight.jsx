@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { AlertCircle, Loader, Trophy, Shield } from 'lucide-react';
 import { SettingsContext } from '../context/SettingsContext';
+import { getApiUrl } from '../utils/apiConfig';
 
 export default function ChickenFight() {
   const { isDarkMode } = useContext(SettingsContext);
@@ -45,7 +46,7 @@ export default function ChickenFight() {
   // Fetch game selection
   const fetchGameSelection = async () => {
     try {
-      const response = await axios.get('/api/chicken-fight/game/daily-selection');
+      const response = await axios.get(`${getApiUrl()}/api/chicken-fight/game/daily-selection`);
       if (response.data.success) {
         setGameSelection(response.data.game.gameTypes || []);
         setSelectedGames(response.data.game.gameTypes || []);
@@ -59,7 +60,7 @@ export default function ChickenFight() {
   const fetchEntries = async () => {
     setEntriesLoading(true);
     try {
-      const response = await axios.get('/api/chicken-fight/entries');
+      const response = await axios.get(`${getApiUrl()}/api/chicken-fight/entries`);
       if (response.data.success) {
         setEntries(response.data.entries || []);
       }
@@ -75,7 +76,7 @@ export default function ChickenFight() {
     setBetsLoading(true);
     try {
       const today = new Date().toISOString().split('T')[0];
-      const response = await axios.get('/api/chicken-fight/bets', {
+      const response = await axios.get(`${getApiUrl()}/api/chicken-fight/bets`, {
         params: { gameDate: today }
       });
       if (response.data.success) {
@@ -93,7 +94,7 @@ export default function ChickenFight() {
     setResultsLoading(true);
     try {
       const today = new Date().toISOString().split('T')[0];
-      const response = await axios.get('/api/chicken-fight/game/results', {
+      const response = await axios.get(`${getApiUrl()}/api/chicken-fight/game/results`, {
         params: { gameDate: today }
       });
       if (response.data.success) {
@@ -118,7 +119,7 @@ export default function ChickenFight() {
     setSuccess('');
 
     try {
-      const response = await axios.post('/api/chicken-fight/game/daily-selection', {
+      const response = await axios.post(`${getApiUrl()}/api/chicken-fight/game/daily-selection`, {
         gameTypes: selectedGames
       });
 
@@ -161,7 +162,7 @@ export default function ChickenFight() {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      const response = await axios.post('/api/chicken-fight/bets', {
+      const response = await axios.post(`${getApiUrl()}/api/chicken-fight/bets`, {
         gameDate: today.toISOString(),
         gameType: betFormData.gameType,
         entryId: betFormData.entryId,

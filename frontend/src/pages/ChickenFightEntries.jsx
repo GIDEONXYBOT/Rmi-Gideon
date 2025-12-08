@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { AlertCircle, Plus, Loader } from 'lucide-react';
 import { SettingsContext } from '../context/SettingsContext';
+import { getApiUrl } from '../utils/apiConfig';
 
 export default function ChickenFightEntries() {
   const { isDarkMode } = useContext(SettingsContext);
@@ -21,7 +22,7 @@ export default function ChickenFightEntries() {
   const fetchEntries = async () => {
     setLoading(true);
     try {
-      const response = await axios.get('/api/chicken-fight/entries');
+      const response = await axios.get(`${getApiUrl()}/api/chicken-fight/entries`);
       if (response.data.success) {
         setEntries(response.data.entries || []);
       }
@@ -73,7 +74,7 @@ export default function ChickenFightEntries() {
         return;
       }
 
-      const response = await axios.post('/api/chicken-fight/entries', {
+      const response = await axios.post(`${getApiUrl()}/api/chicken-fight/entries`, {
         entryName: entryName.trim(),
         gameType,
         legBandNumbers: legBands.map(b => b.trim())
