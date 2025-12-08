@@ -81,6 +81,10 @@ import MyShift from "./pages/MyShift.jsx";
 import ScheduleRotation from "./pages/ScheduleRotation.jsx";
 import AttendanceScheduler from "./pages/AttendanceScheduler.jsx";
 
+// 🐔 Chicken Fight Pages
+import ChickenFight from "./pages/ChickenFight.jsx";
+import ChickenFightEntries from "./pages/ChickenFightEntries.jsx";
+
 // Declarator Pages
 import DeclaratorDashboard from "./pages/DeclaratorDashboardFixed.jsx";
 import TellerDeployments from "./pages/TellerDeployments.jsx";
@@ -292,6 +296,10 @@ function App() {
                       
                       {/* 🎯 Betting Event Report */}
                       <Route path="betting-event-report" element={<BettingEventReport />} />
+                      
+                      {/* 🐔 Chicken Fight */}
+                      <Route path="chicken-fight" element={<ChickenFight />} />
+                      <Route path="chicken-fight-entries" element={<ChickenFightEntries />} />
                       
                       <Route path="*" element={<NotFound />} />
                     </Routes>

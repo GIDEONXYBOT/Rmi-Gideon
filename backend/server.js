@@ -172,7 +172,7 @@ import cashflowArchiveRoutes from "./routes/cashflowArchive.js"; // /api/cashflo
 import reportSingleRoutes from "./routes/dashboard.js"; // /api/report (singular)
 import salariesRoutes from "./routes/salaries.js"; // /api/salaries (frontend expects this)
 import mediaRoutes from "./routes/media.js"; // /api/media (feed uploads)
-// deploymentsRoutesAlias removed (duplicate import)
+import chickenFightRoutes from "./routes/chicken-fight.js"; // 🐔 /api/chicken-fight
 
 // Temporarily disable all routes to test basic server startup
 // app.use("/api/payroll", payrollRoutes);
@@ -220,6 +220,7 @@ app.use("/api/report", reportSingleRoutes); // routes under /api/report/ (e.g. /
 app.use("/api/cashflow-archive", cashflowArchiveRoutes);
 app.use("/api/salaries", salariesRoutes);
 app.use("/api/media", mediaRoutes);
+app.use("/api/chicken-fight", chickenFightRoutes); // 🐔 Chicken Fight betting
 // app.use("/api/chat", chatRoutes);
 // app.use("/api/schedule", scheduleRoutes);
 // app.use("/api/attendance", attendanceRoutes);
