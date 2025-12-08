@@ -23,6 +23,8 @@ export default function ChickenFight() {
   const [selectedMeronLegBand, setSelectedMeronLegBand] = useState('');
   const [selectedWalaEntry, setSelectedWalaEntry] = useState('');
   const [selectedWalaLegBand, setSelectedWalaLegBand] = useState('');
+  const [fightNumber, setFightNumber] = useState(0);
+  const [fights, setFights] = useState([]); // Track fight results
 
   // Get leg bands for selected Meron entry
   const meronEntry = entries.find(e => e._id === selectedMeronEntry);
@@ -37,7 +39,17 @@ export default function ChickenFight() {
       setError('Please select both entry and leg band for Meron');
       return;
     }
+    const newFight = {
+      id: fightNumber + 1,
+      type: 'meron',
+      entryName: meronEntry.entryName,
+      winner: true
+    };
+    setFights([...fights, newFight]);
+    setFightNumber(fightNumber + 1);
     setSuccess(`Meron (${meronEntry.entryName} - Leg Band ${selectedMeronLegBand}) wins!`);
+    setSelectedMeronEntry('');
+    setSelectedMeronLegBand('');
     setTimeout(() => setSuccess(''), 2000);
   };
 
@@ -46,7 +58,17 @@ export default function ChickenFight() {
       setError('Please select both entry and leg band for Wala');
       return;
     }
+    const newFight = {
+      id: fightNumber + 1,
+      type: 'wala',
+      entryName: walaEntry.entryName,
+      winner: true
+    };
+    setFights([...fights, newFight]);
+    setFightNumber(fightNumber + 1);
     setSuccess(`Wala (${walaEntry.entryName} - Leg Band ${selectedWalaLegBand}) wins!`);
+    setSelectedWalaEntry('');
+    setSelectedWalaLegBand('');
     setTimeout(() => setSuccess(''), 2000);
   };
   
@@ -186,36 +208,56 @@ export default function ChickenFight() {
       <div className={`w-48 ${isDarkMode ? 'bg-gray-800' : 'bg-gray-900'} text-white p-4 overflow-y-auto`}>
         <div className="mb-6">
           <div className="font-bold text-white bg-gray-700 p-3 rounded mb-2 text-center">RESULT</div>
-          <div className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-400'}`}>
-            {stats && (
-              <div className="space-y-2">
-                <div className="flex justify-between bg-red-700 p-2 rounded">
-                  <span>Meron</span>
-                  <span className="font-bold">{stats.by2wins || 0}</span>
-                </div>
-                <div className="flex justify-between bg-blue-700 p-2 rounded">
-                  <span>Wala</span>
-                  <span className="font-bold">{stats.by3wins || 0}</span>
-                </div>
-                <div className="flex justify-between bg-green-700 p-2 rounded">
-                  <span>Draw</span>
-                  <span className="font-bold">0</span>
-                </div>
-              </div>
-            )}
+          
+          {/* Score Summary */}
+          <div className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-400'} mb-4 space-y-2`}>
+            {/* Calculate scores */}
+            {(() => {
+              const meronScore = fights.filter(f => f.type === 'meron').length;
+              const walaScore = fights.filter(f => f.type === 'wala').length;
+              const topEntry = fights.length > 0 ? fights.reduce((prev, current) => {
+                const prevCount = fights.filter(f => f.entryName === prev.entryName).length;
+                const currentCount = fights.filter(f => f.entryName === current.entryName).length;
+                return currentCount > prevCount ? current : prev;
+              }) : null;
+
+              return (
+                <>
+                  <div className="flex justify-between bg-red-700 p-2 rounded font-medium">
+                    <span>Meron</span>
+                    <span>{meronScore}</span>
+                  </div>
+                  <div className="flex justify-between bg-blue-700 p-2 rounded font-medium">
+                    <span>Wala</span>
+                    <span>{walaScore}</span>
+                  </div>
+                  {topEntry && (
+                    <div className="flex justify-between bg-yellow-600 p-2 rounded font-medium text-yellow-100">
+                      <span>★ Champion</span>
+                      <span>{topEntry.entryName}</span>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
         </div>
 
         {/* Fight List */}
-        <div className="text-xs">
-          {registrations.map((reg, idx) => (
-            <div key={reg._id} className={`p-2 mb-1 rounded font-medium ${
-              reg.registrations.some(r => r.gameType === '2wins') ? 'bg-red-700' : 
-              reg.registrations.some(r => r.gameType === '3wins') ? 'bg-blue-700' : 'bg-gray-700'
-            }`}>
-              #{idx + 1} {reg.registrations.some(r => r.gameType === '2wins') ? 'MERON' : 'WALA'}
+        <div className="text-xs space-y-1">
+          {fights.length === 0 ? (
+            <div className={`p-2 text-center ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>
+              No fights recorded
             </div>
-          ))}
+          ) : (
+            fights.map((fight) => (
+              <div key={fight.id} className={`p-2 rounded font-medium truncate ${
+                fight.type === 'meron' ? 'bg-red-700' : 'bg-blue-700'
+              }`}>
+                #{fight.id} {fight.entryName}
+              </div>
+            ))
+          )}
         </div>
       </div>
 
@@ -311,7 +353,7 @@ export default function ChickenFight() {
 
           {/* Fight Number Column */}
           <div className="bg-gray-800 text-white rounded-lg p-8 flex flex-col items-center justify-center">
-            <div className="text-7xl font-bold mb-4">0</div>
+            <div className="text-7xl font-bold mb-4">{fightNumber}</div>
             <div className="text-lg font-bold">FIGHT</div>
           </div>
 
