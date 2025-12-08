@@ -1,62 +1,42 @@
 import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
-import { AlertCircle, Loader, Trophy, Shield } from 'lucide-react';
+import { AlertCircle, Plus, Loader, Check, X } from 'lucide-react';
 import { SettingsContext } from '../context/SettingsContext';
 import { getApiUrl } from '../utils/apiConfig';
 
 export default function ChickenFight() {
   const { isDarkMode } = useContext(SettingsContext);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-
-  // Game selection
-  const [gameSelection, setGameSelection] = useState([]);
-  const [selectedGames, setSelectedGames] = useState([]);
-  const [showingGameSelection, setShowingGameSelection] = useState(false);
-  const [savingGameSelection, setSavingGameSelection] = useState(false);
-
+  
   // Entries
   const [entries, setEntries] = useState([]);
   const [entriesLoading, setEntriesLoading] = useState(false);
+  
+  // Registrations
+  const [registrations, setRegistrations] = useState([]);
+  const [registrationsLoading, setRegistrationsLoading] = useState(false);
+  
+  // Registration form
+  const [showRegForm, setShowRegForm] = useState(false);
+  const [selectedEntry, setSelectedEntry] = useState('');
+  const [selected2Wins, setSelected2Wins] = useState(false);
+  const [selected3Wins, setSelected3Wins] = useState(false);
+  const [submittingReg, setSubmittingReg] = useState(false);
+  
+  // Stats
+  const [stats, setStats] = useState(null);
 
-  // Betting
-  const [bets, setBets] = useState([]);
-  const [betsLoading, setBetsLoading] = useState(false);
-  const [showBetForm, setShowBetForm] = useState(false);
-  const [betFormData, setBetFormData] = useState({
-    gameType: '2wins',
-    entryId: '',
-    side: 'meron',
-    amount: ''
-  });
-  const [submittingBet, setSubmittingBet] = useState(false);
+  const today = new Date().toISOString().split('T')[0];
 
-  // Results
-  const [results, setResults] = useState(null);
-  const [resultsLoading, setResultsLoading] = useState(false);
-
-  // Fetch initial data
+  // Fetch data on load
   useEffect(() => {
-    fetchGameSelection();
     fetchEntries();
-    fetchBets();
+    fetchRegistrations();
+    fetchStats();
   }, []);
 
-  // Fetch game selection
-  const fetchGameSelection = async () => {
-    try {
-      const response = await axios.get(`${getApiUrl()}/api/chicken-fight/game/daily-selection`);
-      if (response.data.success) {
-        setGameSelection(response.data.game.gameTypes || []);
-        setSelectedGames(response.data.game.gameTypes || []);
-      }
-    } catch (err) {
-      console.error('Error fetching game selection:', err);
-    }
-  };
-
-  // Fetch entries
+  // Fetch available entries
   const fetchEntries = async () => {
     setEntriesLoading(true);
     try {
@@ -66,480 +46,360 @@ export default function ChickenFight() {
       }
     } catch (err) {
       console.error('Error fetching entries:', err);
+      setError('Failed to load entries');
     } finally {
       setEntriesLoading(false);
     }
   };
 
-  // Fetch bets
-  const fetchBets = async () => {
-    setBetsLoading(true);
+  // Fetch registrations for today
+  const fetchRegistrations = async () => {
+    setRegistrationsLoading(true);
     try {
-      const today = new Date().toISOString().split('T')[0];
-      const response = await axios.get(`${getApiUrl()}/api/chicken-fight/bets`, {
+      const response = await axios.get(`${getApiUrl()}/api/chicken-fight-registration/registrations`, {
         params: { gameDate: today }
       });
       if (response.data.success) {
-        setBets(response.data.bets || []);
+        setRegistrations(response.data.registrations || []);
       }
     } catch (err) {
-      console.error('Error fetching bets:', err);
+      console.error('Error fetching registrations:', err);
     } finally {
-      setBetsLoading(false);
+      setRegistrationsLoading(false);
     }
   };
 
-  // Fetch results
-  const fetchResults = async () => {
-    setResultsLoading(true);
+  // Fetch statistics
+  const fetchStats = async () => {
     try {
-      const today = new Date().toISOString().split('T')[0];
-      const response = await axios.get(`${getApiUrl()}/api/chicken-fight/game/results`, {
+      const response = await axios.get(`${getApiUrl()}/api/chicken-fight-registration/registrations-stats`, {
         params: { gameDate: today }
       });
       if (response.data.success) {
-        setResults(response.data.game);
+        setStats(response.data.stats);
       }
     } catch (err) {
-      console.error('Error fetching results:', err);
-    } finally {
-      setResultsLoading(false);
+      console.error('Error fetching stats:', err);
     }
   };
 
-  // Save game selection
-  const handleSaveGameSelection = async () => {
-    if (selectedGames.length === 0) {
-      setError('Select at least one game type');
+  // Register entry
+  const handleRegisterEntry = async () => {
+    if (!selectedEntry || (!selected2Wins && !selected3Wins)) {
+      setError('Please select an entry and at least one game type');
       return;
     }
 
-    setSavingGameSelection(true);
-    setError('');
-    setSuccess('');
+    const entry = entries.find(e => e._id === selectedEntry);
+    const gameTypes = [];
+    if (selected2Wins) gameTypes.push('2wins');
+    if (selected3Wins) gameTypes.push('3wins');
 
+    setSubmittingReg(true);
     try {
-      const response = await axios.post(`${getApiUrl()}/api/chicken-fight/game/daily-selection`, {
-        gameTypes: selectedGames
+      await axios.post(`${getApiUrl()}/api/chicken-fight-registration/registrations`, {
+        entryId: selectedEntry,
+        entryName: entry.entryName,
+        gameTypes,
+        gameDate: today
       });
 
-      if (response.data.success) {
-        setGameSelection(selectedGames);
-        setShowingGameSelection(false);
-        setSuccess('Game selection updated!');
-        setTimeout(() => setSuccess(''), 3000);
-      }
+      setSuccess(`Entry "${entry.entryName}" registered successfully!`);
+      setSelectedEntry('');
+      setSelected2Wins(false);
+      setSelected3Wins(false);
+      setShowRegForm(false);
+      fetchRegistrations();
+      fetchStats();
+      setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to save game selection');
+      setError(err.response?.data?.message || 'Failed to register entry');
     } finally {
-      setSavingGameSelection(false);
+      setSubmittingReg(false);
     }
   };
 
-  // Toggle game selection
-  const toggleGameType = (gameType) => {
-    if (selectedGames.includes(gameType)) {
-      setSelectedGames(selectedGames.filter(g => g !== gameType));
-    } else {
-      setSelectedGames([...selectedGames, gameType]);
+  // Mark as paid
+  const handleMarkPaid = async (registrationId, gameType) => {
+    try {
+      await axios.put(
+        `${getApiUrl()}/api/chicken-fight-registration/registrations/${registrationId}/pay`,
+        { gameType }
+      );
+
+      setSuccess(`Payment recorded for ${gameType}`);
+      fetchRegistrations();
+      fetchStats();
+      setTimeout(() => setSuccess(''), 2000);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to mark payment');
     }
   };
 
-  // Place bet
-  const handlePlaceBet = async (e) => {
-    e.preventDefault();
-    setSubmittingBet(true);
-    setError('');
-    setSuccess('');
+  // Delete registration
+  const handleDeleteRegistration = async (registrationId) => {
+    if (!window.confirm('Delete this registration?')) return;
 
     try {
-      if (!betFormData.entryId || !betFormData.amount) {
-        setError('Please fill all fields');
-        setSubmittingBet(false);
-        return;
-      }
+      await axios.delete(
+        `${getApiUrl()}/api/chicken-fight-registration/registrations/${registrationId}`
+      );
 
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      const response = await axios.post(`${getApiUrl()}/api/chicken-fight/bets`, {
-        gameDate: today.toISOString(),
-        gameType: betFormData.gameType,
-        entryId: betFormData.entryId,
-        side: betFormData.side,
-        amount: parseFloat(betFormData.amount)
-      });
-
-      if (response.data.success) {
-        setSuccess('Bet placed successfully!');
-        setBetFormData({ gameType: '2wins', entryId: '', side: 'meron', amount: '' });
-        setShowBetForm(false);
-        fetchBets();
-        setTimeout(() => setSuccess(''), 3000);
-      }
+      setSuccess('Registration deleted');
+      fetchRegistrations();
+      fetchStats();
+      setTimeout(() => setSuccess(''), 2000);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to place bet');
-    } finally {
-      setSubmittingBet(false);
+      setError(err.response?.data?.message || 'Failed to delete registration');
     }
-  };
-
-  // Get entries for selected game type
-  const getEntriesForGameType = (gameType) => {
-    return entries.filter(e => e.gameType === gameType);
-  };
-
-  // Get bets for game type
-  const getBetsForGameType = (gameType) => {
-    return bets.filter(b => b.gameType === gameType);
   };
 
   return (
-    <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+    <div className={`min-h-screen p-6 ${isDarkMode ? 'bg-slate-900' : 'bg-gray-50'}`}>
       {/* Header */}
-      <div className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b sticky top-0 z-10`}>
-        <div className="max-w-6xl mx-auto px-4 py-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className={`text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                Chicken Fight
-              </h1>
-              <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mt-1`}>
-                Daily betting platform
-              </p>
-            </div>
-            <button
-              onClick={() => setShowingGameSelection(!showingGameSelection)}
-              className={`px-4 py-2 rounded-lg font-semibold transition ${
-                isDarkMode
-                  ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                  : 'bg-blue-500 hover:bg-blue-600 text-white'
-              }`}
-            >
-              {showingGameSelection ? 'Cancel' : 'Select Games'}
-            </button>
-          </div>
-        </div>
+      <div className="max-w-7xl mx-auto mb-8">
+        <h1 className={`text-4xl font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+          🐔 Chicken Fight Registration
+        </h1>
+        <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>
+          Track entry registrations and payment status
+        </p>
       </div>
 
-      {/* Alerts */}
+      {/* Error Alert */}
       {error && (
-        <div className={`mx-4 mt-4 p-4 rounded-lg flex items-center gap-3 ${isDarkMode ? 'bg-red-900/30 text-red-400 border border-red-700' : 'bg-red-100 text-red-800 border border-red-300'}`}>
-          <AlertCircle size={20} />
-          <span>{error}</span>
+        <div className="max-w-7xl mx-auto mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
+          <AlertCircle className="text-red-600" size={20} />
+          <span className="text-red-700 flex-1">{error}</span>
+          <button onClick={() => setError('')} className="text-red-600 hover:text-red-800">
+            <X size={18} />
+          </button>
         </div>
       )}
 
+      {/* Success Alert */}
       {success && (
-        <div className={`mx-4 mt-4 p-4 rounded-lg flex items-center gap-3 ${isDarkMode ? 'bg-green-900/30 text-green-400 border border-green-700' : 'bg-green-100 text-green-800 border border-green-300'}`}>
-          <span>✓ {success}</span>
+        <div className="max-w-7xl mx-auto mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
+          <Check className="text-green-600" size={20} />
+          <span className="text-green-700">{success}</span>
         </div>
       )}
 
-      <div className="max-w-6xl mx-auto px-4 py-6">
-        {/* Game Selection Section */}
-        {showingGameSelection && (
-          <div className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border rounded-lg p-6 mb-8`}>
-            <h2 className={`text-xl font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-              Select Games for Today
-            </h2>
-            <div className="flex gap-4 mb-6">
-              <button
-                onClick={() => toggleGameType('2wins')}
-                className={`flex-1 py-3 rounded-lg font-semibold transition ${
-                  selectedGames.includes('2wins')
-                    ? isDarkMode
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-blue-500 text-white'
-                    : isDarkMode
-                    ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                2-Wins
-              </button>
-              <button
-                onClick={() => toggleGameType('3wins')}
-                className={`flex-1 py-3 rounded-lg font-semibold transition ${
-                  selectedGames.includes('3wins')
-                    ? isDarkMode
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-blue-500 text-white'
-                    : isDarkMode
-                    ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                3-Wins
-              </button>
+      {/* Statistics */}
+      {stats && (
+        <div className="max-w-7xl mx-auto mb-8 grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-slate-800' : 'bg-white'} shadow`}>
+            <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Total</div>
+            <div className={`text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+              {stats.total}
             </div>
-            <button
-              onClick={handleSaveGameSelection}
-              disabled={savingGameSelection}
-              className={`w-full py-2 rounded-lg font-semibold transition ${
-                savingGameSelection
-                  ? isDarkMode
-                    ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : isDarkMode
-                  ? 'bg-green-600 hover:bg-green-700 text-white'
-                  : 'bg-green-500 hover:bg-green-600 text-white'
-              }`}
-            >
-              {savingGameSelection ? 'Saving...' : 'Save Selection'}
-            </button>
           </div>
-        )}
+          <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-slate-800' : 'bg-white'} shadow`}>
+            <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>2-Wins Paid</div>
+            <div className="text-3xl font-bold text-green-600">{stats.paid2wins}/{stats.by2wins}</div>
+            <div className="text-xs text-green-600">₱{stats.paid2wins * 500}</div>
+          </div>
+          <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-slate-800' : 'bg-white'} shadow`}>
+            <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>3-Wins Paid</div>
+            <div className="text-3xl font-bold text-blue-600">{stats.paid3wins}/{stats.by3wins}</div>
+            <div className="text-xs text-blue-600">₱{stats.paid3wins * 1000}</div>
+          </div>
+          <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-slate-800' : 'bg-white'} shadow`}>
+            <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Revenue</div>
+            <div className={`text-3xl font-bold ${isDarkMode ? 'text-yellow-400' : 'text-yellow-600'}`}>
+              ₱{stats.totalRevenue}
+            </div>
+          </div>
+        </div>
+      )}
 
-        {/* Active Games */}
-        {gameSelection.length > 0 && (
-          <div className="mb-8">
+      {/* Registration Form */}
+      {showRegForm && (
+        <div className="max-w-7xl mx-auto mb-8">
+          <div className={`p-6 rounded-lg ${isDarkMode ? 'bg-slate-800' : 'bg-white'} shadow`}>
             <h2 className={`text-2xl font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-              Active Games Today
+              Register New Entry
             </h2>
-            <div className="flex gap-2 flex-wrap">
-              {gameSelection.map(game => (
-                <span
-                  key={game}
-                  className={`px-4 py-2 rounded-full font-semibold ${
-                    isDarkMode
-                      ? 'bg-blue-900/50 text-blue-300'
-                      : 'bg-blue-100 text-blue-700'
+
+            <div className="space-y-4">
+              <div>
+                <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Select Entry
+                </label>
+                <select
+                  value={selectedEntry}
+                  onChange={(e) => setSelectedEntry(e.target.value)}
+                  disabled={entriesLoading}
+                  className={`w-full px-4 py-2 rounded-lg border ${
+                    isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-gray-300'
                   }`}
                 >
-                  {game === '2wins' ? '2-Wins' : '3-Wins'}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Betting Section */}
-        {gameSelection.length > 0 && (
-          <div className="space-y-8 mb-8">
-            {/* 2-Wins Betting */}
-            {gameSelection.includes('2wins') && (
-              <div className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border rounded-lg p-6`}>
-                <h3 className={`text-xl font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                  2-Wins Betting
-                </h3>
-
-                {entriesLoading ? (
-                  <div className="flex justify-center py-8">
-                    <Loader size={24} className={`animate-spin ${isDarkMode ? 'text-blue-400' : 'text-blue-500'}`} />
-                  </div>
-                ) : getEntriesForGameType('2wins').length === 0 ? (
-                  <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>
-                    No entries created for 2-Wins game yet.
-                  </p>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    {getEntriesForGameType('2wins').map(entry => {
-                      const entryBets = bets.filter(b => b.entryId === entry._id);
-                      const totalAmount = entryBets.reduce((sum, b) => sum + b.amount, 0);
-
-                      return (
-                        <div
-                          key={entry._id}
-                          className={`${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'} p-4 rounded-lg border ${isDarkMode ? 'border-gray-600' : 'border-gray-200'}`}
-                        >
-                          <div className="flex justify-between items-start mb-3">
-                            <h4 className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                              {entry.entryName}
-                            </h4>
-                            {totalAmount > 0 && (
-                              <span className={`px-2 py-1 rounded text-sm font-semibold ${isDarkMode ? 'bg-blue-900/50 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>
-                                ₱{totalAmount.toLocaleString()}
-                              </span>
-                            )}
-                          </div>
-                          <button
-                            onClick={() => {
-                              setBetFormData({
-                                gameType: '2wins',
-                                entryId: entry._id,
-                                side: 'meron',
-                                amount: ''
-                              });
-                              setShowBetForm(true);
-                            }}
-                            className={`w-full py-2 rounded font-semibold transition ${
-                              isDarkMode
-                                ? 'bg-green-600 hover:bg-green-700 text-white'
-                                : 'bg-green-500 hover:bg-green-600 text-white'
-                            }`}
-                          >
-                            Place Bet
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                  <option value="">-- Select Entry --</option>
+                  {entries.map(entry => (
+                    <option key={entry._id} value={entry._id}>
+                      {entry.entryName} ({entry.gameType})
+                    </option>
+                  ))}
+                </select>
               </div>
-            )}
 
-            {/* 3-Wins Betting */}
-            {gameSelection.includes('3wins') && (
-              <div className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border rounded-lg p-6`}>
-                <h3 className={`text-xl font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                  3-Wins Betting
-                </h3>
-
-                {entriesLoading ? (
-                  <div className="flex justify-center py-8">
-                    <Loader size={24} className={`animate-spin ${isDarkMode ? 'text-blue-400' : 'text-blue-500'}`} />
-                  </div>
-                ) : getEntriesForGameType('3wins').length === 0 ? (
-                  <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>
-                    No entries created for 3-Wins game yet.
-                  </p>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    {getEntriesForGameType('3wins').map(entry => {
-                      const entryBets = bets.filter(b => b.entryId === entry._id);
-                      const totalAmount = entryBets.reduce((sum, b) => sum + b.amount, 0);
-
-                      return (
-                        <div
-                          key={entry._id}
-                          className={`${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'} p-4 rounded-lg border ${isDarkMode ? 'border-gray-600' : 'border-gray-200'}`}
-                        >
-                          <div className="flex justify-between items-start mb-3">
-                            <h4 className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                              {entry.entryName}
-                            </h4>
-                            {totalAmount > 0 && (
-                              <span className={`px-2 py-1 rounded text-sm font-semibold ${isDarkMode ? 'bg-purple-900/50 text-purple-300' : 'bg-purple-100 text-purple-700'}`}>
-                                ₱{totalAmount.toLocaleString()}
-                              </span>
-                            )}
-                          </div>
-                          <button
-                            onClick={() => {
-                              setBetFormData({
-                                gameType: '3wins',
-                                entryId: entry._id,
-                                side: 'meron',
-                                amount: ''
-                              });
-                              setShowBetForm(true);
-                            }}
-                            className={`w-full py-2 rounded font-semibold transition ${
-                              isDarkMode
-                                ? 'bg-green-600 hover:bg-green-700 text-white'
-                                : 'bg-green-500 hover:bg-green-600 text-white'
-                            }`}
-                          >
-                            Place Bet
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Bet Form Modal */}
-        {showBetForm && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-6 max-w-md w-full`}>
-              <h3 className={`text-xl font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                Place Bet
-              </h3>
-
-              <form onSubmit={handlePlaceBet} className="space-y-4">
-                {/* Side Selection */}
-                <div>
-                  <label className={`block text-sm font-semibold mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                    Choose Side
-                  </label>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setBetFormData({ ...betFormData, side: 'meron' })}
-                      className={`flex-1 py-2 rounded font-semibold transition ${
-                        betFormData.side === 'meron'
-                          ? isDarkMode
-                            ? 'bg-red-600 text-white'
-                            : 'bg-red-500 text-white'
-                          : isDarkMode
-                          ? 'bg-gray-700 text-gray-300'
-                          : 'bg-gray-200 text-gray-700'
-                      }`}
-                    >
-                      Meron
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setBetFormData({ ...betFormData, side: 'wala' })}
-                      className={`flex-1 py-2 rounded font-semibold transition ${
-                        betFormData.side === 'wala'
-                          ? isDarkMode
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-blue-500 text-white'
-                          : isDarkMode
-                          ? 'bg-gray-700 text-gray-300'
-                          : 'bg-gray-200 text-gray-700'
-                      }`}
-                    >
-                      Wala
-                    </button>
-                  </div>
-                </div>
-
-                {/* Amount */}
-                <div>
-                  <label className={`block text-sm font-semibold mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                    Amount (₱)
-                  </label>
+              <div>
+                <label className={`block text-sm font-medium mb-3 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Game Types
+                </label>
+                <label className={`flex items-center gap-3 p-3 rounded border mb-2 cursor-pointer ${
+                  isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-gray-50 border-gray-200'
+                } ${selected2Wins ? (isDarkMode ? 'bg-red-900 border-red-600' : 'bg-red-50 border-red-300') : ''}`}>
                   <input
-                    type="number"
-                    value={betFormData.amount}
-                    onChange={(e) => setBetFormData({ ...betFormData, amount: e.target.value })}
-                    placeholder="Enter amount"
-                    className={`w-full px-3 py-2 rounded border ${
-                      isDarkMode
-                        ? 'bg-gray-700 border-gray-600 text-white'
-                        : 'bg-white border-gray-300 text-gray-900'
-                    } focus:outline-none focus:border-blue-500`}
+                    type="checkbox"
+                    checked={selected2Wins}
+                    onChange={(e) => setSelected2Wins(e.target.checked)}
+                    className="w-4 h-4"
                   />
-                </div>
+                  <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>
+                    2-Wins (₱500)
+                  </span>
+                </label>
 
-                {/* Buttons */}
-                <div className="flex gap-2 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setShowBetForm(false)}
-                    className={`flex-1 py-2 rounded font-semibold transition ${
-                      isDarkMode
-                        ? 'bg-gray-700 hover:bg-gray-600 text-white'
-                        : 'bg-gray-200 hover:bg-gray-300 text-gray-900'
-                    }`}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={submittingBet}
-                    className={`flex-1 py-2 rounded font-semibold transition ${
-                      submittingBet
-                        ? isDarkMode
-                          ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                        : isDarkMode
-                        ? 'bg-green-600 hover:bg-green-700 text-white'
-                        : 'bg-green-500 hover:bg-green-600 text-white'
-                    }`}
-                  >
-                    {submittingBet ? 'Placing...' : 'Place Bet'}
-                  </button>
-                </div>
-              </form>
+                <label className={`flex items-center gap-3 p-3 rounded border cursor-pointer ${
+                  isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-gray-50 border-gray-200'
+                } ${selected3Wins ? (isDarkMode ? 'bg-blue-900 border-blue-600' : 'bg-blue-50 border-blue-300') : ''}`}>
+                  <input
+                    type="checkbox"
+                    checked={selected3Wins}
+                    onChange={(e) => setSelected3Wins(e.target.checked)}
+                    className="w-4 h-4"
+                  />
+                  <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>
+                    3-Wins (₱1,000)
+                  </span>
+                </label>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={handleRegisterEntry}
+                  disabled={submittingReg || !selectedEntry || (!selected2Wins && !selected3Wins)}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium flex items-center justify-center gap-2"
+                >
+                  {submittingReg ? <Loader size={18} className="animate-spin" /> : <Plus size={18} />}
+                  {submittingReg ? 'Registering...' : 'Register'}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowRegForm(false);
+                    setSelectedEntry('');
+                    setSelected2Wins(false);
+                    setSelected3Wins(false);
+                  }}
+                  className={`px-6 py-2 rounded-lg border ${
+                    isDarkMode ? 'border-slate-600 text-gray-300 hover:bg-slate-700' : 'border-gray-300 text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Button */}
+      {!showRegForm && (
+        <div className="max-w-7xl mx-auto mb-8">
+          <button
+            onClick={() => setShowRegForm(true)}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2"
+          >
+            <Plus size={20} />
+            Add Registration
+          </button>
+        </div>
+      )}
+
+      {/* Registrations Table */}
+      <div className="max-w-7xl mx-auto">
+        {registrationsLoading ? (
+          <div className="flex justify-center py-12">
+            <Loader className="animate-spin text-blue-600" size={32} />
+          </div>
+        ) : registrations.length === 0 ? (
+          <div className={`p-8 text-center rounded-lg ${isDarkMode ? 'bg-slate-800' : 'bg-white'}`}>
+            <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>No registrations yet</p>
+          </div>
+        ) : (
+          <div className={`rounded-lg overflow-hidden shadow ${isDarkMode ? 'bg-slate-800' : 'bg-white'}`}>
+            <table className="w-full">
+              <thead>
+                <tr className={isDarkMode ? 'bg-slate-700' : 'bg-gray-100'}>
+                  <th className={`px-6 py-3 text-left font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>Entry Name</th>
+                  <th className={`px-6 py-3 text-left font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>2-Wins</th>
+                  <th className={`px-6 py-3 text-left font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>3-Wins</th>
+                  <th className={`px-6 py-3 text-left font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>Total</th>
+                  <th className={`px-6 py-3 text-left font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {registrations.map((reg) => {
+                  const reg2wins = reg.registrations.find(r => r.gameType === '2wins');
+                  const reg3wins = reg.registrations.find(r => r.gameType === '3wins');
+                  const totalFees = (reg2wins?.registrationFee || 0) + (reg3wins?.registrationFee || 0);
+
+                  return (
+                    <tr key={reg._id} className={`border-t ${isDarkMode ? 'border-slate-700' : 'border-gray-200'}`}>
+                      <td className={`px-6 py-4 font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                        {reg.entryName}
+                      </td>
+                      <td className="px-6 py-4">
+                        {reg2wins ? (
+                          <div className="flex items-center gap-2">
+                            <span className={reg2wins.isPaid ? 'text-green-600' : 'text-orange-600'}>₱500</span>
+                            <button
+                              onClick={() => handleMarkPaid(reg._id, '2wins')}
+                              disabled={reg2wins.isPaid}
+                              className={`px-2 py-1 text-xs rounded font-medium ${
+                                reg2wins.isPaid ? 'bg-green-100 text-green-700' : isDarkMode ? 'bg-orange-900 text-orange-200' : 'bg-orange-100 text-orange-700'
+                              }`}
+                            >
+                              {reg2wins.isPaid ? '✓' : 'Pay'}
+                            </button>
+                          </div>
+                        ) : <span className={isDarkMode ? 'text-gray-500' : 'text-gray-400'}>-</span>}
+                      </td>
+                      <td className="px-6 py-4">
+                        {reg3wins ? (
+                          <div className="flex items-center gap-2">
+                            <span className={reg3wins.isPaid ? 'text-green-600' : 'text-orange-600'}>₱1,000</span>
+                            <button
+                              onClick={() => handleMarkPaid(reg._id, '3wins')}
+                              disabled={reg3wins.isPaid}
+                              className={`px-2 py-1 text-xs rounded font-medium ${
+                                reg3wins.isPaid ? 'bg-green-100 text-green-700' : isDarkMode ? 'bg-orange-900 text-orange-200' : 'bg-orange-100 text-orange-700'
+                              }`}
+                            >
+                              {reg3wins.isPaid ? '✓' : 'Pay'}
+                            </button>
+                          </div>
+                        ) : <span className={isDarkMode ? 'text-gray-500' : 'text-gray-400'}>-</span>}
+                      </td>
+                      <td className={`px-6 py-4 font-semibold ${isDarkMode ? 'text-yellow-400' : 'text-yellow-600'}`}>
+                        ₱{totalFees}
+                      </td>
+                      <td className="px-6 py-4">
+                        <button
+                          onClick={() => handleDeleteRegistration(reg._id)}
+                          className={`px-3 py-1 text-xs rounded font-medium ${
+                            isDarkMode ? 'bg-red-900 text-red-200' : 'bg-red-100 text-red-700'
+                          }`}
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </div>

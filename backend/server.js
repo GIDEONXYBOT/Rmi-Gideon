@@ -173,6 +173,7 @@ import reportSingleRoutes from "./routes/dashboard.js"; // /api/report (singular
 import salariesRoutes from "./routes/salaries.js"; // /api/salaries (frontend expects this)
 import mediaRoutes from "./routes/media.js"; // /api/media (feed uploads)
 import chickenFightRoutes from "./routes/chicken-fight.js"; // 🐔 /api/chicken-fight
+import chickenFightRegistrationRoutes from "./routes/chicken-fight-registration.js"; // 🐔 /api/chicken-fight-registration
 
 // Temporarily disable all routes to test basic server startup
 // app.use("/api/payroll", payrollRoutes);
@@ -221,6 +222,7 @@ app.use("/api/cashflow-archive", cashflowArchiveRoutes);
 app.use("/api/salaries", salariesRoutes);
 app.use("/api/media", mediaRoutes);
 app.use("/api/chicken-fight", chickenFightRoutes); // 🐔 Chicken Fight betting system
+app.use("/api/chicken-fight-registration", chickenFightRegistrationRoutes); // 🐔 Chicken Fight registration
 // Deployed: 2025-12-08
 // app.use("/api/chat", chatRoutes);
 // app.use("/api/schedule", scheduleRoutes);
