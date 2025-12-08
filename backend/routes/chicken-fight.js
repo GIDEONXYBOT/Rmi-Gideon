@@ -1,22 +1,18 @@
 import express from 'express';
+import { requireAuth, requireRole } from '../middleware/auth.js';
 import ChickenFightEntry from '../models/ChickenFightEntry.js';
 import ChickenFightBet from '../models/ChickenFightBet.js';
 import ChickenFightGame from '../models/ChickenFightGame.js';
 
 const router = express.Router();
 
-// Middleware to check if user is supervisor or superadmin
-const checkAdminRole = (req, res, next) => {
-  if (!req.user || (req.user.role !== 'supervisor' && req.user.role !== 'super_admin' && req.user.role !== 'admin')) {
-    return res.status(403).json({ success: false, message: 'Unauthorized' });
-  }
-  next();
-};
+// Apply auth middleware to all routes
+router.use(requireAuth);
 
 // ============ ENTRY ENDPOINTS ============
 
 // Create new entry
-router.post('/entries', checkAdminRole, async (req, res) => {
+router.post('/entries', async (req, res) => {
   try {
     const { entryName, gameType, legBandNumbers } = req.body;
 
@@ -88,7 +84,7 @@ router.get('/entries', async (req, res) => {
 // ============ BET ENDPOINTS ============
 
 // Place a bet
-router.post('/bets', checkAdminRole, async (req, res) => {
+router.post('/bets', async (req, res) => {
   try {
     const { gameDate, gameType, entryId, side, amount } = req.body;
 
@@ -167,7 +163,7 @@ router.get('/bets', async (req, res) => {
 // ============ GAME RESULTS ENDPOINTS ============
 
 // Set game selection for the day
-router.post('/game/daily-selection', checkAdminRole, async (req, res) => {
+router.post('/game/daily-selection', async (req, res) => {
   try {
     const { gameTypes } = req.body;
 
@@ -227,7 +223,7 @@ router.get('/game/daily-selection', async (req, res) => {
 });
 
 // Set results and determine winners (Champion/Insurance)
-router.put('/game/results', checkAdminRole, async (req, res) => {
+router.put('/game/results', async (req, res) => {
   try {
     const { gameDate, entryResults } = req.body;
 
