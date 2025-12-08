@@ -29,6 +29,10 @@ export default function ChickenFight() {
   const [selectedWalaLegBand, setSelectedWalaLegBand] = useState('');
   const [fightNumber, setFightNumber] = useState(0);
   const [fights, setFights] = useState([]); // Track fight results
+  const [showHistory, setShowHistory] = useState(false);
+  const [historyDates, setHistoryDates] = useState([]);
+  const [selectedHistoryDate, setSelectedHistoryDate] = useState(null);
+  const [historyFights, setHistoryFights] = useState([]);
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -50,6 +54,47 @@ export default function ChickenFight() {
     localStorage.setItem(`chicken-fight-${today}`, JSON.stringify(fights));
     localStorage.setItem(`chicken-fight-number-${today}`, fightNumber.toString());
   }, [fights, fightNumber, today]);
+
+  // Load history dates on mount
+  useEffect(() => {
+    loadHistoryDates();
+  }, []);
+
+  // Load available history dates
+  const loadHistoryDates = () => {
+    const dates = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('chicken-fight-') && !key.includes('number')) {
+        const date = key.replace('chicken-fight-', '');
+        if (date !== today && !dates.includes(date)) {
+          dates.push(date);
+        }
+      }
+    }
+    setHistoryDates(dates.sort().reverse());
+  };
+
+  // Load history for selected date
+  const loadHistoryForDate = (date) => {
+    const savedFights = localStorage.getItem(`chicken-fight-${date}`);
+    if (savedFights) {
+      setHistoryFights(JSON.parse(savedFights));
+      setSelectedHistoryDate(date);
+    }
+  };
+
+  // Reset today's records
+  const handleResetToday = () => {
+    if (window.confirm('Are you sure you want to reset today\'s records? This action cannot be undone.')) {
+      setFights([]);
+      setFightNumber(0);
+      localStorage.removeItem(`chicken-fight-${today}`);
+      localStorage.removeItem(`chicken-fight-number-${today}`);
+      setSuccess('Today\'s records have been reset');
+      setTimeout(() => setSuccess(''), 2000);
+    }
+  };
 
   // Get leg bands for selected Meron entry
   const meronEntry = entries.find(e => e._id === selectedMeronEntry);
@@ -396,10 +441,24 @@ export default function ChickenFight() {
       {/* Main Content */}
       <div className={`flex-1 p-8 overflow-y-auto ${isDarkMode ? 'bg-gray-900' : 'bg-white'}`}>
         {/* Header */}
-        <div className="mb-6">
+        <div className="mb-6 flex justify-between items-center">
           <h1 className={`text-4xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
             RMI {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).toUpperCase()}
           </h1>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowHistory(!showHistory)}
+              className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium"
+            >
+              {showHistory ? 'Hide History' : 'View History'}
+            </button>
+            <button
+              onClick={handleResetToday}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium"
+            >
+              Reset Today
+            </button>
+          </div>
         </div>
 
         {/* Alerts */}
@@ -417,6 +476,70 @@ export default function ChickenFight() {
           <div className="mb-6 p-4 bg-green-100 border border-green-400 text-green-700 rounded flex items-center gap-3">
             <Check size={20} />
             <span>{success}</span>
+          </div>
+        )}
+
+        {/* History Viewer */}
+        {showHistory && (
+          <div className={`mb-6 p-6 rounded-lg border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-300'}`}>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Fight History</h2>
+              <button
+                onClick={() => setShowHistory(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {historyDates.length === 0 ? (
+              <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>No history records found</p>
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
+                {/* Date List */}
+                <div>
+                  <h3 className={`font-bold mb-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Past Dates</h3>
+                  <div className="space-y-2">
+                    {historyDates.map(date => (
+                      <button
+                        key={date}
+                        onClick={() => loadHistoryForDate(date)}
+                        className={`w-full text-left px-3 py-2 rounded transition ${
+                          selectedHistoryDate === date
+                            ? isDarkMode ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-900'
+                            : isDarkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-200 hover:bg-gray-300'
+                        }`}
+                      >
+                        {new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Fight Records */}
+                <div>
+                  <h3 className={`font-bold mb-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                    {selectedHistoryDate ? `Fights on ${new Date(selectedHistoryDate).toLocaleDateString()}` : 'Select a date'}
+                  </h3>
+                  <div className={`p-3 rounded max-h-96 overflow-y-auto ${isDarkMode ? 'bg-gray-700' : 'bg-white border border-gray-300'}`}>
+                    {selectedHistoryDate && historyFights.length > 0 ? (
+                      <div className="space-y-2">
+                        {historyFights.map((fight, idx) => (
+                          <div key={idx} className={`p-2 rounded text-sm ${isDarkMode ? 'bg-gray-600' : 'bg-gray-100'}`}>
+                            <div className="font-medium">{fight.entryName}</div>
+                            <div className="text-xs">Result: {fight.result === 1 ? '✓ Win' : '✗ Loss'} | Leg Band: {fight.legBand}</div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : selectedHistoryDate ? (
+                      <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>No fights recorded</p>
+                    ) : (
+                      <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>Select a date to view fights</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
