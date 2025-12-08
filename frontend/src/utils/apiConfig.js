@@ -3,7 +3,7 @@
  * 
  * - Uses current browser hostname (auto-detects IP if accessed via IP)
  * - Backend strict port: 5000
- * - Falls back to VITE_API_URL if set in .env
+ * - Maps production domains to backend endpoints
  * 
  * IMPORTANT: Always use getApiUrl() function, NOT the API_URL constant
  */
@@ -15,15 +15,26 @@ export function getApiUrl() {
     return 'http://localhost:5000';
   }
 
-  // Use the same hostname as the frontend for API calls
-  const envUrl = import.meta.env.VITE_API_URL;
+  const hostname = window.location.hostname;
+  
+  // Map production domains to their respective backends
+  const domainMap = {
+    'rmi.gideonbot.xyz': 'https://rmi-backend-zhdr.onrender.com',
+    'www.rmi.gideonbot.xyz': 'https://rmi-backend-zhdr.onrender.com',
+  };
 
+  // Check if we have a mapped domain
+  if (domainMap[hostname]) {
+    return domainMap[hostname];
+  }
+
+  // Check for environment variable (works with Cloudflare/Vercel env vars)
+  const envUrl = import.meta.env.VITE_API_URL;
   if (envUrl) {
     return envUrl;
   }
 
-  // Use the current hostname (works for both localhost and IP access)
-  const hostname = window.location.hostname;
+  // Default: use the current hostname with port 5000 (for localhost development)
   return `http://${hostname}:5000`;
 }
 
