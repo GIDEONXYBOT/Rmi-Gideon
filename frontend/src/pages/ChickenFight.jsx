@@ -26,6 +26,27 @@ export default function ChickenFight() {
   const [fightNumber, setFightNumber] = useState(0);
   const [fights, setFights] = useState([]); // Track fight results
 
+  const today = new Date().toISOString().split('T')[0];
+
+  // Load fights from localStorage on mount
+  useEffect(() => {
+    const savedFights = localStorage.getItem(`chicken-fight-${today}`);
+    const savedFightNumber = localStorage.getItem(`chicken-fight-number-${today}`);
+    
+    if (savedFights) {
+      setFights(JSON.parse(savedFights));
+    }
+    if (savedFightNumber) {
+      setFightNumber(parseInt(savedFightNumber));
+    }
+  }, [today]);
+
+  // Save fights to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem(`chicken-fight-${today}`, JSON.stringify(fights));
+    localStorage.setItem(`chicken-fight-number-${today}`, fightNumber.toString());
+  }, [fights, fightNumber, today]);
+
   // Get leg bands for selected Meron entry
   const meronEntry = entries.find(e => e._id === selectedMeronEntry);
   const meronLegBands = meronEntry?.legBandNumbers || [];
@@ -33,6 +54,13 @@ export default function ChickenFight() {
   // Get leg bands for selected Wala entry
   const walaEntry = entries.find(e => e._id === selectedWalaEntry);
   const walaLegBands = walaEntry?.legBandNumbers || [];
+
+  // Get used leg bands (already fought)
+  const usedLegBands = new Set(fights.map(f => f.legBand).filter(Boolean));
+
+  // Filter out already-used leg bands
+  const availableMeronLegBands = meronLegBands.filter(band => !usedLegBands.has(band));
+  const availableWalaLegBands = walaLegBands.filter(band => !usedLegBands.has(band));
 
   const handleMeronWin = () => {
     if (!selectedMeronEntry || !selectedMeronLegBand) {
@@ -43,6 +71,7 @@ export default function ChickenFight() {
       id: fightNumber + 1,
       type: 'meron',
       entryName: meronEntry.entryName,
+      legBand: selectedMeronLegBand,
       winner: true
     };
     setFights([...fights, newFight]);
@@ -62,6 +91,7 @@ export default function ChickenFight() {
       id: fightNumber + 1,
       type: 'wala',
       entryName: walaEntry.entryName,
+      legBand: selectedWalaLegBand,
       winner: true
     };
     setFights([...fights, newFight]);
@@ -74,8 +104,6 @@ export default function ChickenFight() {
   
   // Stats
   const [stats, setStats] = useState(null);
-
-  const today = new Date().toISOString().split('T')[0];
 
   // Fetch data on load
   useEffect(() => {
@@ -357,12 +385,15 @@ export default function ChickenFight() {
                   className="w-full px-4 py-2 rounded-lg bg-red-600 text-white border border-red-500"
                 >
                   <option value="">-- Select Leg Band --</option>
-                  {meronLegBands.map(band => (
+                  {availableMeronLegBands.map(band => (
                     <option key={band} value={band}>
                       Band {band}
                     </option>
                   ))}
                 </select>
+                {availableMeronLegBands.length === 0 && (
+                  <p className="text-xs text-red-200 mt-1">All leg bands have already fought</p>
+                )}
               </div>
             )}
 
@@ -424,12 +455,15 @@ export default function ChickenFight() {
                   className="w-full px-4 py-2 rounded-lg bg-blue-600 text-white border border-blue-500"
                 >
                   <option value="">-- Select Leg Band --</option>
-                  {walaLegBands.map(band => (
+                  {availableWalaLegBands.map(band => (
                     <option key={band} value={band}>
                       Band {band}
                     </option>
                   ))}
                 </select>
+                {availableWalaLegBands.length === 0 && (
+                  <p className="text-xs text-blue-200 mt-1">All leg bands have already fought</p>
+                )}
               </div>
             )}
 
