@@ -19,6 +19,10 @@ export default function ChickenFight() {
   
   // Registration form
   const [showRegForm, setShowRegForm] = useState(false);
+  const [selectedEntry, setSelectedEntry] = useState('');
+  const [selected2Wins, setSelected2Wins] = useState(false);
+  const [selected3Wins, setSelected3Wins] = useState(false);
+  const [submittingReg, setSubmittingReg] = useState(false);
   const [selectedMeronEntry, setSelectedMeronEntry] = useState('');
   const [selectedMeronLegBand, setSelectedMeronLegBand] = useState('');
   const [selectedWalaEntry, setSelectedWalaEntry] = useState('');
