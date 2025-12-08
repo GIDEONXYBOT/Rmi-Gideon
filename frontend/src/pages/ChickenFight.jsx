@@ -399,6 +399,18 @@ export default function ChickenFight() {
           <div className="bg-red-700 text-white rounded-lg p-8">
             <h2 className="text-2xl font-bold mb-4">MERON</h2>
             
+            {/* Available Entries - All 2wins and 3wins */}
+            <div className="mb-4 p-3 bg-red-600 rounded text-sm max-h-32 overflow-y-auto">
+              <div className="font-medium mb-2">Available:</div>
+              <div className="space-y-1">
+                {entries.map(entry => (
+                  <div key={entry._id} className="text-xs">
+                    {entry.entryName} ({entry.gameType})
+                  </div>
+                ))}
+              </div>
+            </div>
+            
             {/* Entry Selector */}
             <div className="mb-4">
               <label className="block text-sm font-medium mb-2">Select Entry</label>
@@ -411,13 +423,11 @@ export default function ChickenFight() {
                 className="w-full px-4 py-2 rounded-lg bg-red-600 text-white border border-red-500"
               >
                 <option value="">-- Select Entry --</option>
-                {entries
-                  .filter(e => e.gameType === '2wins')
-                  .map(entry => (
-                    <option key={entry._id} value={entry._id}>
-                      {entry.entryName}
-                    </option>
-                  ))}
+                {entries.map(entry => (
+                  <option key={entry._id} value={entry._id}>
+                    {entry.entryName} ({entry.gameType})
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -469,6 +479,18 @@ export default function ChickenFight() {
           <div className="bg-blue-700 text-white rounded-lg p-8">
             <h2 className="text-2xl font-bold mb-4">WALA</h2>
             
+            {/* Available Entries - All 2wins and 3wins */}
+            <div className="mb-4 p-3 bg-blue-600 rounded text-sm max-h-32 overflow-y-auto">
+              <div className="font-medium mb-2">Available:</div>
+              <div className="space-y-1">
+                {entries.map(entry => (
+                  <div key={entry._id} className="text-xs">
+                    {entry.entryName} ({entry.gameType})
+                  </div>
+                ))}
+              </div>
+            </div>
+            
             {/* Entry Selector */}
             <div className="mb-4">
               <label className="block text-sm font-medium mb-2">Select Entry</label>
@@ -481,13 +503,11 @@ export default function ChickenFight() {
                 className="w-full px-4 py-2 rounded-lg bg-blue-600 text-white border border-blue-500"
               >
                 <option value="">-- Select Entry --</option>
-                {entries
-                  .filter(e => e.gameType === '3wins')
-                  .map(entry => (
-                    <option key={entry._id} value={entry._id}>
-                      {entry.entryName}
-                    </option>
-                  ))}
+                {entries.map(entry => (
+                  <option key={entry._id} value={entry._id}>
+                    {entry.entryName} ({entry.gameType})
+                  </option>
+                ))}
               </select>
             </div>
 
