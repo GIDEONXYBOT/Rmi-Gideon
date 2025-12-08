@@ -257,6 +257,10 @@ function App() {
                       {/* Provide alias so admin URL works as well */}
                       <Route path="betting-event-report" element={<BettingEventReport />} />
                       
+                      {/* 🐔 Chicken Fight */}
+                      <Route path="chicken-fight" element={<ChickenFight />} />
+                      <Route path="chicken-fight-entries" element={<ChickenFightEntries />} />
+                      
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </SidebarLayout>
