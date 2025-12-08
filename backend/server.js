@@ -220,7 +220,8 @@ app.use("/api/report", reportSingleRoutes); // routes under /api/report/ (e.g. /
 app.use("/api/cashflow-archive", cashflowArchiveRoutes);
 app.use("/api/salaries", salariesRoutes);
 app.use("/api/media", mediaRoutes);
-app.use("/api/chicken-fight", chickenFightRoutes); // 🐔 Chicken Fight betting
+app.use("/api/chicken-fight", chickenFightRoutes); // 🐔 Chicken Fight betting system
+// Deployed: 2025-12-08
 // app.use("/api/chat", chatRoutes);
 // app.use("/api/schedule", scheduleRoutes);
 // app.use("/api/attendance", attendanceRoutes);
