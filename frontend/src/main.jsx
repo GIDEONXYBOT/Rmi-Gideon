@@ -405,6 +405,11 @@ function App() {
                       
                       {/* 🎯 Betting Event Report */}
                       <Route path="betting-event-report" element={<BettingEventReport />} />
+                      
+                      {/* 🐔 Chicken Fight */}
+                      <Route path="chicken-fight" element={<ChickenFight />} />
+                      <Route path="chicken-fight-entries" element={<ChickenFightEntries />} />
+                      
                       <Route path="key-performance-indicator" element={<KeyPerformanceIndicator />} />
                       <Route path="teller-mappings" element={<TellerMappings />} />
                       
