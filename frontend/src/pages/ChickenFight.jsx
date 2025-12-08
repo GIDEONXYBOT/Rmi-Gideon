@@ -67,40 +67,54 @@ export default function ChickenFight() {
   const availableWalaLegBands = walaLegBands.filter(band => !usedLegBands.has(band));
 
   const handleMeronWin = () => {
-    if (!selectedMeronEntry || !selectedMeronLegBand) {
-      setError('Please select both entry and leg band for Meron');
+    if (!selectedMeronEntry || !selectedMeronLegBand || !selectedWalaEntry || !selectedWalaLegBand) {
+      setError('Please select both Meron and Wala entries with leg bands');
       return;
     }
-    const newFight = {
+    const meronFight = {
       id: fightNumber + 1,
-      type: 'meron',
       entryName: meronEntry.entryName,
       legBand: selectedMeronLegBand,
-      winner: true
+      result: 1  // 1 for win
     };
-    setFights([...fights, newFight]);
+    const walaFight = {
+      id: fightNumber + 1,
+      entryName: walaEntry.entryName,
+      legBand: selectedWalaLegBand,
+      result: 0  // 0 for loss
+    };
+    setFights([...fights, meronFight, walaFight]);
     setFightNumber(fightNumber + 1);
-    setSuccess(`Meron (${meronEntry.entryName} - Leg Band ${selectedMeronLegBand}) wins!`);
+    setSuccess(`Meron (${meronEntry.entryName}) defeats Wala (${walaEntry.entryName})`);
     setSelectedMeronEntry('');
     setSelectedMeronLegBand('');
+    setSelectedWalaEntry('');
+    setSelectedWalaLegBand('');
     setTimeout(() => setSuccess(''), 2000);
   };
 
   const handleWalaWin = () => {
-    if (!selectedWalaEntry || !selectedWalaLegBand) {
-      setError('Please select both entry and leg band for Wala');
+    if (!selectedMeronEntry || !selectedMeronLegBand || !selectedWalaEntry || !selectedWalaLegBand) {
+      setError('Please select both Meron and Wala entries with leg bands');
       return;
     }
-    const newFight = {
+    const meronFight = {
       id: fightNumber + 1,
-      type: 'wala',
+      entryName: meronEntry.entryName,
+      legBand: selectedMeronLegBand,
+      result: 0  // 0 for loss
+    };
+    const walaFight = {
+      id: fightNumber + 1,
       entryName: walaEntry.entryName,
       legBand: selectedWalaLegBand,
-      winner: true
+      result: 1  // 1 for win
     };
-    setFights([...fights, newFight]);
+    setFights([...fights, meronFight, walaFight]);
     setFightNumber(fightNumber + 1);
-    setSuccess(`Wala (${walaEntry.entryName} - Leg Band ${selectedWalaLegBand}) wins!`);
+    setSuccess(`Wala (${walaEntry.entryName}) defeats Meron (${meronEntry.entryName})`);
+    setSelectedMeronEntry('');
+    setSelectedMeronLegBand('');
     setSelectedWalaEntry('');
     setSelectedWalaLegBand('');
     setTimeout(() => setSuccess(''), 2000);
@@ -244,10 +258,12 @@ export default function ChickenFight() {
           {/* Score Summary with Champions */}
           <div className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-400'} mb-4 space-y-2`}>
             {(() => {
-              // Count wins per entry
+              // Count wins per entry (only count result === 1)
               const entryWins = {};
               fights.forEach(fight => {
-                entryWins[fight.entryName] = (entryWins[fight.entryName] || 0) + 1;
+                if (fight.result === 1) {
+                  entryWins[fight.entryName] = (entryWins[fight.entryName] || 0) + 1;
+                }
               });
 
               // Find champions (2 wins for Meron, 3 wins for Wala)
@@ -265,8 +281,14 @@ export default function ChickenFight() {
                 })
                 .map(([name]) => name);
 
-              const meronScore = fights.filter(f => f.type === 'meron').length;
-              const walaScore = fights.filter(f => f.type === 'wala').length;
+                const meronScore = fights.filter(f => {
+                const entry = entries.find(e => e.entryName === f.entryName);
+                return entry?.gameType === '2wins' && f.result === 1;
+              }).length;
+              const walaScore = fights.filter(f => {
+                const entry = entries.find(e => e.entryName === f.entryName);
+                return entry?.gameType === '3wins' && f.result === 1;
+              }).length;
 
               return (
                 <>
@@ -306,11 +328,9 @@ export default function ChickenFight() {
             </div>
           ) : (
             (() => {
-              // Count wins per entry for this section
-              const entryWins = {};
+              // Track entry types and their fight results
               let entryTypes = {}; // Track entry types
               fights.forEach(fight => {
-                entryWins[fight.entryName] = (entryWins[fight.entryName] || 0) + 1;
                 const entry = entries.find(e => e.entryName === fight.entryName);
                 if (entry) {
                   entryTypes[fight.entryName] = entry.gameType;
@@ -325,7 +345,6 @@ export default function ChickenFight() {
                   seenEntries.add(fight.entryName);
                   uniqueEntries.push({
                     name: fight.entryName,
-                    type: fight.type,
                     gameType: entryTypes[fight.entryName]
                   });
                 }
@@ -333,26 +352,29 @@ export default function ChickenFight() {
 
               return uniqueEntries.map(entryData => {
                 const entry = entries.find(e => e.entryName === entryData.name);
-                const isMeronChampion = entry?.gameType === '2wins' && entryWins[entryData.name] >= 2;
-                const isWalaChampion = entry?.gameType === '3wins' && entryWins[entryData.name] >= 3;
+                // Get all fight results for this entry (1 for win, 0 for loss)
+                const entryFights = fights.filter(f => f.entryName === entryData.name);
+                const wins = entryFights.filter(f => f.result === 1).length;
+                const isMeronChampion = entry?.gameType === '2wins' && wins >= 2;
+                const isWalaChampion = entry?.gameType === '3wins' && wins >= 3;
                 const isChampion = isMeronChampion || isWalaChampion;
 
                 return (
                   <div key={entryData.name} className={`p-2 rounded font-medium flex items-center justify-between gap-2 ${
-                    entryData.type === 'meron' ? 'bg-red-700' : 'bg-blue-700'
+                    entry?.gameType === '2wins' ? 'bg-red-700' : 'bg-blue-700'
                   }`}>
                     <div className="flex items-center gap-1 truncate flex-1">
                       {isChampion && <span>★</span>}
                       <span className="truncate">{entryData.name}</span>
                     </div>
-                    {/* Win/Loss Indicators - Numbers (1 for win) */}
+                    {/* Win/Loss Indicators - Show actual results (1 for win, 0 for loss) */}
                     <div className="flex gap-1 items-center flex-shrink-0">
-                      {Array.from({ length: entryWins[entryData.name] }).map((_, idx) => (
+                      {entryFights.map((fight, idx) => (
                         <span
                           key={idx}
-                          className="font-bold text-sm"
+                          className={`font-bold text-sm ${fight.result === 1 ? 'text-white' : 'text-red-200'}`}
                         >
-                          1
+                          {fight.result}
                         </span>
                       ))}
                     </div>
