@@ -266,18 +266,26 @@ export default function ChickenFight() {
 
               return (
                 <>
-                  <div className="flex justify-between bg-red-700 p-2 rounded font-medium items-center">
-                    <span>Meron</span>
-                    <div className="flex items-center gap-1">
-                      {meronChampions.length > 0 && <span>★</span>}
+                  <div className="bg-red-700 p-3 rounded font-medium">
+                    <div className="flex justify-between items-center mb-2">
+                      <span>MERON</span>
                       <span>{meronScore}</span>
                     </div>
+                    <div className="flex gap-0.5 flex-wrap">
+                      {Array.from({ length: meronScore }).map((_, idx) => (
+                        <div key={idx} className="bg-red-300 w-2 h-1 rounded-full" />
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex justify-between bg-blue-700 p-2 rounded font-medium items-center">
-                    <span>Wala</span>
-                    <div className="flex items-center gap-1">
-                      {walaChampions.length > 0 && <span>★</span>}
+                  <div className="bg-blue-700 p-3 rounded font-medium">
+                    <div className="flex justify-between items-center mb-2">
+                      <span>WALA</span>
                       <span>{walaScore}</span>
+                    </div>
+                    <div className="flex gap-0.5 flex-wrap">
+                      {Array.from({ length: walaScore }).map((_, idx) => (
+                        <div key={idx} className="bg-blue-300 w-2 h-1 rounded-full" />
+                      ))}
                     </div>
                   </div>
                 </>
