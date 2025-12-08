@@ -342,6 +342,18 @@ export default function ChickenFight() {
                 return entry?.gameType === '3wins' && f.result === 1;
               }).length;
 
+              // Get all Meron fights (2wins) with their results
+              const meronFights = fights.filter(f => {
+                const entry = entries.find(e => e.entryName === f.entryName);
+                return entry?.gameType === '2wins';
+              });
+
+              // Get all Wala fights (3wins) with their results
+              const walaFights = fights.filter(f => {
+                const entry = entries.find(e => e.entryName === f.entryName);
+                return entry?.gameType === '3wins';
+              });
+
               return (
                 <>
                   <div className="bg-red-700 p-3 rounded font-medium">
@@ -350,8 +362,8 @@ export default function ChickenFight() {
                       <span>{meronScore}</span>
                     </div>
                     <div className="flex gap-1 flex-wrap">
-                      {Array.from({ length: meronScore }).map((_, idx) => (
-                        <span key={idx} className="font-bold text-sm">1</span>
+                      {meronFights.map((fight, idx) => (
+                        <span key={idx} className="font-bold text-sm">{fight.result}</span>
                       ))}
                     </div>
                   </div>
@@ -361,8 +373,8 @@ export default function ChickenFight() {
                       <span>{walaScore}</span>
                     </div>
                     <div className="flex gap-1 flex-wrap">
-                      {Array.from({ length: walaScore }).map((_, idx) => (
-                        <span key={idx} className="font-bold text-sm">1</span>
+                      {walaFights.map((fight, idx) => (
+                        <span key={idx} className="font-bold text-sm">{fight.result}</span>
                       ))}
                     </div>
                   </div>
