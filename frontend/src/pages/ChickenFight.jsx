@@ -220,8 +220,8 @@ export default function ChickenFight() {
           </div>
         )}
 
-        {/* Two Column Display - Meron and Wala */}
-        <div className="grid grid-cols-2 gap-4 mb-8">
+        {/* Three Column Display - Meron, Fight Number, Wala */}
+        <div className="grid grid-cols-3 gap-4 mb-8">
           {/* Meron Column */}
           <div className="bg-red-700 text-white rounded-lg p-8">
             <h2 className="text-2xl font-bold mb-4">MERON</h2>
@@ -239,6 +239,25 @@ export default function ChickenFight() {
               </select>
             </div>
             <div className="text-6xl font-bold text-center">0</div>
+          </div>
+
+          {/* Fight Number Column */}
+          <div className="bg-gray-800 text-white rounded-lg p-8 flex flex-col items-center justify-center">
+            <div className="mb-6">
+              <label className="block text-sm font-medium mb-2 text-center">Select Leg Band</label>
+              <select className="px-4 py-2 rounded-lg bg-gray-700 text-white border border-gray-600 min-w-[150px]">
+                <option value="">-- Select Leg Band --</option>
+                {entries.flatMap(entry => 
+                  (entry.legBandNumbers || []).map(band => (
+                    <option key={`${entry._id}-${band}`} value={band}>
+                      {entry.entryName} - Band {band}
+                    </option>
+                  ))
+                )}
+              </select>
+            </div>
+            <div className="text-7xl font-bold">0</div>
+            <div className="text-lg mt-4">FIGHT</div>
           </div>
 
           {/* Wala Column */}
