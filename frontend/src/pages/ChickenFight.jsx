@@ -19,10 +19,36 @@ export default function ChickenFight() {
   
   // Registration form
   const [showRegForm, setShowRegForm] = useState(false);
-  const [selectedEntry, setSelectedEntry] = useState('');
-  const [selected2Wins, setSelected2Wins] = useState(false);
-  const [selected3Wins, setSelected3Wins] = useState(false);
-  const [submittingReg, setSubmittingReg] = useState(false);
+  const [selectedMeronEntry, setSelectedMeronEntry] = useState('');
+  const [selectedMeronLegBand, setSelectedMeronLegBand] = useState('');
+  const [selectedWalaEntry, setSelectedWalaEntry] = useState('');
+  const [selectedWalaLegBand, setSelectedWalaLegBand] = useState('');
+
+  // Get leg bands for selected Meron entry
+  const meronEntry = entries.find(e => e._id === selectedMeronEntry);
+  const meronLegBands = meronEntry?.legBandNumbers || [];
+
+  // Get leg bands for selected Wala entry
+  const walaEntry = entries.find(e => e._id === selectedWalaEntry);
+  const walaLegBands = walaEntry?.legBandNumbers || [];
+
+  const handleMeronWin = () => {
+    if (!selectedMeronEntry || !selectedMeronLegBand) {
+      setError('Please select both entry and leg band for Meron');
+      return;
+    }
+    setSuccess(`Meron (${meronEntry.entryName} - Leg Band ${selectedMeronLegBand}) wins!`);
+    setTimeout(() => setSuccess(''), 2000);
+  };
+
+  const handleWalaWin = () => {
+    if (!selectedWalaEntry || !selectedWalaLegBand) {
+      setError('Please select both entry and leg band for Wala');
+      return;
+    }
+    setSuccess(`Wala (${walaEntry.entryName} - Leg Band ${selectedWalaLegBand}) wins!`);
+    setTimeout(() => setSuccess(''), 2000);
+  };
   
   // Stats
   const [stats, setStats] = useState(null);
@@ -225,9 +251,18 @@ export default function ChickenFight() {
           {/* Meron Column */}
           <div className="bg-red-700 text-white rounded-lg p-8">
             <h2 className="text-2xl font-bold mb-4">MERON</h2>
+            
+            {/* Entry Selector */}
             <div className="mb-4">
               <label className="block text-sm font-medium mb-2">Select Entry</label>
-              <select className="w-full px-4 py-2 rounded-lg bg-red-600 text-white border border-red-500">
+              <select
+                value={selectedMeronEntry}
+                onChange={(e) => {
+                  setSelectedMeronEntry(e.target.value);
+                  setSelectedMeronLegBand('');
+                }}
+                className="w-full px-4 py-2 rounded-lg bg-red-600 text-white border border-red-500"
+              >
                 <option value="">-- Select Entry --</option>
                 {entries
                   .filter(e => e.gameType === '2wins')
@@ -238,34 +273,63 @@ export default function ChickenFight() {
                   ))}
               </select>
             </div>
-            <div className="text-6xl font-bold text-center">0</div>
+
+            {/* Leg Band Selector */}
+            {selectedMeronEntry && meronLegBands.length > 0 && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-2">Select Leg Band</label>
+                <select
+                  value={selectedMeronLegBand}
+                  onChange={(e) => setSelectedMeronLegBand(e.target.value)}
+                  className="w-full px-4 py-2 rounded-lg bg-red-600 text-white border border-red-500"
+                >
+                  <option value="">-- Select Leg Band --</option>
+                  {meronLegBands.map(band => (
+                    <option key={band} value={band}>
+                      Band {band}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Win Button */}
+            <button
+              onClick={handleMeronWin}
+              disabled={!selectedMeronEntry || !selectedMeronLegBand}
+              className={`w-full py-3 font-bold rounded-lg text-lg transition ${
+                selectedMeronEntry && selectedMeronLegBand
+                  ? 'bg-red-500 hover:bg-red-600 text-white cursor-pointer'
+                  : 'bg-red-900 text-gray-400 cursor-not-allowed opacity-50'
+              }`}
+            >
+              MERON WINS
+            </button>
+
+            <div className="text-6xl font-bold text-center mt-4">0</div>
           </div>
 
           {/* Fight Number Column */}
           <div className="bg-gray-800 text-white rounded-lg p-8 flex flex-col items-center justify-center">
-            <div className="mb-6">
-              <label className="block text-sm font-medium mb-2 text-center">Select Leg Band</label>
-              <select className="px-4 py-2 rounded-lg bg-gray-700 text-white border border-gray-600 min-w-[150px]">
-                <option value="">-- Select Leg Band --</option>
-                {entries.flatMap(entry => 
-                  (entry.legBandNumbers || []).map(band => (
-                    <option key={`${entry._id}-${band}`} value={band}>
-                      {entry.entryName} - Band {band}
-                    </option>
-                  ))
-                )}
-              </select>
-            </div>
-            <div className="text-7xl font-bold">0</div>
-            <div className="text-lg mt-4">FIGHT</div>
+            <div className="text-7xl font-bold mb-4">0</div>
+            <div className="text-lg font-bold">FIGHT</div>
           </div>
 
           {/* Wala Column */}
           <div className="bg-blue-700 text-white rounded-lg p-8">
             <h2 className="text-2xl font-bold mb-4">WALA</h2>
+            
+            {/* Entry Selector */}
             <div className="mb-4">
               <label className="block text-sm font-medium mb-2">Select Entry</label>
-              <select className="w-full px-4 py-2 rounded-lg bg-blue-600 text-white border border-blue-500">
+              <select
+                value={selectedWalaEntry}
+                onChange={(e) => {
+                  setSelectedWalaEntry(e.target.value);
+                  setSelectedWalaLegBand('');
+                }}
+                className="w-full px-4 py-2 rounded-lg bg-blue-600 text-white border border-blue-500"
+              >
                 <option value="">-- Select Entry --</option>
                 {entries
                   .filter(e => e.gameType === '3wins')
@@ -276,7 +340,40 @@ export default function ChickenFight() {
                   ))}
               </select>
             </div>
-            <div className="text-6xl font-bold text-center">0</div>
+
+            {/* Leg Band Selector */}
+            {selectedWalaEntry && walaLegBands.length > 0 && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-2">Select Leg Band</label>
+                <select
+                  value={selectedWalaLegBand}
+                  onChange={(e) => setSelectedWalaLegBand(e.target.value)}
+                  className="w-full px-4 py-2 rounded-lg bg-blue-600 text-white border border-blue-500"
+                >
+                  <option value="">-- Select Leg Band --</option>
+                  {walaLegBands.map(band => (
+                    <option key={band} value={band}>
+                      Band {band}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Win Button */}
+            <button
+              onClick={handleWalaWin}
+              disabled={!selectedWalaEntry || !selectedWalaLegBand}
+              className={`w-full py-3 font-bold rounded-lg text-lg transition ${
+                selectedWalaEntry && selectedWalaLegBand
+                  ? 'bg-blue-500 hover:bg-blue-600 text-white cursor-pointer'
+                  : 'bg-blue-900 text-gray-400 cursor-not-allowed opacity-50'
+              }`}
+            >
+              WALA WINS
+            </button>
+
+            <div className="text-6xl font-bold text-center mt-4">0</div>
           </div>
         </div>
 
