@@ -275,9 +275,9 @@ export default function ChickenFight() {
                       <span>MERON</span>
                       <span>{meronScore}</span>
                     </div>
-                    <div className="flex gap-0.5 flex-wrap">
+                    <div className="flex gap-1 flex-wrap">
                       {Array.from({ length: meronScore }).map((_, idx) => (
-                        <div key={idx} className="bg-red-300 w-2 h-1 rounded-full" />
+                        <span key={idx} className="font-bold text-sm">1</span>
                       ))}
                     </div>
                   </div>
@@ -286,9 +286,9 @@ export default function ChickenFight() {
                       <span>WALA</span>
                       <span>{walaScore}</span>
                     </div>
-                    <div className="flex gap-0.5 flex-wrap">
+                    <div className="flex gap-1 flex-wrap">
                       {Array.from({ length: walaScore }).map((_, idx) => (
-                        <div key={idx} className="bg-blue-300 w-2 h-1 rounded-full" />
+                        <span key={idx} className="font-bold text-sm">1</span>
                       ))}
                     </div>
                   </div>
@@ -345,17 +345,15 @@ export default function ChickenFight() {
                       {isChampion && <span>★</span>}
                       <span className="truncate">{entryData.name}</span>
                     </div>
-                    {/* Win/Loss Indicators - Horizontal lines */}
-                    <div className="flex gap-0.5 items-center flex-shrink-0">
+                    {/* Win/Loss Indicators - Numbers (1 for win) */}
+                    <div className="flex gap-1 items-center flex-shrink-0">
                       {Array.from({ length: entryWins[entryData.name] }).map((_, idx) => (
-                        <div
+                        <span
                           key={idx}
-                          className={`h-0.5 ${
-                            entryData.type === 'meron' 
-                              ? 'bg-red-200 w-2'  // Horizontal line for Meron win
-                              : 'bg-blue-200 w-2'  // Horizontal line for Wala win
-                          }`}
-                        />
+                          className="font-bold text-sm"
+                        >
+                          1
+                        </span>
                       ))}
                     </div>
                   </div>
