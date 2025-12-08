@@ -286,7 +286,7 @@ export default function ChickenFight() {
           </div>
         </div>
 
-        {/* Fight List with Champions */}
+        {/* Fight List with Champions and Win/Loss Indicators */}
         <div className="text-xs space-y-1">
           {fights.length === 0 ? (
             <div className={`p-2 text-center ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>
@@ -300,18 +300,37 @@ export default function ChickenFight() {
                 entryWins[fight.entryName] = (entryWins[fight.entryName] || 0) + 1;
               });
 
-              return fights.map((fight) => {
+              return fights.map((fight, index) => {
                 const entry = entries.find(e => e.entryName === fight.entryName);
                 const isMeronChampion = entry?.gameType === '2wins' && entryWins[fight.entryName] >= 2;
                 const isWalaChampion = entry?.gameType === '3wins' && entryWins[fight.entryName] >= 3;
                 const isChampion = isMeronChampion || isWalaChampion;
 
+                // Count how many fights this entry has had
+                const entryFightCount = fights.filter(f => f.entryName === fight.entryName).length;
+                const entryFightIndex = fights.filter(f => f.entryName === fight.entryName && fights.indexOf(f) <= index).length;
+
                 return (
-                  <div key={fight.id} className={`p-2 rounded font-medium truncate flex items-center gap-1 ${
+                  <div key={fight.id} className={`p-2 rounded font-medium flex items-center justify-between gap-1 ${
                     fight.type === 'meron' ? 'bg-red-700' : 'bg-blue-700'
                   }`}>
-                    {isChampion && <span>★</span>}
-                    <span>#{fight.id} {fight.entryName}</span>
+                    <div className="flex items-center gap-1 truncate flex-1">
+                      {isChampion && <span>★</span>}
+                      <span className="truncate">#{fight.id} {fight.entryName}</span>
+                    </div>
+                    {/* Win/Loss Indicators */}
+                    <div className="flex gap-0.5 items-center">
+                      {Array.from({ length: entryFightIndex }).map((_, idx) => (
+                        <div
+                          key={idx}
+                          className={`${
+                            fight.type === 'meron' 
+                              ? 'bg-red-300 w-1.5 h-0.5'  // Horizontal line for win
+                              : 'bg-blue-300 w-1.5 h-0.5'  // Horizontal line for win
+                          }`}
+                        />
+                      ))}
+                    </div>
                   </div>
                 );
               });
