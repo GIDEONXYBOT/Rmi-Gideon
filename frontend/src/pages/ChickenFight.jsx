@@ -209,54 +209,85 @@ export default function ChickenFight() {
         <div className="mb-6">
           <div className="font-bold text-white bg-gray-700 p-3 rounded mb-2 text-center">RESULT</div>
           
-          {/* Score Summary */}
+          {/* Score Summary with Champions */}
           <div className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-400'} mb-4 space-y-2`}>
-            {/* Calculate scores */}
             {(() => {
+              // Count wins per entry
+              const entryWins = {};
+              fights.forEach(fight => {
+                entryWins[fight.entryName] = (entryWins[fight.entryName] || 0) + 1;
+              });
+
+              // Find champions (2 wins for Meron, 3 wins for Wala)
+              const meronChampions = Object.entries(entryWins)
+                .filter(([name, wins]) => {
+                  const entry = entries.find(e => e.entryName === name);
+                  return entry?.gameType === '2wins' && wins >= 2;
+                })
+                .map(([name]) => name);
+
+              const walaChampions = Object.entries(entryWins)
+                .filter(([name, wins]) => {
+                  const entry = entries.find(e => e.entryName === name);
+                  return entry?.gameType === '3wins' && wins >= 3;
+                })
+                .map(([name]) => name);
+
               const meronScore = fights.filter(f => f.type === 'meron').length;
               const walaScore = fights.filter(f => f.type === 'wala').length;
-              const topEntry = fights.length > 0 ? fights.reduce((prev, current) => {
-                const prevCount = fights.filter(f => f.entryName === prev.entryName).length;
-                const currentCount = fights.filter(f => f.entryName === current.entryName).length;
-                return currentCount > prevCount ? current : prev;
-              }) : null;
 
               return (
                 <>
-                  <div className="flex justify-between bg-red-700 p-2 rounded font-medium">
+                  <div className="flex justify-between bg-red-700 p-2 rounded font-medium items-center">
                     <span>Meron</span>
-                    <span>{meronScore}</span>
-                  </div>
-                  <div className="flex justify-between bg-blue-700 p-2 rounded font-medium">
-                    <span>Wala</span>
-                    <span>{walaScore}</span>
-                  </div>
-                  {topEntry && (
-                    <div className="flex justify-between bg-yellow-600 p-2 rounded font-medium text-yellow-100">
-                      <span>★ Champion</span>
-                      <span>{topEntry.entryName}</span>
+                    <div className="flex items-center gap-1">
+                      {meronChampions.length > 0 && <span>★</span>}
+                      <span>{meronScore}</span>
                     </div>
-                  )}
+                  </div>
+                  <div className="flex justify-between bg-blue-700 p-2 rounded font-medium items-center">
+                    <span>Wala</span>
+                    <div className="flex items-center gap-1">
+                      {walaChampions.length > 0 && <span>★</span>}
+                      <span>{walaScore}</span>
+                    </div>
+                  </div>
                 </>
               );
             })()}
           </div>
         </div>
 
-        {/* Fight List */}
+        {/* Fight List with Champions */}
         <div className="text-xs space-y-1">
           {fights.length === 0 ? (
             <div className={`p-2 text-center ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>
               No fights recorded
             </div>
           ) : (
-            fights.map((fight) => (
-              <div key={fight.id} className={`p-2 rounded font-medium truncate ${
-                fight.type === 'meron' ? 'bg-red-700' : 'bg-blue-700'
-              }`}>
-                #{fight.id} {fight.entryName}
-              </div>
-            ))
+            (() => {
+              // Count wins per entry for this section
+              const entryWins = {};
+              fights.forEach(fight => {
+                entryWins[fight.entryName] = (entryWins[fight.entryName] || 0) + 1;
+              });
+
+              return fights.map((fight) => {
+                const entry = entries.find(e => e.entryName === fight.entryName);
+                const isMeronChampion = entry?.gameType === '2wins' && entryWins[fight.entryName] >= 2;
+                const isWalaChampion = entry?.gameType === '3wins' && entryWins[fight.entryName] >= 3;
+                const isChampion = isMeronChampion || isWalaChampion;
+
+                return (
+                  <div key={fight.id} className={`p-2 rounded font-medium truncate flex items-center gap-1 ${
+                    fight.type === 'meron' ? 'bg-red-700' : 'bg-blue-700'
+                  }`}>
+                    {isChampion && <span>★</span>}
+                    <span>#{fight.id} {fight.entryName}</span>
+                  </div>
+                );
+              });
+            })()
           )}
         </div>
       </div>
