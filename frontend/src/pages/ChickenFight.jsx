@@ -1014,11 +1014,23 @@ export default function ChickenFight() {
                     return filteredRegistrations.map((reg) => {
                       const reg2wins = reg.registrations.find(r => r.gameType === '2wins');
                       const reg3wins = reg.registrations.find(r => r.gameType === '3wins');
+                      const entry = entries.find(e => e.entryName === reg.entryName);
 
                     return (
                       <tr key={reg._id} className={`border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
                         <td className={`px-6 py-4 font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                          {reg.entryName}
+                          <div className="flex items-center gap-2">
+                            <span>{reg.entryName}</span>
+                            {entry && (
+                              <span className={`px-2 py-1 text-xs font-bold rounded ${
+                                entry.gameType === '2wins'
+                                  ? isDarkMode ? 'bg-red-900/50 text-red-300' : 'bg-red-100 text-red-700'
+                                  : isDarkMode ? 'bg-blue-900/50 text-blue-300' : 'bg-blue-100 text-blue-700'
+                              }`}>
+                                {entry.gameType === '2wins' ? '2-WINS' : '3-WINS'}
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-6 py-4 text-center">
                           {reg2wins ? (
