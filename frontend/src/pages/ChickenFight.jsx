@@ -815,7 +815,7 @@ export default function ChickenFight() {
 
         {/* Statistics */}
         {stats && (
-          <div className="grid grid-cols-6 gap-4 mb-8">
+          <div className="grid grid-cols-7 gap-4 mb-8">
             <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
               <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Total Registered</div>
               <div className={`text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -867,6 +867,16 @@ export default function ChickenFight() {
               </div>
             </div>
             <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
+              <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Insurance</div>
+              <div className={`text-3xl font-bold ${isDarkMode ? 'text-purple-400' : 'text-purple-600'}`}>
+                ₱{(() => {
+                  const insuranceCount = registrations.filter(r => r.insurancePaid).length;
+                  return insuranceCount * 100; // Assuming 100 per insurance
+                })()}
+              </div>
+              <div className={`text-xs ${isDarkMode ? 'text-purple-400' : 'text-purple-600'}`}>{registrations.filter(r => r.insurancePaid).length} entries</div>
+            </div>
+            <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
               <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Total Revenue</div>
               <div className={`text-3xl font-bold ${isDarkMode ? 'text-yellow-400' : 'text-yellow-600'}`}>
                 ₱{stats.totalRevenue}
@@ -894,9 +904,9 @@ export default function ChickenFight() {
                 <thead>
                   <tr className={isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}>
                     <th className={`px-6 py-3 text-left font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>Entry Name</th>
-                    <th className={`px-6 py-3 text-left font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>2-Wins (₱500)</th>
-                    <th className={`px-6 py-3 text-left font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>3-Wins (₱1,000)</th>
-                    <th className={`px-6 py-3 text-left font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>Total Fees</th>
+                    <th className={`px-6 py-3 text-center font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>2-Wins (₱500) - Paid</th>
+                    <th className={`px-6 py-3 text-center font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>3-Wins (₱1,000) - Paid</th>
+                    <th className={`px-6 py-3 text-center font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>Insurance</th>
                     <th className={`px-6 py-3 text-left font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>Actions</th>
                   </tr>
                 </thead>
@@ -904,23 +914,22 @@ export default function ChickenFight() {
                   {registrations.map((reg) => {
                     const reg2wins = reg.registrations.find(r => r.gameType === '2wins');
                     const reg3wins = reg.registrations.find(r => r.gameType === '3wins');
-                    const totalFees = (reg2wins?.registrationFee || 0) + (reg3wins?.registrationFee || 0);
 
                     return (
                       <tr key={reg._id} className={`border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
                         <td className={`px-6 py-4 font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                           {reg.entryName}
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-6 py-4 text-center">
                           {reg2wins ? (
-                            <div className="flex items-center gap-2">
-                              <span className={reg2wins.isPaid ? 'text-green-600 font-bold' : 'text-gray-600'}>
+                            <div className="flex flex-col items-center gap-2">
+                              <span className={reg2wins.isPaid ? 'text-green-600 font-bold text-sm' : 'text-gray-600 text-sm'}>
                                 {reg2wins.isPaid ? '✓ PAID' : 'UNPAID'}
                               </span>
                               <button
                                 onClick={() => handleMarkPaid(reg._id, '2wins')}
                                 disabled={reg2wins.isPaid}
-                                className={`px-2 py-1 text-xs rounded font-medium ${
+                                className={`px-3 py-1 text-xs rounded font-medium ${
                                   reg2wins.isPaid ? 'bg-green-100 text-green-700' : isDarkMode ? 'bg-red-900 text-red-200 hover:bg-red-800' : 'bg-red-100 text-red-700'
                                 }`}
                               >
@@ -929,16 +938,16 @@ export default function ChickenFight() {
                             </div>
                           ) : <span className={isDarkMode ? 'text-gray-500' : 'text-gray-400'}>-</span>}
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-6 py-4 text-center">
                           {reg3wins && !reg2wins ? (
-                            <div className="flex items-center gap-2">
-                              <span className={reg3wins.isPaid ? 'text-green-600 font-bold' : 'text-gray-600'}>
+                            <div className="flex flex-col items-center gap-2">
+                              <span className={reg3wins.isPaid ? 'text-green-600 font-bold text-sm' : 'text-gray-600 text-sm'}>
                                 {reg3wins.isPaid ? '✓ PAID' : 'UNPAID'}
                               </span>
                               <button
                                 onClick={() => handleMarkPaid(reg._id, '3wins')}
                                 disabled={reg3wins.isPaid}
-                                className={`px-2 py-1 text-xs rounded font-medium ${
+                                className={`px-3 py-1 text-xs rounded font-medium ${
                                   reg3wins.isPaid ? 'bg-green-100 text-green-700' : isDarkMode ? 'bg-blue-900 text-blue-200 hover:bg-blue-800' : 'bg-blue-100 text-blue-700'
                                 }`}
                               >
@@ -949,8 +958,22 @@ export default function ChickenFight() {
                             <span className={isDarkMode ? 'text-gray-500' : 'text-gray-400'}>-</span>
                           ) : <span className={isDarkMode ? 'text-gray-500' : 'text-gray-400'}>-</span>}
                         </td>
-                        <td className={`px-6 py-4 font-semibold text-lg ${isDarkMode ? 'text-yellow-400' : 'text-yellow-600'}`}>
-                          ₱{totalFees}
+                        <td className="px-6 py-4 text-center">
+                          <div className="flex flex-col items-center gap-2">
+                            <span className={reg.insurancePaid ? 'text-purple-600 font-bold text-sm' : 'text-gray-600 text-sm'}>
+                              {reg.insurancePaid ? '✓' : '✗'}
+                            </span>
+                            <button
+                              onClick={() => handleInsurance(reg._id)}
+                              className={`px-3 py-1 text-xs rounded font-medium ${
+                                reg.insurancePaid
+                                  ? 'bg-green-100 text-green-700'
+                                  : isDarkMode ? 'bg-purple-900 text-purple-200 hover:bg-purple-800' : 'bg-purple-100 text-purple-700'
+                              }`}
+                            >
+                              {reg.insurancePaid ? '✓' : 'Add'}
+                            </button>
+                          </div>
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex gap-2">
@@ -979,14 +1002,6 @@ export default function ChickenFight() {
                               }`}
                             >
                               Withdraw
-                            </button>
-                            <button
-                              onClick={() => handleInsurance(reg._id)}
-                              className={`px-3 py-1 text-xs rounded font-medium ${
-                                isDarkMode ? 'bg-purple-900 text-purple-200 hover:bg-purple-800' : 'bg-purple-100 text-purple-700'
-                              }`}
-                            >
-                              Insurance
                             </button>
                           </div>
                         </td>
