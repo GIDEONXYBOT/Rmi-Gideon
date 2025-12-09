@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
-import { AlertCircle, Plus, Loader, Trash2, X } from 'lucide-react';
+import { AlertCircle, Plus, Loader, Trash2, X, Check } from 'lucide-react';
 import { SettingsContext } from '../context/SettingsContext';
 import { getApiUrl } from '../utils/apiConfig';
 
@@ -118,32 +118,33 @@ export default function ChickenFightEntries() {
   const entries3Wins = entries.filter(e => e.gameType === '3wins');
 
   return (
-    <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+    <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-white'}`}>
       {/* Header */}
-      <div className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b sticky top-0 z-10`}>
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <h1 className={`text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-            Manage Chicken Fight Entries
+      <div className={`${isDarkMode ? 'bg-gradient-to-r from-gray-800 to-gray-900 border-gray-700' : 'bg-gradient-to-r from-white to-gray-50 border-gray-200'} border-b sticky top-0 z-10 shadow-lg`}>
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <h1 className={`text-4xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+            🐓 Manage Entries
           </h1>
-          <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mt-1`}>
-            Quickly add and manage entries for 2-Wins and 3-Wins
+          <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mt-2 text-lg`}>
+            Add, manage, and organize entries for 2-Wins and 3-Wins competitions
           </p>
         </div>
       </div>
 
       {/* Alerts */}
-      <div className="max-w-7xl mx-auto px-4 py-4 space-y-2">
+      <div className="max-w-7xl mx-auto px-4 py-6 space-y-3">
         {error && (
-          <div className={`p-4 rounded-lg flex items-center gap-3 ${isDarkMode ? 'bg-red-900/30 text-red-400 border border-red-700' : 'bg-red-100 text-red-800 border border-red-300'}`}>
+          <div className={`p-4 rounded-lg flex items-center gap-3 border ${isDarkMode ? 'bg-red-900/30 text-red-300 border-red-600' : 'bg-red-50 text-red-800 border-red-300'}`}>
             <AlertCircle size={20} />
             <span className="flex-1">{error}</span>
-            <button onClick={() => setError('')}><X size={18} /></button>
+            <button onClick={() => setError('')} className="hover:opacity-70"><X size={18} /></button>
           </div>
         )}
         {success && (
-          <div className={`p-4 rounded-lg flex items-center gap-3 ${isDarkMode ? 'bg-green-900/30 text-green-400 border border-green-700' : 'bg-green-100 text-green-800 border border-green-300'}`}>
-            <span className="flex-1">✓ {success}</span>
-            <button onClick={() => setSuccess('')}><X size={18} /></button>
+          <div className={`p-4 rounded-lg flex items-center gap-3 border ${isDarkMode ? 'bg-green-900/30 text-green-300 border-green-600' : 'bg-green-50 text-green-800 border-green-300'}`}>
+            <Check size={20} />
+            <span className="flex-1">{success}</span>
+            <button onClick={() => setSuccess('')} className="hover:opacity-70"><X size={18} /></button>
           </div>
         )}
       </div>
@@ -152,15 +153,16 @@ export default function ChickenFightEntries() {
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Add Entry Form - Left/Top */}
-          <div className={`lg:col-span-1 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border rounded-lg p-6 h-fit`}>
-            <h2 className={`text-xl font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-              ➕ Add Entry
+          <div className={`lg:col-span-1 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border rounded-xl p-8 h-fit shadow-lg hover:shadow-xl transition`}>
+            <h2 className={`text-2xl font-bold mb-6 flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+              <Plus size={24} className="text-green-500" />
+              Add Entry
             </h2>
 
-            <form onSubmit={handleSubmitEntry} className="space-y-4">
+            <form onSubmit={handleSubmitEntry} className="space-y-5">
               {/* Entry Name */}
               <div>
-                <label className={`block text-xs font-semibold mb-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-700'}`}>
+                <label className={`block text-sm font-bold mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                   Entry Name
                 </label>
                 <input
@@ -168,31 +170,31 @@ export default function ChickenFightEntries() {
                   value={entryName}
                   onChange={(e) => setEntryName(e.target.value)}
                   placeholder="e.g., Red Tiger"
-                  className={`w-full px-3 py-2 rounded-lg border ${
+                  className={`w-full px-4 py-3 rounded-lg border transition ${
                     isDarkMode
-                      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
-                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
-                  } focus:outline-none focus:border-blue-500`}
+                      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500 focus:border-blue-500 focus:bg-gray-600'
+                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500'
+                  }`}
                 />
               </div>
 
               {/* Game Type Tabs */}
               <div>
-                <label className={`block text-xs font-semibold mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-700'}`}>
-                  Type
+                <label className={`block text-sm font-bold mb-3 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Competition Type
                 </label>
-                <div className="flex gap-2">
+                <div className="flex gap-3">
                   <button
                     type="button"
                     onClick={() => handleGameTypeChange('2wins')}
-                    className={`flex-1 py-2 rounded-lg font-semibold text-sm transition ${
+                    className={`flex-1 py-3 rounded-lg font-bold text-sm transition duration-200 ${
                       gameType === '2wins'
                         ? isDarkMode
-                          ? 'bg-red-600 text-white'
-                          : 'bg-red-500 text-white'
+                          ? 'bg-red-600 text-white shadow-lg shadow-red-600/50'
+                          : 'bg-red-500 text-white shadow-lg shadow-red-500/50'
                         : isDarkMode
-                        ? 'bg-gray-700 text-gray-300'
-                        : 'bg-gray-200 text-gray-700'
+                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
                     2-Wins
@@ -200,14 +202,14 @@ export default function ChickenFightEntries() {
                   <button
                     type="button"
                     onClick={() => handleGameTypeChange('3wins')}
-                    className={`flex-1 py-2 rounded-lg font-semibold text-sm transition ${
+                    className={`flex-1 py-3 rounded-lg font-bold text-sm transition duration-200 ${
                       gameType === '3wins'
                         ? isDarkMode
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-blue-500 text-white'
+                          ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/50'
+                          : 'bg-blue-500 text-white shadow-lg shadow-blue-500/50'
                         : isDarkMode
-                        ? 'bg-gray-700 text-gray-300'
-                        : 'bg-gray-200 text-gray-700'
+                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
                     3-Wins
@@ -217,8 +219,8 @@ export default function ChickenFightEntries() {
 
               {/* Leg Bands */}
               <div>
-                <label className={`block text-xs font-semibold mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-700'}`}>
-                  Leg Bands
+                <label className={`block text-sm font-bold mb-3 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Leg Band Numbers ({legBands.length})
                 </label>
                 <div className="space-y-2">
                   {legBands.map((band, index) => (
@@ -227,12 +229,12 @@ export default function ChickenFightEntries() {
                       type="text"
                       value={band}
                       onChange={(e) => handleLegBandChange(index, e.target.value)}
-                      placeholder={`Leg ${index + 1}`}
-                      className={`w-full px-3 py-2 rounded-lg border ${
+                      placeholder={`Band ${index + 1}`}
+                      className={`w-full px-4 py-3 rounded-lg border transition font-mono ${
                         isDarkMode
-                          ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
-                          : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
-                      } focus:outline-none focus:border-blue-500`}
+                          ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500 focus:border-blue-500 focus:bg-gray-600'
+                          : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500'
+                      }`}
                     />
                   ))}
                 </div>
@@ -242,24 +244,24 @@ export default function ChickenFightEntries() {
               <button
                 type="submit"
                 disabled={submitting}
-                className={`w-full py-2 rounded-lg font-semibold transition flex items-center justify-center gap-2 ${
+                className={`w-full py-3 rounded-lg font-bold transition duration-200 flex items-center justify-center gap-2 ${
                   submitting
                     ? isDarkMode
                       ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
                       : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                     : isDarkMode
-                    ? 'bg-green-600 hover:bg-green-700 text-white'
-                    : 'bg-green-500 hover:bg-green-600 text-white'
+                    ? 'bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-green-600/50'
+                    : 'bg-green-500 hover:bg-green-600 text-white shadow-lg hover:shadow-green-500/50'
                 }`}
               >
                 {submitting ? (
                   <>
-                    <Loader size={16} className="animate-spin" />
+                    <Loader size={18} className="animate-spin" />
                     Adding...
                   </>
                 ) : (
                   <>
-                    <Plus size={16} />
+                    <Plus size={18} />
                     Add Entry
                   </>
                 )}
@@ -270,41 +272,41 @@ export default function ChickenFightEntries() {
           {/* Lists Side by Side */}
           <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* 2-Wins Column */}
-            <div className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border rounded-lg p-6`}>
-              <h2 className={`text-xl font-bold mb-4 flex items-center gap-2 ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>
-                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                2-Wins ({entries2Wins.length})
+            <div className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border rounded-xl p-8 shadow-lg hover:shadow-xl transition`}>
+              <h2 className={`text-2xl font-bold mb-6 flex items-center gap-3 ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>
+                <div className="w-4 h-4 bg-red-500 rounded-full"></div>
+                2-Wins <span className={`text-sm font-normal ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>({entries2Wins.length})</span>
               </h2>
               {loading ? (
-                <div className="flex justify-center py-8">
-                  <Loader size={24} className={`animate-spin ${isDarkMode ? 'text-gray-400' : 'text-gray-400'}`} />
+                <div className="flex justify-center py-12">
+                  <Loader size={28} className={`animate-spin ${isDarkMode ? 'text-red-500' : 'text-red-500'}`} />
                 </div>
               ) : entries2Wins.length === 0 ? (
-                <p className={`text-center py-8 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                  No 2-Wins entries yet
-                </p>
+                <div className={`text-center py-12 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                  <p className="text-lg">No entries yet</p>
+                </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-3 max-h-96 overflow-y-auto">
                   {entries2Wins.map(entry => (
                     <div
                       key={entry._id}
-                      className={`${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'} rounded-lg p-3 flex justify-between items-start gap-2 group hover:shadow-md transition`}
+                      className={`${isDarkMode ? 'bg-red-900/20 hover:bg-red-900/30 border-red-700' : 'bg-red-50 hover:bg-red-100 border-red-200'} border rounded-lg p-4 flex justify-between items-start gap-3 group transition`}
                     >
                       <div className="flex-1 min-w-0">
-                        <h3 className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                        <h3 className={`font-bold text-lg ${isDarkMode ? 'text-red-300' : 'text-red-700'}`}>
                           {entry.entryName}
                         </h3>
-                        <div className="flex gap-1 mt-1 flex-wrap">
+                        <div className="flex gap-2 mt-3 flex-wrap">
                           {entry.legBandNumbers.map((band, idx) => (
                             <span
                               key={idx}
-                              className={`px-2 py-1 text-xs rounded font-mono ${
+                              className={`px-3 py-1 text-xs rounded-full font-mono font-bold ${
                                 isDarkMode
-                                  ? 'bg-red-900/30 text-red-300'
-                                  : 'bg-red-100 text-red-700'
+                                  ? 'bg-red-900/50 text-red-200 border border-red-700'
+                                  : 'bg-red-200 text-red-800 border border-red-300'
                               }`}
                             >
-                              {band}
+                              #{band}
                             </span>
                           ))}
                         </div>
@@ -312,15 +314,16 @@ export default function ChickenFightEntries() {
                       <button
                         onClick={() => handleDeleteEntry(entry._id)}
                         disabled={deleting === entry._id}
-                        className={`p-2 rounded transition opacity-0 group-hover:opacity-100 ${
+                        className={`p-2 rounded-lg transition ${
                           deleting === entry._id
                             ? 'opacity-100 text-gray-500 cursor-not-allowed'
                             : isDarkMode
-                            ? 'text-red-400 hover:bg-red-900/30 hover:text-red-300'
-                            : 'text-red-600 hover:bg-red-100'
+                            ? 'text-red-400 hover:bg-red-900/40 hover:text-red-300 opacity-0 group-hover:opacity-100'
+                            : 'text-red-600 hover:bg-red-200 opacity-0 group-hover:opacity-100'
                         }`}
+                        title="Delete entry"
                       >
-                        <Trash2 size={16} />
+                        {deleting === entry._id ? <Loader size={18} className="animate-spin" /> : <Trash2 size={18} />}
                       </button>
                     </div>
                   ))}
@@ -329,41 +332,41 @@ export default function ChickenFightEntries() {
             </div>
 
             {/* 3-Wins Column */}
-            <div className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border rounded-lg p-6`}>
-              <h2 className={`text-xl font-bold mb-4 flex items-center gap-2 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
-                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                3-Wins ({entries3Wins.length})
+            <div className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border rounded-xl p-8 shadow-lg hover:shadow-xl transition`}>
+              <h2 className={`text-2xl font-bold mb-6 flex items-center gap-3 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                <div className="w-4 h-4 bg-blue-500 rounded-full"></div>
+                3-Wins <span className={`text-sm font-normal ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>({entries3Wins.length})</span>
               </h2>
               {loading ? (
-                <div className="flex justify-center py-8">
-                  <Loader size={24} className={`animate-spin ${isDarkMode ? 'text-gray-400' : 'text-gray-400'}`} />
+                <div className="flex justify-center py-12">
+                  <Loader size={28} className={`animate-spin ${isDarkMode ? 'text-blue-500' : 'text-blue-500'}`} />
                 </div>
               ) : entries3Wins.length === 0 ? (
-                <p className={`text-center py-8 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                  No 3-Wins entries yet
-                </p>
+                <div className={`text-center py-12 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                  <p className="text-lg">No entries yet</p>
+                </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-3 max-h-96 overflow-y-auto">
                   {entries3Wins.map(entry => (
                     <div
                       key={entry._id}
-                      className={`${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'} rounded-lg p-3 flex justify-between items-start gap-2 group hover:shadow-md transition`}
+                      className={`${isDarkMode ? 'bg-blue-900/20 hover:bg-blue-900/30 border-blue-700' : 'bg-blue-50 hover:bg-blue-100 border-blue-200'} border rounded-lg p-4 flex justify-between items-start gap-3 group transition`}
                     >
                       <div className="flex-1 min-w-0">
-                        <h3 className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                        <h3 className={`font-bold text-lg ${isDarkMode ? 'text-blue-300' : 'text-blue-700'}`}>
                           {entry.entryName}
                         </h3>
-                        <div className="flex gap-1 mt-1 flex-wrap">
+                        <div className="flex gap-2 mt-3 flex-wrap">
                           {entry.legBandNumbers.map((band, idx) => (
                             <span
                               key={idx}
-                              className={`px-2 py-1 text-xs rounded font-mono ${
+                              className={`px-3 py-1 text-xs rounded-full font-mono font-bold ${
                                 isDarkMode
-                                  ? 'bg-blue-900/30 text-blue-300'
-                                  : 'bg-blue-100 text-blue-700'
+                                  ? 'bg-blue-900/50 text-blue-200 border border-blue-700'
+                                  : 'bg-blue-200 text-blue-800 border border-blue-300'
                               }`}
                             >
-                              {band}
+                              #{band}
                             </span>
                           ))}
                         </div>
@@ -371,15 +374,16 @@ export default function ChickenFightEntries() {
                       <button
                         onClick={() => handleDeleteEntry(entry._id)}
                         disabled={deleting === entry._id}
-                        className={`p-2 rounded transition opacity-0 group-hover:opacity-100 ${
+                        className={`p-2 rounded-lg transition ${
                           deleting === entry._id
                             ? 'opacity-100 text-gray-500 cursor-not-allowed'
                             : isDarkMode
-                            ? 'text-red-400 hover:bg-red-900/30 hover:text-red-300'
-                            : 'text-red-600 hover:bg-red-100'
+                            ? 'text-red-400 hover:bg-red-900/40 hover:text-red-300 opacity-0 group-hover:opacity-100'
+                            : 'text-red-600 hover:bg-red-200 opacity-0 group-hover:opacity-100'
                         }`}
+                        title="Delete entry"
                       >
-                        <Trash2 size={16} />
+                        {deleting === entry._id ? <Loader size={18} className="animate-spin" /> : <Trash2 size={18} />}
                       </button>
                     </div>
                   ))}

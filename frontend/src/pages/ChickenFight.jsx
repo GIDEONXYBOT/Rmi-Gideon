@@ -603,65 +603,108 @@ export default function ChickenFight() {
 
         {/* History Viewer */}
         {showHistory && (
-          <div className={`mb-6 p-6 rounded-lg border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-300'}`}>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Fight History</h2>
+          <div className={`mb-6 rounded-xl border shadow-lg ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+            <div className={`flex justify-between items-center p-6 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+              <div>
+                <h2 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>📅 Fight History</h2>
+                <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mt-1`}>Review past records and fights</p>
+              </div>
               <button
                 onClick={() => setShowHistory(false)}
-                className="text-gray-500 hover:text-gray-700"
+                className={`p-2 rounded-lg transition ${isDarkMode ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-600'}`}
               >
-                <X size={20} />
+                <X size={24} />
               </button>
             </div>
 
-            {historyDates.length === 0 ? (
-              <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>No history records found</p>
-            ) : (
-              <div className="grid grid-cols-2 gap-4">
-                {/* Date List */}
-                <div>
-                  <h3 className={`font-bold mb-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Past Dates</h3>
-                  <div className="space-y-2">
-                    {historyDates.map(date => (
-                      <button
-                        key={date}
-                        onClick={() => loadHistoryForDate(date)}
-                        className={`w-full text-left px-3 py-2 rounded transition ${
-                          selectedHistoryDate === date
-                            ? isDarkMode ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-900'
-                            : isDarkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-200 hover:bg-gray-300'
-                        }`}
-                      >
-                        {new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                      </button>
-                    ))}
-                  </div>
+            <div className="p-6">
+              {historyDates.length === 0 ? (
+                <div className={`text-center py-12 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  <p className="text-lg">No history records found</p>
                 </div>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Date List */}
+                  <div className={`lg:col-span-1 ${isDarkMode ? 'bg-gray-700/50' : 'bg-gray-50'} rounded-lg p-4 max-h-96 overflow-y-auto`}>
+                    <h3 className={`font-bold mb-3 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>AVAILABLE DATES</h3>
+                    <div className="space-y-2">
+                      {historyDates.map(date => (
+                        <button
+                          key={date}
+                          onClick={() => loadHistoryForDate(date)}
+                          className={`w-full text-left px-4 py-3 rounded-lg transition font-medium text-sm ${
+                            selectedHistoryDate === date
+                              ? isDarkMode 
+                                ? 'bg-blue-600 text-white shadow-lg' 
+                                : 'bg-blue-500 text-white shadow-lg'
+                              : isDarkMode 
+                                ? 'bg-gray-600 hover:bg-gray-500 text-gray-100' 
+                                : 'bg-white hover:bg-gray-100 text-gray-900 border border-gray-200'
+                          }`}
+                        >
+                          {new Date(date).toLocaleDateString('en-US', { 
+                            weekday: 'short',
+                            month: 'short', 
+                            day: 'numeric',
+                            year: 'numeric' 
+                          })}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
 
-                {/* Fight Records */}
-                <div>
-                  <h3 className={`font-bold mb-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                    {selectedHistoryDate ? `Fights on ${new Date(selectedHistoryDate).toLocaleDateString()}` : 'Select a date'}
-                  </h3>
-                  <div className={`p-3 rounded max-h-96 overflow-y-auto ${isDarkMode ? 'bg-gray-700' : 'bg-white border border-gray-300'}`}>
-                    {selectedHistoryDate && historyFights.length > 0 ? (
-                      <div className="space-y-2">
-                        {historyFights.map((fight, idx) => (
-                          <div key={idx} className={`p-2 rounded text-sm ${isDarkMode ? 'bg-gray-600' : 'bg-gray-100'}`}>
-                            <div className="font-medium">{fight.entryName}</div>
-                            <div className="text-xs">Result: {fight.result === 1 ? '✓ Win' : '✗ Loss'} | Leg Band: {fight.legBand}</div>
+                  {/* Fight Records */}
+                  <div className="lg:col-span-2">
+                    <div className={`rounded-lg p-4 ${isDarkMode ? 'bg-gray-700/50' : 'bg-gray-50'}`}>
+                      <h3 className={`font-bold mb-4 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        {selectedHistoryDate 
+                          ? `FIGHTS - ${new Date(selectedHistoryDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}`
+                          : 'SELECT A DATE TO VIEW FIGHTS'
+                        }
+                      </h3>
+                      <div className={`max-h-96 overflow-y-auto space-y-2`}>
+                        {selectedHistoryDate && historyFights.length > 0 ? (
+                          <div className="space-y-2">
+                            {historyFights.map((fight, idx) => {
+                              const entry = entries.find(e => e.entryName === fight.entryName);
+                              const isWin = fight.result === 1;
+                              return (
+                                <div 
+                                  key={idx} 
+                                  className={`p-4 rounded-lg border-l-4 ${
+                                    entry?.gameType === '2wins'
+                                      ? isDarkMode ? 'bg-red-900/30 border-red-600 text-red-200' : 'bg-red-50 border-red-400 text-red-900'
+                                      : isDarkMode ? 'bg-blue-900/30 border-blue-600 text-blue-200' : 'bg-blue-50 border-blue-400 text-blue-900'
+                                  }`}
+                                >
+                                  <div className="flex justify-between items-start">
+                                    <div className="flex-1">
+                                      <div className={`font-bold text-sm ${isDarkMode ? 'text-white' : ''}`}>{fight.entryName}</div>
+                                      <div className="text-xs mt-1">Leg Band: <span className="font-mono font-bold">{fight.legBand}</span></div>
+                                    </div>
+                                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                                      isWin 
+                                        ? isDarkMode ? 'bg-green-600 text-white' : 'bg-green-500 text-white'
+                                        : isDarkMode ? 'bg-red-600 text-white' : 'bg-red-500 text-white'
+                                    }`}>
+                                      {isWin ? '✓ WIN' : '✗ LOSS'}
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
-                        ))}
+                        ) : selectedHistoryDate ? (
+                          <p className={`text-center py-8 ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>No fights recorded on this date</p>
+                        ) : (
+                          <p className={`text-center py-8 ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>Select a date to view fight records</p>
+                        )}
                       </div>
-                    ) : selectedHistoryDate ? (
-                      <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>No fights recorded</p>
-                    ) : (
-                      <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>Select a date to view fights</p>
-                    )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         )}
 
@@ -778,109 +821,117 @@ export default function ChickenFight() {
 
         {/* Statistics */}
         {stats && (
-          <div className="grid grid-cols-7 gap-4 mb-8">
-            <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
-              <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Total Registered</div>
-              <div className={`text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                {stats.total}
+          <div className="mb-8">
+            <h2 className={`text-2xl font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>💰 Statistics</h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4">
+              {/* Total Registered */}
+              <div className={`p-4 rounded-lg border ${isDarkMode ? 'bg-gradient-to-br from-gray-800 to-gray-900 border-gray-700' : 'bg-gradient-to-br from-white to-gray-50 border-gray-200'} shadow-md hover:shadow-lg transition`}>
+                <div className={`text-xs font-bold ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>TOTAL REGISTERED</div>
+                <div className={`text-4xl font-bold mt-2 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                  {stats.total}
+                </div>
               </div>
-            </div>
-            <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
-              <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>2-Wins Paid (₱500)</div>
-              <div className="text-3xl font-bold text-red-600">{stats.paid2wins}/{stats.by2wins}</div>
-              <div className="text-xs text-red-600">₱{stats.paid2wins * 500}</div>
-            </div>
-            <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
-              <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>3-Wins Paid (₱1,000)</div>
-              <div className="text-3xl font-bold text-blue-600">{stats.paid3wins}/{stats.by3wins}</div>
-              <div className="text-xs text-blue-600">₱{stats.paid3wins * 1000}</div>
-            </div>
-            <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
-              <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Champion 2-Wins</div>
-              <div className={`text-3xl font-bold ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>
-                ₱{(() => {
-                  const meronChampionCount = Object.entries(
-                    fights.reduce((acc, fight) => {
-                      const entry = entries.find(e => e.entryName === fight.entryName);
-                      if (entry?.gameType === '2wins' && fight.result === 1) {
-                        acc[fight.entryName] = (acc[fight.entryName] || 0) + 1;
-                      }
-                      return acc;
-                    }, {})
-                  ).filter(([_, wins]) => wins >= 2).length;
-                  return meronChampionCount * 500;
-                })()}
+
+              {/* 2-Wins Paid */}
+              <div className={`p-4 rounded-lg border ${isDarkMode ? 'bg-gradient-to-br from-red-900/30 to-red-900/20 border-red-700' : 'bg-gradient-to-br from-red-50 to-red-100 border-red-200'} shadow-md hover:shadow-lg transition`}>
+                <div className={`text-xs font-bold ${isDarkMode ? 'text-red-300' : 'text-red-700'}`}>2-WINS PAID</div>
+                <div className={`text-3xl font-bold mt-2 ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>{stats.paid2wins}/{stats.by2wins}</div>
+                <div className={`text-xs mt-1 font-mono ${isDarkMode ? 'text-red-300' : 'text-red-600'}`}>₱{stats.paid2wins * 500}</div>
               </div>
-            </div>
-            <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
-              <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Champion 3-Wins</div>
-              <div className={`text-3xl font-bold ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
-                ₱{(() => {
-                  const walaChampionCount = Object.entries(
-                    fights.reduce((acc, fight) => {
-                      const entry = entries.find(e => e.entryName === fight.entryName);
-                      if (entry?.gameType === '3wins' && fight.result === 1) {
-                        acc[fight.entryName] = (acc[fight.entryName] || 0) + 1;
-                      }
-                      return acc;
-                    }, {})
-                  ).filter(([_, wins]) => wins >= 3).length;
-                  return walaChampionCount * 1000;
-                })()}
+
+              {/* 3-Wins Paid */}
+              <div className={`p-4 rounded-lg border ${isDarkMode ? 'bg-gradient-to-br from-blue-900/30 to-blue-900/20 border-blue-700' : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200'} shadow-md hover:shadow-lg transition`}>
+                <div className={`text-xs font-bold ${isDarkMode ? 'text-blue-300' : 'text-blue-700'}`}>3-WINS PAID</div>
+                <div className={`text-3xl font-bold mt-2 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>{stats.paid3wins}/{stats.by3wins}</div>
+                <div className={`text-xs mt-1 font-mono ${isDarkMode ? 'text-blue-300' : 'text-blue-600'}`}>₱{stats.paid3wins * 1000}</div>
               </div>
-            </div>
-            <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
-              <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Insurance</div>
-              <div className={`text-3xl font-bold ${isDarkMode ? 'text-purple-400' : 'text-purple-600'}`}>
-                ₱{(() => {
-                  const insuranceCount = registrations.filter(r => r.insurancePaid).length;
-                  return insuranceCount * 5000; // 5000 per insurance
-                })()}
+
+              {/* Champion 2-Wins */}
+              <div className={`p-4 rounded-lg border ${isDarkMode ? 'bg-gradient-to-br from-orange-900/30 to-orange-900/20 border-orange-700' : 'bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200'} shadow-md hover:shadow-lg transition`}>
+                <div className={`text-xs font-bold ${isDarkMode ? 'text-orange-300' : 'text-orange-700'}`}>CHAMPION 2-WINS</div>
+                <div className={`text-3xl font-bold mt-2 ${isDarkMode ? 'text-orange-400' : 'text-orange-600'}`}>
+                  ₱{(() => {
+                    const meronChampionCount = Object.entries(
+                      fights.reduce((acc, fight) => {
+                        const entry = entries.find(e => e.entryName === fight.entryName);
+                        if (entry?.gameType === '2wins' && fight.result === 1) {
+                          acc[fight.entryName] = (acc[fight.entryName] || 0) + 1;
+                        }
+                        return acc;
+                      }, {})
+                    ).filter(([_, wins]) => wins >= 2).length;
+                    return meronChampionCount * 500;
+                  })()}
+                </div>
               </div>
-              <div className={`text-xs ${isDarkMode ? 'text-purple-400' : 'text-purple-600'}`}>{registrations.filter(r => r.insurancePaid).length} entries</div>
-            </div>
-            <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
-              <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Total Revenue</div>
-              <div className={`text-3xl font-bold ${isDarkMode ? 'text-yellow-400' : 'text-yellow-600'}`}>
-                ₱{(() => {
-                  // Calculate total revenue collected
-                  const totalCollected = stats.totalRevenue || 0;
-                  
-                  // Calculate champion payouts
-                  const meronChampionCount = Object.entries(
-                    fights.reduce((acc, fight) => {
-                      const entry = entries.find(e => e.entryName === fight.entryName);
-                      if (entry?.gameType === '2wins' && fight.result === 1) {
-                        acc[fight.entryName] = (acc[fight.entryName] || 0) + 1;
-                      }
-                      return acc;
-                    }, {})
-                  ).filter(([_, wins]) => wins >= 2).length;
-                  const meronChampionPayout = meronChampionCount * 500;
-                  
-                  const walaChampionCount = Object.entries(
-                    fights.reduce((acc, fight) => {
-                      const entry = entries.find(e => e.entryName === fight.entryName);
-                      if (entry?.gameType === '3wins' && fight.result === 1) {
-                        acc[fight.entryName] = (acc[fight.entryName] || 0) + 1;
-                      }
-                      return acc;
-                    }, {})
-                  ).filter(([_, wins]) => wins >= 3).length;
-                  const walaChampionPayout = walaChampionCount * 1000;
-                  
-                  // Calculate insurance total
-                  const insuranceCount = registrations.filter(r => r.insurancePaid).length;
-                  const insuranceTotal = insuranceCount * 5000;
-                  
-                  // Net revenue after deducting champions and insurance
-                  const netRevenue = totalCollected - meronChampionPayout - walaChampionPayout - insuranceTotal;
-                  
-                  return Math.max(0, netRevenue);
-                })()}
+
+              {/* Champion 3-Wins */}
+              <div className={`p-4 rounded-lg border ${isDarkMode ? 'bg-gradient-to-br from-cyan-900/30 to-cyan-900/20 border-cyan-700' : 'bg-gradient-to-br from-cyan-50 to-cyan-100 border-cyan-200'} shadow-md hover:shadow-lg transition`}>
+                <div className={`text-xs font-bold ${isDarkMode ? 'text-cyan-300' : 'text-cyan-700'}`}>CHAMPION 3-WINS</div>
+                <div className={`text-3xl font-bold mt-2 ${isDarkMode ? 'text-cyan-400' : 'text-cyan-600'}`}>
+                  ₱{(() => {
+                    const walaChampionCount = Object.entries(
+                      fights.reduce((acc, fight) => {
+                        const entry = entries.find(e => e.entryName === fight.entryName);
+                        if (entry?.gameType === '3wins' && fight.result === 1) {
+                          acc[fight.entryName] = (acc[fight.entryName] || 0) + 1;
+                        }
+                        return acc;
+                      }, {})
+                    ).filter(([_, wins]) => wins >= 3).length;
+                    return walaChampionCount * 1000;
+                  })()}
+                </div>
               </div>
-              <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                Gross: ₱{stats.totalRevenue} - Champions & Insurance
+
+              {/* Insurance */}
+              <div className={`p-4 rounded-lg border ${isDarkMode ? 'bg-gradient-to-br from-purple-900/30 to-purple-900/20 border-purple-700' : 'bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200'} shadow-md hover:shadow-lg transition`}>
+                <div className={`text-xs font-bold ${isDarkMode ? 'text-purple-300' : 'text-purple-700'}`}>INSURANCE</div>
+                <div className={`text-3xl font-bold mt-2 ${isDarkMode ? 'text-purple-400' : 'text-purple-600'}`}>
+                  ₱{(() => {
+                    const insuranceCount = registrations.filter(r => r.insurancePaid).length;
+                    return insuranceCount * 5000;
+                  })()}
+                </div>
+                <div className={`text-xs mt-1 ${isDarkMode ? 'text-purple-300' : 'text-purple-600'}`}>{registrations.filter(r => r.insurancePaid).length} entries</div>
+              </div>
+
+              {/* Net Revenue */}
+              <div className={`p-4 rounded-lg border md:col-span-2 lg:col-span-1 ${isDarkMode ? 'bg-gradient-to-br from-green-900/30 to-green-900/20 border-green-700' : 'bg-gradient-to-br from-green-50 to-green-100 border-green-200'} shadow-md hover:shadow-lg transition`}>
+                <div className={`text-xs font-bold ${isDarkMode ? 'text-green-300' : 'text-green-700'}`}>NET REVENUE</div>
+                <div className={`text-3xl font-bold mt-2 ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>
+                  ₱{(() => {
+                    const totalCollected = stats.totalRevenue || 0;
+                    const meronChampionCount = Object.entries(
+                      fights.reduce((acc, fight) => {
+                        const entry = entries.find(e => e.entryName === fight.entryName);
+                        if (entry?.gameType === '2wins' && fight.result === 1) {
+                          acc[fight.entryName] = (acc[fight.entryName] || 0) + 1;
+                        }
+                        return acc;
+                      }, {})
+                    ).filter(([_, wins]) => wins >= 2).length;
+                    const meronChampionPayout = meronChampionCount * 500;
+                    
+                    const walaChampionCount = Object.entries(
+                      fights.reduce((acc, fight) => {
+                        const entry = entries.find(e => e.entryName === fight.entryName);
+                        if (entry?.gameType === '3wins' && fight.result === 1) {
+                          acc[fight.entryName] = (acc[fight.entryName] || 0) + 1;
+                        }
+                        return acc;
+                      }, {})
+                    ).filter(([_, wins]) => wins >= 3).length;
+                    const walaChampionPayout = walaChampionCount * 1000;
+                    
+                    const insuranceCount = registrations.filter(r => r.insurancePaid).length;
+                    const insuranceTotal = insuranceCount * 5000;
+                    
+                    const netRevenue = totalCollected - meronChampionPayout - walaChampionPayout - insuranceTotal;
+                    return Math.max(0, netRevenue);
+                  })()}
+                </div>
+                <div className={`text-xs mt-1 font-mono ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Gross - Payouts</div>
               </div>
             </div>
           </div>
