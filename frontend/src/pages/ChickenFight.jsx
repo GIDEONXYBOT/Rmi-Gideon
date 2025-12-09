@@ -228,10 +228,12 @@ export default function ChickenFight() {
 
   // Fetch data on load
   useEffect(() => {
-    fetchEntries();
-    fetchRegistrations();
-    fetchStats();
-    autoRegisterEntries();
+    const initialize = async () => {
+      await fetchEntries();
+      await fetchRegistrations();
+      await fetchStats();
+    };
+    initialize();
   }, []);
 
   // Fetch available entries
@@ -894,7 +896,7 @@ export default function ChickenFight() {
                         return acc;
                       }, {})
                     ).filter(([_, wins]) => wins >= 2).length;
-                    return meronChampionCount * 500;
+                    return meronChampionCount * 5000;
                   })()}
                 </div>
               </div>
@@ -913,7 +915,7 @@ export default function ChickenFight() {
                         return acc;
                       }, {})
                     ).filter(([_, wins]) => wins >= 3).length;
-                    return walaChampionCount * 1000;
+                    return walaChampionCount * 20000;
                   })()}
                 </div>
               </div>
@@ -945,7 +947,7 @@ export default function ChickenFight() {
                         return acc;
                       }, {})
                     ).filter(([_, wins]) => wins >= 2).length;
-                    const meronChampionPayout = meronChampionCount * 500;
+                    const meronChampionPayout = meronChampionCount * 5000;
                     
                     const walaChampionCount = Object.entries(
                       fights.reduce((acc, fight) => {
@@ -956,7 +958,7 @@ export default function ChickenFight() {
                         return acc;
                       }, {})
                     ).filter(([_, wins]) => wins >= 3).length;
-                    const walaChampionPayout = walaChampionCount * 1000;
+                    const walaChampionPayout = walaChampionCount * 20000;
                     
                     const insuranceCount = registrations.filter(r => r.insurancePaid).length;
                     const insuranceTotal = insuranceCount * 5000;
