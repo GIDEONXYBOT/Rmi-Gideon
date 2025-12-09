@@ -58,6 +58,26 @@ router.post('/registrations', async (req, res) => {
 
     // Parse date - default to today
     const registerDate = gameDate ? new Date(gameDate) : new Date();
+    const startDate = new Date(registerDate.getFullYear(), registerDate.getMonth(), registerDate.getDate());
+    const endDate = new Date(registerDate.getFullYear(), registerDate.getMonth(), registerDate.getDate() + 1);
+
+    // Check if entry is already registered for this date
+    const existingRegistration = await ChickenFightRegistration.findOne({
+      entryId,
+      gameDate: {
+        $gte: startDate,
+        $lt: endDate
+      }
+    });
+
+    if (existingRegistration) {
+      // Already registered for today - just return existing registration
+      return res.json({
+        success: true,
+        message: `Entry "${entryName}" already registered for today`,
+        registration: existingRegistration
+      });
+    }
 
     // Create registration record
     const registrations = gameTypes.map(gameType => ({
@@ -116,6 +136,8 @@ router.put('/registrations/:registrationId/pay', async (req, res) => {
     gameReg.paidBy = username;
 
     registration.updatedBy = username;
+    // Mark the registrations array as modified to ensure updatedAt is updated
+    registration.markModified('registrations');
     await registration.save();
 
     res.json({
@@ -156,6 +178,8 @@ router.put('/registrations/:registrationId/withdraw', async (req, res) => {
     gameReg.paidBy = null;
 
     registration.updatedBy = username;
+    // Mark the registrations array as modified to ensure updatedAt is updated
+    registration.markModified('registrations');
     await registration.save();
 
     res.json({

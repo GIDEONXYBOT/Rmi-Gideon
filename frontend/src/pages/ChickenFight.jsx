@@ -1004,8 +1004,16 @@ export default function ChickenFight() {
                     const entryMap = new Map();
                     registrations.forEach(reg => {
                       const entryName = reg.entryName;
-                      if (!entryMap.has(entryName) || new Date(reg.updatedAt || 0) > new Date(entryMap.get(entryName).updatedAt || 0)) {
+                      const existing = entryMap.get(entryName);
+                      if (!existing) {
                         entryMap.set(entryName, reg);
+                      } else {
+                        // Keep the one with more recent updatedAt
+                        const existingTime = new Date(existing.updatedAt || existing.createdAt || 0).getTime();
+                        const newTime = new Date(reg.updatedAt || reg.createdAt || 0).getTime();
+                        if (newTime > existingTime) {
+                          entryMap.set(entryName, reg);
+                        }
                       }
                     });
                     
