@@ -348,6 +348,23 @@ export default function ChickenFight() {
     }
   };
 
+  // Insurance payment
+  const handleInsurance = async (registrationId) => {
+    try {
+      await axios.put(
+        `${getApiUrl()}/api/chicken-fight-registration/registrations/${registrationId}/insurance`,
+        {}
+      );
+
+      setSuccess('Insurance recorded');
+      fetchRegistrations();
+      fetchStats();
+      setTimeout(() => setSuccess(''), 2000);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to record insurance');
+    }
+  };
+
   return (
     <div className={`min-h-screen flex ${isDarkMode ? 'bg-gray-900' : 'bg-white'}`}>
       {/* Left Sidebar - RESULT */}
@@ -907,13 +924,13 @@ export default function ChickenFight() {
                                   reg2wins.isPaid ? 'bg-green-100 text-green-700' : isDarkMode ? 'bg-red-900 text-red-200 hover:bg-red-800' : 'bg-red-100 text-red-700'
                                 }`}
                               >
-                                {reg2wins.isPaid ? '✓' : 'Mark Paid'}
+                                {reg2wins.isPaid ? '✓' : 'Paid'}
                               </button>
                             </div>
                           ) : <span className={isDarkMode ? 'text-gray-500' : 'text-gray-400'}>-</span>}
                         </td>
                         <td className="px-6 py-4">
-                          {reg3wins ? (
+                          {reg3wins && !reg2wins ? (
                             <div className="flex items-center gap-2">
                               <span className={reg3wins.isPaid ? 'text-green-600 font-bold' : 'text-gray-600'}>
                                 {reg3wins.isPaid ? '✓ PAID' : 'UNPAID'}
@@ -925,9 +942,11 @@ export default function ChickenFight() {
                                   reg3wins.isPaid ? 'bg-green-100 text-green-700' : isDarkMode ? 'bg-blue-900 text-blue-200 hover:bg-blue-800' : 'bg-blue-100 text-blue-700'
                                 }`}
                               >
-                                {reg3wins.isPaid ? '✓' : 'Mark Paid'}
+                                {reg3wins.isPaid ? '✓' : 'Paid'}
                               </button>
                             </div>
+                          ) : reg3wins ? (
+                            <span className={isDarkMode ? 'text-gray-500' : 'text-gray-400'}>-</span>
                           ) : <span className={isDarkMode ? 'text-gray-500' : 'text-gray-400'}>-</span>}
                         </td>
                         <td className={`px-6 py-4 font-semibold text-lg ${isDarkMode ? 'text-yellow-400' : 'text-yellow-600'}`}>
@@ -960,6 +979,14 @@ export default function ChickenFight() {
                               }`}
                             >
                               Withdraw
+                            </button>
+                            <button
+                              onClick={() => handleInsurance(reg._id)}
+                              className={`px-3 py-1 text-xs rounded font-medium ${
+                                isDarkMode ? 'bg-purple-900 text-purple-200 hover:bg-purple-800' : 'bg-purple-100 text-purple-700'
+                              }`}
+                            >
+                              Insurance
                             </button>
                           </div>
                         </td>

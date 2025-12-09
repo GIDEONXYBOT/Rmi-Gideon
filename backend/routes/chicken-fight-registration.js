@@ -169,6 +169,35 @@ router.put('/registrations/:registrationId/withdraw', async (req, res) => {
   }
 });
 
+// Record insurance payment
+router.put('/registrations/:registrationId/insurance', async (req, res) => {
+  try {
+    const { registrationId } = req.params;
+    const username = req.user.username;
+
+    const registration = await ChickenFightRegistration.findById(registrationId);
+    if (!registration) {
+      return res.status(404).json({ success: false, message: 'Registration not found' });
+    }
+
+    registration.insurancePaid = !registration.insurancePaid;
+    registration.insurancePaidDate = registration.insurancePaid ? new Date() : null;
+    registration.insurancePaidBy = registration.insurancePaid ? username : null;
+    registration.updatedBy = username;
+    
+    await registration.save();
+
+    res.json({
+      success: true,
+      message: registration.insurancePaid ? 'Insurance recorded' : 'Insurance removed',
+      registration
+    });
+  } catch (err) {
+    console.error('Error recording insurance:', err);
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
+  }
+});
+
 // Get registration statistics for a date
 router.get('/registrations-stats', async (req, res) => {
   try {

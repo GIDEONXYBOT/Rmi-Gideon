@@ -50,6 +50,18 @@ const chickenFightRegistrationSchema = new mongoose.Schema(
       type: String,
       default: null
     },
+    insurancePaid: {
+      type: Boolean,
+      default: false
+    },
+    insurancePaidDate: {
+      type: Date,
+      default: null
+    },
+    insurancePaidBy: {
+      type: String,
+      default: null
+    },
     notes: {
       type: String,
       default: ''
