@@ -1022,24 +1022,60 @@ export default function ChickenFight() {
                         </td>
                         <td className="px-6 py-4 text-center">
                           {reg2wins ? (
-                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                              reg2wins.isPaid
-                                ? isDarkMode ? 'bg-green-900/30 text-green-300' : 'bg-green-100 text-green-700'
-                                : isDarkMode ? 'bg-red-900/30 text-red-300' : 'bg-red-100 text-red-700'
-                            }`}>
-                              {reg2wins.isPaid ? '✓ PAID' : 'UNPAID'}
-                            </span>
+                            <div className="flex flex-col items-center gap-2">
+                              <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                                reg2wins.isPaid
+                                  ? isDarkMode ? 'bg-green-900/30 text-green-300' : 'bg-green-100 text-green-700'
+                                  : isDarkMode ? 'bg-red-900/30 text-red-300' : 'bg-red-100 text-red-700'
+                              }`}>
+                                {reg2wins.isPaid ? '✓ PAID' : 'UNPAID'}
+                              </span>
+                              <button
+                                onClick={() => {
+                                  if (reg2wins.isPaid) {
+                                    handleWithdrawPayment(reg._id, '2wins');
+                                  } else {
+                                    handleMarkPaid(reg._id, '2wins');
+                                  }
+                                }}
+                                className={`px-3 py-1 text-xs rounded font-medium ${
+                                  reg2wins.isPaid
+                                    ? isDarkMode ? 'bg-yellow-900 text-yellow-200 hover:bg-yellow-800' : 'bg-yellow-100 text-yellow-700'
+                                    : isDarkMode ? 'bg-green-900 text-green-200 hover:bg-green-800' : 'bg-green-100 text-green-700'
+                                }`}
+                              >
+                                {reg2wins.isPaid ? 'Withdraw' : 'Mark Paid'}
+                              </button>
+                            </div>
                           ) : <span className={isDarkMode ? 'text-gray-500' : 'text-gray-400'}>-</span>}
                         </td>
                         <td className="px-6 py-4 text-center">
                           {reg3wins ? (
-                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                              reg3wins.isPaid
-                                ? isDarkMode ? 'bg-green-900/30 text-green-300' : 'bg-green-100 text-green-700'
-                                : isDarkMode ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-700'
-                            }`}>
-                              {reg3wins.isPaid ? '✓ PAID' : 'UNPAID'}
-                            </span>
+                            <div className="flex flex-col items-center gap-2">
+                              <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                                reg3wins.isPaid
+                                  ? isDarkMode ? 'bg-green-900/30 text-green-300' : 'bg-green-100 text-green-700'
+                                  : isDarkMode ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-700'
+                              }`}>
+                                {reg3wins.isPaid ? '✓ PAID' : 'UNPAID'}
+                              </span>
+                              <button
+                                onClick={() => {
+                                  if (reg3wins.isPaid) {
+                                    handleWithdrawPayment(reg._id, '3wins');
+                                  } else {
+                                    handleMarkPaid(reg._id, '3wins');
+                                  }
+                                }}
+                                className={`px-3 py-1 text-xs rounded font-medium ${
+                                  reg3wins.isPaid
+                                    ? isDarkMode ? 'bg-yellow-900 text-yellow-200 hover:bg-yellow-800' : 'bg-yellow-100 text-yellow-700'
+                                    : isDarkMode ? 'bg-green-900 text-green-200 hover:bg-green-800' : 'bg-green-100 text-green-700'
+                                }`}
+                              >
+                                {reg3wins.isPaid ? 'Withdraw' : 'Mark Paid'}
+                              </button>
+                            </div>
                           ) : <span className={isDarkMode ? 'text-gray-500' : 'text-gray-400'}>-</span>}
                         </td>
                         <td className="px-6 py-4 text-center">
