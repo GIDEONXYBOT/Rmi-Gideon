@@ -664,24 +664,6 @@ export default function ChickenFight() {
           <div className="bg-red-700 text-white rounded-lg p-8">
             <h2 className="text-2xl font-bold mb-4">MERON</h2>
             
-            {/* Leg Band Search */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-2">Search Leg Band</label>
-              <input
-                type="text"
-                value={meronLegBandSearch}
-                onChange={(e) => handleMeronLegBandSearch(e.target.value)}
-                placeholder="Enter leg band number..."
-                className="w-full px-4 py-2 rounded-lg bg-red-600 text-white border border-red-500 placeholder-red-300"
-              />
-              {meronLegBandSearch && selectedMeronEntry && (
-                <div className="mt-2 p-2 bg-red-600 rounded text-sm">
-                  <div className="font-medium">{meronEntry?.entryName}</div>
-                  <div className="text-xs">Leg Band: {selectedMeronLegBand}</div>
-                </div>
-              )}
-            </div>
-
             {/* Available Entries - Only those with remaining leg bands */}
             <div className="mb-4 p-3 bg-red-600 rounded text-sm max-h-32 overflow-y-auto">
               <div className="font-medium mb-2">Available:</div>
@@ -696,66 +678,6 @@ export default function ChickenFight() {
                 )}
               </div>
             </div>
-            
-            {/* Entry Selector */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-2">Select Entry</label>
-              <select
-                value={selectedMeronEntry}
-                onChange={(e) => {
-                  setSelectedMeronEntry(e.target.value);
-                  setSelectedMeronLegBand('');
-                  setMeronLegBandSearch('');
-                }}
-                className="w-full px-4 py-2 rounded-lg bg-red-600 text-white border border-red-500"
-              >
-                <option value="">-- Select Entry --</option>
-                {availableMeronEntries.map(entry => (
-                  <option key={entry._id} value={entry._id}>
-                    {entry.entryName} ({entry.gameType})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Leg Band Selector */}
-            {selectedMeronEntry && meronLegBands.length > 0 && (
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-2">Select Leg Band</label>
-                <select
-                  value={selectedMeronLegBand}
-                  onChange={(e) => setSelectedMeronLegBand(e.target.value)}
-                  className="w-full px-4 py-2 rounded-lg bg-red-600 text-white border border-red-500"
-                >
-                  <option value="">-- Select Leg Band --</option>
-                  {availableMeronLegBands.map(band => (
-                    <option key={band} value={band}>
-                      Band {band}
-                    </option>
-                  ))}
-                </select>
-                {availableMeronLegBands.length === 0 && (
-                  <p className="text-xs text-red-200 mt-1">All leg bands have already fought</p>
-                )}
-
-                {/* Meron Fight Results - Show below leg band selector */}
-                <div className="mt-3 p-3 bg-red-600 rounded text-center">
-                  <div className="flex gap-1 flex-wrap justify-center">
-                    {(() => {
-                      const meronEntry = entries.find(e => e._id === selectedMeronEntry);
-                      const selectedEntryFights = fights.filter(f => f.entryName === meronEntry?.entryName);
-                      return selectedEntryFights.length > 0 ? (
-                        selectedEntryFights.map((fight, idx) => (
-                          <span key={idx} className="text-3xl font-bold">{fight.result}</span>
-                        ))
-                      ) : (
-                        <span className="text-3xl font-bold text-gray-300">-</span>
-                      );
-                    })()}
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* Win Button */}
             <button
@@ -814,65 +736,22 @@ export default function ChickenFight() {
               </div>
             </div>
             
-            {/* Entry Selector */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-2">Select Entry</label>
-              <select
-                value={selectedWalaEntry}
-                onChange={(e) => {
-                  setSelectedWalaEntry(e.target.value);
-                  setSelectedWalaLegBand('');
-                  setWalaLegBandSearch('');
-                }}
-                className="w-full px-4 py-2 rounded-lg bg-blue-600 text-white border border-blue-500"
-              >
-                <option value="">-- Select Entry --</option>
+            {/* Available Entries - Only those with remaining leg bands */}
+            <div className="mb-4 p-3 bg-blue-600 rounded text-sm max-h-32 overflow-y-auto">
+              <div className="font-medium mb-2">Available:</div>
+              <div className="space-y-1">
                 {availableWalaEntries.map(entry => (
-                  <option key={entry._id} value={entry._id}>
+                  <div key={entry._id} className="text-xs">
                     {entry.entryName} ({entry.gameType})
-                  </option>
+                  </div>
                 ))}
-              </select>
+                {availableWalaEntries.length === 0 && (
+                  <div className="text-xs text-blue-200">No entries available</div>
+                )}
+              </div>
             </div>
 
             {/* Leg Band Selector */}
-            {selectedWalaEntry && walaLegBands.length > 0 && (
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-2">Select Leg Band</label>
-                <select
-                  value={selectedWalaLegBand}
-                  onChange={(e) => setSelectedWalaLegBand(e.target.value)}
-                  className="w-full px-4 py-2 rounded-lg bg-blue-600 text-white border border-blue-500"
-                >
-                  <option value="">-- Select Leg Band --</option>
-                  {availableWalaLegBands.map(band => (
-                    <option key={band} value={band}>
-                      Band {band}
-                    </option>
-                  ))}
-                </select>
-                {availableWalaLegBands.length === 0 && (
-                  <p className="text-xs text-blue-200 mt-1">All leg bands have already fought</p>
-                )}
-
-                {/* Wala Fight Results - Show below leg band selector */}
-                <div className="mt-3 p-3 bg-blue-600 rounded text-center">
-                  <div className="flex gap-1 flex-wrap justify-center">
-                    {(() => {
-                      const walaEntry = entries.find(e => e._id === selectedWalaEntry);
-                      const selectedEntryFights = fights.filter(f => f.entryName === walaEntry?.entryName);
-                      return selectedEntryFights.length > 0 ? (
-                        selectedEntryFights.map((fight, idx) => (
-                          <span key={idx} className="text-3xl font-bold">{fight.result}</span>
-                        ))
-                      ) : (
-                        <span className="text-3xl font-bold text-gray-300">-</span>
-                      );
-                    })()}
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* Win Button */}
             <button
@@ -1025,15 +904,17 @@ export default function ChickenFight() {
                   </tr>
                 </thead>
                 <tbody>
-                  {registrations.reduce((uniqueRegs, reg) => {
-                    // Prevent duplicates by checking if entry already exists
-                    if (!uniqueRegs.find(r => r._id === reg._id)) {
-                      uniqueRegs.push(reg);
-                    }
-                    return uniqueRegs;
-                  }, []).map((reg) => {
-                    const reg2wins = reg.registrations.find(r => r.gameType === '2wins');
-                    const reg3wins = reg.registrations.find(r => r.gameType === '3wins');
+                  {(() => {
+                    // Use Map to ensure only latest version of each registration
+                    const regMap = new Map();
+                    registrations.forEach(reg => {
+                      if (!regMap.has(reg._id) || new Date(reg.updatedAt || 0) > new Date(regMap.get(reg._id).updatedAt || 0)) {
+                        regMap.set(reg._id, reg);
+                      }
+                    });
+                    return Array.from(regMap.values()).map((reg) => {
+                      const reg2wins = reg.registrations.find(r => r.gameType === '2wins');
+                      const reg3wins = reg.registrations.find(r => r.gameType === '3wins');
 
                     return (
                       <tr key={reg._id} className={`border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
@@ -1125,7 +1006,8 @@ export default function ChickenFight() {
                         </td>
                       </tr>
                     );
-                  })}
+                    });
+                  })()}
                 </tbody>
               </table>
             </div>
