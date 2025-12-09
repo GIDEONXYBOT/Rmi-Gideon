@@ -25,8 +25,10 @@ export default function ChickenFight() {
   const [submittingReg, setSubmittingReg] = useState(false);
   const [selectedMeronEntry, setSelectedMeronEntry] = useState('');
   const [selectedMeronLegBand, setSelectedMeronLegBand] = useState('');
+  const [meronLegBandSearch, setMeronLegBandSearch] = useState('');
   const [selectedWalaEntry, setSelectedWalaEntry] = useState('');
   const [selectedWalaLegBand, setSelectedWalaLegBand] = useState('');
+  const [walaLegBandSearch, setWalaLegBandSearch] = useState('');
   const [fightNumber, setFightNumber] = useState(0);
   const [fights, setFights] = useState([]); // Track fight results
   const [showHistory, setShowHistory] = useState(false);
@@ -123,6 +125,42 @@ export default function ChickenFight() {
 
   // Filter Wala entries - exclude if already selected in Meron
   const availableWalaEntries = availableEntries.filter(entry => entry._id !== selectedMeronEntry);
+
+  // Handle Meron leg band search - auto-select entry and leg band
+  const handleMeronLegBandSearch = (value) => {
+    setMeronLegBandSearch(value);
+    if (!value.trim()) {
+      setSelectedMeronEntry('');
+      setSelectedMeronLegBand('');
+      return;
+    }
+    // Search for entry with this leg band
+    const foundEntry = availableMeronEntries.find(entry => 
+      entry.legBandNumbers?.includes(value.trim())
+    );
+    if (foundEntry) {
+      setSelectedMeronEntry(foundEntry._id);
+      setSelectedMeronLegBand(value.trim());
+    }
+  };
+
+  // Handle Wala leg band search - auto-select entry and leg band
+  const handleWalaLegBandSearch = (value) => {
+    setWalaLegBandSearch(value);
+    if (!value.trim()) {
+      setSelectedWalaEntry('');
+      setSelectedWalaLegBand('');
+      return;
+    }
+    // Search for entry with this leg band
+    const foundEntry = availableWalaEntries.find(entry => 
+      entry.legBandNumbers?.includes(value.trim())
+    );
+    if (foundEntry) {
+      setSelectedWalaEntry(foundEntry._id);
+      setSelectedWalaLegBand(value.trim());
+    }
+  };
 
   const handleMeronWin = () => {
     if (!selectedMeronEntry || !selectedMeronLegBand || !selectedWalaEntry || !selectedWalaLegBand) {
@@ -626,6 +664,24 @@ export default function ChickenFight() {
           <div className="bg-red-700 text-white rounded-lg p-8">
             <h2 className="text-2xl font-bold mb-4">MERON</h2>
             
+            {/* Leg Band Search */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">Search Leg Band</label>
+              <input
+                type="text"
+                value={meronLegBandSearch}
+                onChange={(e) => handleMeronLegBandSearch(e.target.value)}
+                placeholder="Enter leg band number..."
+                className="w-full px-4 py-2 rounded-lg bg-red-600 text-white border border-red-500 placeholder-red-300"
+              />
+              {meronLegBandSearch && selectedMeronEntry && (
+                <div className="mt-2 p-2 bg-red-600 rounded text-sm">
+                  <div className="font-medium">{meronEntry?.entryName}</div>
+                  <div className="text-xs">Leg Band: {selectedMeronLegBand}</div>
+                </div>
+              )}
+            </div>
+
             {/* Available Entries - Only those with remaining leg bands */}
             <div className="mb-4 p-3 bg-red-600 rounded text-sm max-h-32 overflow-y-auto">
               <div className="font-medium mb-2">Available:</div>
@@ -649,6 +705,7 @@ export default function ChickenFight() {
                 onChange={(e) => {
                   setSelectedMeronEntry(e.target.value);
                   setSelectedMeronLegBand('');
+                  setMeronLegBandSearch('');
                 }}
                 className="w-full px-4 py-2 rounded-lg bg-red-600 text-white border border-red-500"
               >
@@ -724,6 +781,24 @@ export default function ChickenFight() {
           <div className="bg-blue-700 text-white rounded-lg p-8">
             <h2 className="text-2xl font-bold mb-4">WALA</h2>
             
+            {/* Leg Band Search */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">Search Leg Band</label>
+              <input
+                type="text"
+                value={walaLegBandSearch}
+                onChange={(e) => handleWalaLegBandSearch(e.target.value)}
+                placeholder="Enter leg band number..."
+                className="w-full px-4 py-2 rounded-lg bg-blue-600 text-white border border-blue-500 placeholder-blue-300"
+              />
+              {walaLegBandSearch && selectedWalaEntry && (
+                <div className="mt-2 p-2 bg-blue-600 rounded text-sm">
+                  <div className="font-medium">{walaEntry?.entryName}</div>
+                  <div className="text-xs">Leg Band: {selectedWalaLegBand}</div>
+                </div>
+              )}
+            </div>
+
             {/* Available Entries - Only those with remaining leg bands */}
             <div className="mb-4 p-3 bg-blue-600 rounded text-sm max-h-32 overflow-y-auto">
               <div className="font-medium mb-2">Available:</div>
@@ -747,6 +822,7 @@ export default function ChickenFight() {
                 onChange={(e) => {
                   setSelectedWalaEntry(e.target.value);
                   setSelectedWalaLegBand('');
+                  setWalaLegBandSearch('');
                 }}
                 className="w-full px-4 py-2 rounded-lg bg-blue-600 text-white border border-blue-500"
               >
