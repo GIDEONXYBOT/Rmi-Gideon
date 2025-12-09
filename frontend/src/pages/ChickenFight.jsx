@@ -973,7 +973,11 @@ export default function ChickenFight() {
                       }
                     });
                     
-                    return Array.from(entryMap.values()).map((reg) => {
+                    // Filter to only show entries that exist in the Manage Entries page
+                    const validEntryNames = new Set(entries.map(e => e.entryName));
+                    const filteredRegistrations = Array.from(entryMap.values()).filter(reg => validEntryNames.has(reg.entryName));
+                    
+                    return filteredRegistrations.map((reg) => {
                       const reg2wins = reg.registrations.find(r => r.gameType === '2wins');
                       const reg3wins = reg.registrations.find(r => r.gameType === '3wins');
 
