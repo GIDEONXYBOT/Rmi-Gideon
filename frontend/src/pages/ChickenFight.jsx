@@ -1089,21 +1089,23 @@ export default function ChickenFight() {
                           ) : <span className={isDarkMode ? 'text-gray-500' : 'text-gray-400'}>-</span>}
                         </td>
                         <td className="px-6 py-4 text-center">
-                          <div className="flex flex-col items-center gap-2">
-                            <span className={reg.insurancePaid ? 'text-purple-600 font-bold text-sm' : 'text-gray-600 text-sm'}>
-                              {reg.insurancePaid ? '✓' : '✗'}
-                            </span>
-                            <button
-                              onClick={() => handleInsurance(reg._id)}
-                              className={`px-3 py-1 text-xs rounded font-medium ${
-                                reg.insurancePaid
-                                  ? 'bg-green-100 text-green-700'
-                                  : isDarkMode ? 'bg-purple-900 text-purple-200 hover:bg-purple-800' : 'bg-purple-100 text-purple-700'
-                              }`}
-                            >
-                              {reg.insurancePaid ? '✓' : 'Add'}
-                            </button>
-                          </div>
+                          {entry?.gameType === '3wins' ? (
+                            <div className="flex flex-col items-center gap-2">
+                              <span className={reg.insurancePaid ? 'text-purple-600 font-bold text-sm' : 'text-gray-600 text-sm'}>
+                                {reg.insurancePaid ? '✓' : '✗'}
+                              </span>
+                              <button
+                                onClick={() => handleInsurance(reg._id)}
+                                className={`px-3 py-1 text-xs rounded font-medium ${
+                                  reg.insurancePaid
+                                    ? 'bg-green-100 text-green-700'
+                                    : isDarkMode ? 'bg-purple-900 text-purple-200 hover:bg-purple-800' : 'bg-purple-100 text-purple-700'
+                                }`}
+                              >
+                                {reg.insurancePaid ? '✓' : 'Add'}
+                              </button>
+                            </div>
+                          ) : <span className={isDarkMode ? 'text-gray-500' : 'text-gray-400'}>-</span>}
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex gap-2">
