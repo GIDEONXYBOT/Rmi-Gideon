@@ -101,6 +101,11 @@ export default function BettingEventReport() {
     return (betAmount || 0) * 0.055;
   };
 
+  // Convert bet amount to points (1 PHP = 1 point)
+  const convertToPoints = (betAmount) => {
+    return Math.round(betAmount || 0);
+  };
+
   const ordinalSuffixOf = (i) => {
     const n = i;
     if (!n) return '';
@@ -262,7 +267,12 @@ export default function BettingEventReport() {
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Rank</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Teller</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Starting Balance</th>
+                {isAdmin && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Starting Balance</th>
+                )}
+                {!isAdmin && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Points</th>
+                )}
                 {isAdmin && (
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Bet Amount</th>
                 )}
@@ -291,9 +301,16 @@ export default function BettingEventReport() {
                       <div className="text-sm font-medium text-gray-900 dark:text-white">{staff.name}</div>
                       <div className="text-sm text-gray-500 dark:text-gray-400">{staff.username}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                      {formatCurrency(staff.startingBalance)}
-                    </td>
+                    {isAdmin && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                        {formatCurrency(staff.startingBalance)}
+                      </td>
+                    )}
+                    {!isAdmin && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-indigo-600 dark:text-indigo-400">
+                        {convertToPoints(staff.betAmount).toLocaleString()} pts
+                      </td>
+                    )}
                     {isAdmin && (
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                         {formatCurrency(staff.betAmount)}
