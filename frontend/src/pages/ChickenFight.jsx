@@ -679,12 +679,23 @@ export default function ChickenFight() {
                                       : isDarkMode ? 'bg-blue-900/30 border-blue-600 text-blue-200' : 'bg-blue-50 border-blue-400 text-blue-900'
                                   }`}
                                 >
-                                  <div className="flex justify-between items-start">
+                                  <div className="flex justify-between items-start gap-3">
                                     <div className="flex-1">
-                                      <div className={`font-bold text-sm ${isDarkMode ? 'text-white' : ''}`}>{fight.entryName}</div>
-                                      <div className="text-xs mt-1">Leg Band: <span className="font-mono font-bold">{fight.legBand}</span></div>
+                                      <div className="flex items-center gap-2 mb-2">
+                                        <span className={`font-bold text-sm ${isDarkMode ? 'text-white' : ''}`}>{fight.entryName}</span>
+                                        {entry && (
+                                          <span className={`px-2 py-0.5 text-xs font-bold rounded ${
+                                            entry.gameType === '2wins'
+                                              ? isDarkMode ? 'bg-red-900/50 text-red-200' : 'bg-red-200 text-red-800'
+                                              : isDarkMode ? 'bg-blue-900/50 text-blue-200' : 'bg-blue-200 text-blue-800'
+                                          }`}>
+                                            {entry.gameType === '2wins' ? '2-WINS' : '3-WINS'}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <div className="text-xs">Leg Band: <span className="font-mono font-bold">{fight.legBand}</span></div>
                                     </div>
-                                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                                    <span className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${
                                       isWin 
                                         ? isDarkMode ? 'bg-green-600 text-white' : 'bg-green-500 text-white'
                                         : isDarkMode ? 'bg-red-600 text-white' : 'bg-red-500 text-white'
