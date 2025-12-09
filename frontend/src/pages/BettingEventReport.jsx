@@ -9,6 +9,17 @@ export default function BettingEventReport() {
   const [error, setError] = useState(null);
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [sortBy, setSortBy] = useState('betAmount'); // 'betAmount' or 'systemBalance'
+  
+  // Get current user role
+  const getCurrentUserRole = () => {
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      return user.role || 'supervisor';
+    } catch {
+      return 'supervisor';
+    }
+  };
+  const userRole = getCurrentUserRole();
 
   useEffect(() => {
     fetchBettingEventData();
@@ -182,7 +193,46 @@ export default function BettingEventReport() {
         </div>
       </div>
 
-
+      {/* Financial Summary - SuperAdmin Only */}
+      {userRole === 'super_admin' && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">💰 Financial Summary</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
+              <div className="text-sm text-green-600 dark:text-green-400 font-medium">Total Starting Balance</div>     
+              <div className="text-2xl font-bold text-green-800 dark:text-green-200">{formatCurrency(data.totalStartingBalance)}</div>
+            </div>
+            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+              <div className="text-sm text-blue-600 dark:text-blue-400 font-medium">Total System Balance</div>
+              <div className="text-2xl font-bold text-blue-800 dark:text-blue-200">{formatCurrency(data.totalSystemBalance)}</div>
+            </div>
+            <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg">
+              <div className="text-sm text-purple-600 dark:text-purple-400 font-medium">Total Bet Amount</div>
+              <div className="text-2xl font-bold text-purple-800 dark:text-purple-200">{formatCurrency(data.totalBetAmount)}</div>
+            </div>
+            <div className="bg-pink-50 dark:bg-pink-900/20 p-4 rounded-lg">
+              <div className="text-sm text-pink-600 dark:text-pink-400 font-medium">Total Commission (5.5%)</div>      
+              <div className="text-2xl font-bold text-pink-800 dark:text-pink-200">
+                {formatCurrency((data.staffReports || []).reduce((sum, staff) => sum + calculateCommission(staff.betAmount), 0))}
+              </div>
+            </div>
+            <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg">
+              <div className="text-sm text-red-600 dark:text-red-400 font-medium">Total Payout</div>
+              <div className="text-2xl font-bold text-red-800 dark:text-red-200">{formatCurrency(data.totalPayout)}</div>
+            </div>
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg">
+              <div className="text-sm text-yellow-600 dark:text-yellow-400 font-medium">Total Canceled/Returned</div>  
+              <div className="text-2xl font-bold text-yellow-800 dark:text-yellow-200">{formatCurrency(data.totalCanceledBet)}</div>
+            </div>
+            <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-lg">
+              <div className="text-sm text-indigo-600 dark:text-indigo-400 font-medium">Net Profit</div>
+              <div className="text-2xl font-bold text-indigo-800 dark:text-indigo-200">
+                {formatCurrency(data.totalBetAmount - data.totalPayout - data.totalCanceledBet)}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Staff Reports */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
@@ -212,11 +262,25 @@ export default function BettingEventReport() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Rank</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Teller</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Starting Balance</th>
+                {userRole === 'super_admin' && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Bet Amount</th>
+                )}
+                {userRole === 'super_admin' && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Payout</th>
+                )}
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">System Balance</th>
+                {userRole === 'super_admin' && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Commission</th>
+                )}
+                {userRole === 'super_admin' && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Profit/Loss</th>
+                )}
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {sortStaffReports(data.staffReports || [], sortBy).map((staff, index) => {
+                const profit = (staff.betAmount || 0) - (staff.payout || 0) - (staff.canceledBet || 0);
+                const commission = calculateCommission(staff.betAmount);
                 return (
                   <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-200 font-semibold">
@@ -229,9 +293,31 @@ export default function BettingEventReport() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                       {formatCurrency(staff.startingBalance)}
                     </td>
+                    {userRole === 'super_admin' && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                        {formatCurrency(staff.betAmount)}
+                      </td>
+                    )}
+                    {userRole === 'super_admin' && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                        {formatCurrency(staff.payout)}
+                      </td>
+                    )}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                       {formatCurrency(staff.systemBalance)}
                     </td>
+                    {userRole === 'super_admin' && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-purple-600 dark:text-purple-400 font-medium">
+                        {formatCurrency(commission)}
+                      </td>
+                    )}
+                    {userRole === 'super_admin' && (
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`text-sm font-medium ${profit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                          {profit >= 0 ? '+' : ''}{formatCurrency(profit)}
+                        </span>
+                      </td>
+                    )}
                   </tr>
                 );
               })}
