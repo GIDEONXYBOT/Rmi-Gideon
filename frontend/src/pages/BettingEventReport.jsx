@@ -20,6 +20,7 @@ export default function BettingEventReport() {
     }
   };
   const userRole = getCurrentUserRole();
+  const isAdmin = userRole === 'admin' || userRole === 'super_admin';
 
   useEffect(() => {
     fetchBettingEventData();
@@ -193,8 +194,8 @@ export default function BettingEventReport() {
         </div>
       </div>
 
-      {/* Financial Summary - SuperAdmin Only */}
-      {userRole === 'super_admin' && (
+      {/* Financial Summary - Admin/SuperAdmin Only */}
+      {isAdmin && (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">💰 Financial Summary</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -262,17 +263,17 @@ export default function BettingEventReport() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Rank</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Teller</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Starting Balance</th>
-                {userRole === 'super_admin' && (
+                {isAdmin && (
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Bet Amount</th>
                 )}
-                {userRole === 'super_admin' && (
+                {isAdmin && (
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Payout</th>
                 )}
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">System Balance</th>
-                {userRole === 'super_admin' && (
+                {isAdmin && (
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Commission</th>
                 )}
-                {userRole === 'super_admin' && (
+                {isAdmin && (
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Profit/Loss</th>
                 )}
               </tr>
@@ -293,12 +294,12 @@ export default function BettingEventReport() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                       {formatCurrency(staff.startingBalance)}
                     </td>
-                    {userRole === 'super_admin' && (
+                    {isAdmin && (
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                         {formatCurrency(staff.betAmount)}
                       </td>
                     )}
-                    {userRole === 'super_admin' && (
+                    {isAdmin && (
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                         {formatCurrency(staff.payout)}
                       </td>
@@ -306,12 +307,12 @@ export default function BettingEventReport() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                       {formatCurrency(staff.systemBalance)}
                     </td>
-                    {userRole === 'super_admin' && (
+                    {isAdmin && (
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-purple-600 dark:text-purple-400 font-medium">
                         {formatCurrency(commission)}
                       </td>
                     )}
-                    {userRole === 'super_admin' && (
+                    {isAdmin && (
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`text-sm font-medium ${profit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                           {profit >= 0 ? '+' : ''}{formatCurrency(profit)}
