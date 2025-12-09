@@ -667,45 +667,74 @@ export default function ChickenFight() {
                       <div className={`max-h-96 overflow-y-auto space-y-2`}>
                         {selectedHistoryDate && historyFights.length > 0 ? (
                           <div className="space-y-2">
-                            {historyFights.map((fight, idx) => {
-                              const entry = entries.find(e => e.entryName === fight.entryName);
-                              const isWin = fight.result === 1;
-                              return (
-                                <div 
-                                  key={idx} 
-                                  className={`p-4 rounded-lg border-l-4 ${
-                                    entry?.gameType === '2wins'
-                                      ? isDarkMode ? 'bg-red-900/30 border-red-600 text-red-200' : 'bg-red-50 border-red-400 text-red-900'
-                                      : isDarkMode ? 'bg-blue-900/30 border-blue-600 text-blue-200' : 'bg-blue-50 border-blue-400 text-blue-900'
-                                  }`}
-                                >
-                                  <div className="flex justify-between items-start gap-3">
-                                    <div className="flex-1">
-                                      <div className="flex items-center gap-2 mb-2">
-                                        <span className={`font-bold text-sm ${isDarkMode ? 'text-white' : ''}`}>{fight.entryName}</span>
-                                        {entry && (
-                                          <span className={`px-2 py-0.5 text-xs font-bold rounded ${
-                                            entry.gameType === '2wins'
-                                              ? isDarkMode ? 'bg-red-900/50 text-red-200' : 'bg-red-200 text-red-800'
-                                              : isDarkMode ? 'bg-blue-900/50 text-blue-200' : 'bg-blue-200 text-blue-800'
-                                          }`}>
-                                            {entry.gameType === '2wins' ? '2-WINS' : '3-WINS'}
-                                          </span>
-                                        )}
+                            {(() => {
+                              // Group fights by entry name
+                              const groupedByEntry = {};
+                              historyFights.forEach(fight => {
+                                if (!groupedByEntry[fight.entryName]) {
+                                  groupedByEntry[fight.entryName] = [];
+                                }
+                                groupedByEntry[fight.entryName].push(fight);
+                              });
+                              
+                              // Display each entry with all its fight results
+                              return Object.entries(groupedByEntry).map(([entryName, fights]) => {
+                                const entry = entries.find(e => e.entryName === entryName);
+                                const wins = fights.filter(f => f.result === 1).length;
+                                const losses = fights.filter(f => f.result === 0).length;
+                                
+                                return (
+                                  <div 
+                                    key={entryName} 
+                                    className={`p-4 rounded-lg border-l-4 ${
+                                      entry?.gameType === '2wins'
+                                        ? isDarkMode ? 'bg-red-900/30 border-red-600 text-red-200' : 'bg-red-50 border-red-400 text-red-900'
+                                        : isDarkMode ? 'bg-blue-900/30 border-blue-600 text-blue-200' : 'bg-blue-50 border-blue-400 text-blue-900'
+                                    }`}
+                                  >
+                                    <div className="flex justify-between items-start gap-3 mb-3">
+                                      <div className="flex-1">
+                                        <div className="flex items-center gap-2 mb-1">
+                                          <span className={`font-bold text-sm ${isDarkMode ? 'text-white' : ''}`}>{entryName}</span>
+                                          {entry && (
+                                            <span className={`px-2 py-0.5 text-xs font-bold rounded ${
+                                              entry.gameType === '2wins'
+                                                ? isDarkMode ? 'bg-red-900/50 text-red-200' : 'bg-red-200 text-red-800'
+                                                : isDarkMode ? 'bg-blue-900/50 text-blue-200' : 'bg-blue-200 text-blue-800'
+                                            }`}>
+                                              {entry.gameType === '2wins' ? '2-WINS' : '3-WINS'}
+                                            </span>
+                                          )}
+                                        </div>
+                                        <div className="text-xs">Record: <span className="font-bold">{wins}W - {losses}L</span></div>
                                       </div>
-                                      <div className="text-xs">Leg Band: <span className="font-mono font-bold">{fight.legBand}</span></div>
+                                      <div className="flex gap-1">
+                                        {fights.map((fight, idx) => (
+                                          <span 
+                                            key={idx} 
+                                            className={`px-2 py-1 rounded text-xs font-bold ${
+                                              fight.result === 1 
+                                                ? isDarkMode ? 'bg-green-600 text-white' : 'bg-green-500 text-white'
+                                                : isDarkMode ? 'bg-red-600 text-white' : 'bg-red-500 text-white'
+                                            }`}
+                                          >
+                                            {fight.result === 1 ? 'W' : 'L'}
+                                          </span>
+                                        ))}
+                                      </div>
                                     </div>
-                                    <span className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${
-                                      isWin 
-                                        ? isDarkMode ? 'bg-green-600 text-white' : 'bg-green-500 text-white'
-                                        : isDarkMode ? 'bg-red-600 text-white' : 'bg-red-500 text-white'
-                                    }`}>
-                                      {isWin ? '✓ WIN' : '✗ LOSS'}
-                                    </span>
+                                    <div className="text-xs space-y-1">
+                                      {fights.map((fight, idx) => (
+                                        <div key={idx} className="flex gap-2">
+                                          <span>Fight {idx + 1}:</span>
+                                          <span className="font-mono">{fight.legBand}</span>
+                                        </div>
+                                      ))}
+                                    </div>
                                   </div>
-                                </div>
-                              );
-                            })}
+                                );
+                              });
+                            })()}
                           </div>
                         ) : selectedHistoryDate ? (
                           <p className={`text-center py-8 ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>No fights recorded on this date</p>
