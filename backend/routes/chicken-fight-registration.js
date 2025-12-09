@@ -129,6 +129,46 @@ router.put('/registrations/:registrationId/pay', async (req, res) => {
   }
 });
 
+// Withdraw payment (mark as unpaid)
+router.put('/registrations/:registrationId/withdraw', async (req, res) => {
+  try {
+    const { registrationId } = req.params;
+    const { gameType } = req.body;
+    const username = req.user.username;
+
+    if (!gameType || !['2wins', '3wins'].includes(gameType)) {
+      return res.status(400).json({ success: false, message: 'Invalid game type' });
+    }
+
+    const registration = await ChickenFightRegistration.findById(registrationId);
+    if (!registration) {
+      return res.status(404).json({ success: false, message: 'Registration not found' });
+    }
+
+    // Find and update the specific game type registration
+    const gameReg = registration.registrations.find(r => r.gameType === gameType);
+    if (!gameReg) {
+      return res.status(404).json({ success: false, message: `No registration for ${gameType}` });
+    }
+
+    gameReg.isPaid = false;
+    gameReg.paidDate = null;
+    gameReg.paidBy = null;
+
+    registration.updatedBy = username;
+    await registration.save();
+
+    res.json({
+      success: true,
+      message: `Payment withdrawn for ${gameType}`,
+      registration
+    });
+  } catch (err) {
+    console.error('Error withdrawing payment:', err);
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
+  }
+});
+
 // Get registration statistics for a date
 router.get('/registrations-stats', async (req, res) => {
   try {

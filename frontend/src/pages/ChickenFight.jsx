@@ -186,6 +186,7 @@ export default function ChickenFight() {
     fetchEntries();
     fetchRegistrations();
     fetchStats();
+    autoRegisterEntries();
   }, []);
 
   // Fetch available entries
@@ -303,6 +304,47 @@ export default function ChickenFight() {
       setTimeout(() => setSuccess(''), 2000);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to delete registration');
+    }
+  };
+
+  // Auto-register all entries on page load
+  const autoRegisterEntries = async () => {
+    try {
+      const response = await axios.get(`${getApiUrl()}/api/chicken-fight/entries`);
+      if (response.data.success && response.data.entries) {
+        for (const entry of response.data.entries) {
+          // Register each entry with both game types
+          await axios.post(`${getApiUrl()}/api/chicken-fight-registration/registrations`, {
+            entryId: entry._id,
+            entryName: entry.entryName,
+            gameTypes: ['2wins', '3wins'],
+            gameDate: today
+          }).catch(() => {
+            // Silently ignore if already registered
+          });
+        }
+        fetchRegistrations();
+        fetchStats();
+      }
+    } catch (err) {
+      console.error('Auto-registration error:', err);
+    }
+  };
+
+  // Withdraw payment (mark as unpaid)
+  const handleWithdrawPayment = async (registrationId, gameType) => {
+    try {
+      await axios.put(
+        `${getApiUrl()}/api/chicken-fight-registration/registrations/${registrationId}/withdraw`,
+        { gameType }
+      );
+
+      setSuccess(`Payment withdrawn for ${gameType}`);
+      fetchRegistrations();
+      fetchStats();
+      setTimeout(() => setSuccess(''), 2000);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to withdraw payment');
     }
   };
 
@@ -756,7 +798,7 @@ export default function ChickenFight() {
 
         {/* Statistics */}
         {stats && (
-          <div className="grid grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-6 gap-4 mb-8">
             <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
               <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Total Registered</div>
               <div className={`text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -764,119 +806,53 @@ export default function ChickenFight() {
               </div>
             </div>
             <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
-              <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>2-Wins (₱500)</div>
+              <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>2-Wins Paid (₱500)</div>
               <div className="text-3xl font-bold text-red-600">{stats.paid2wins}/{stats.by2wins}</div>
               <div className="text-xs text-red-600">₱{stats.paid2wins * 500}</div>
             </div>
             <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
-              <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>3-Wins (₱1,000)</div>
+              <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>3-Wins Paid (₱1,000)</div>
               <div className="text-3xl font-bold text-blue-600">{stats.paid3wins}/{stats.by3wins}</div>
               <div className="text-xs text-blue-600">₱{stats.paid3wins * 1000}</div>
+            </div>
+            <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
+              <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Champion 2-Wins</div>
+              <div className={`text-3xl font-bold ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>
+                ₱{(() => {
+                  const meronChampionCount = Object.entries(
+                    fights.reduce((acc, fight) => {
+                      const entry = entries.find(e => e.entryName === fight.entryName);
+                      if (entry?.gameType === '2wins' && fight.result === 1) {
+                        acc[fight.entryName] = (acc[fight.entryName] || 0) + 1;
+                      }
+                      return acc;
+                    }, {})
+                  ).filter(([_, wins]) => wins >= 2).length;
+                  return meronChampionCount * 500;
+                })()}
+              </div>
+            </div>
+            <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
+              <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Champion 3-Wins</div>
+              <div className={`text-3xl font-bold ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                ₱{(() => {
+                  const walaChampionCount = Object.entries(
+                    fights.reduce((acc, fight) => {
+                      const entry = entries.find(e => e.entryName === fight.entryName);
+                      if (entry?.gameType === '3wins' && fight.result === 1) {
+                        acc[fight.entryName] = (acc[fight.entryName] || 0) + 1;
+                      }
+                      return acc;
+                    }, {})
+                  ).filter(([_, wins]) => wins >= 3).length;
+                  return walaChampionCount * 1000;
+                })()}
+              </div>
             </div>
             <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
               <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Total Revenue</div>
               <div className={`text-3xl font-bold ${isDarkMode ? 'text-yellow-400' : 'text-yellow-600'}`}>
                 ₱{stats.totalRevenue}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Registration Form Button */}
-        {!showRegForm && (
-          <button
-            onClick={() => setShowRegForm(true)}
-            className="mb-8 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2"
-          >
-            <Plus size={20} />
-            Add Registration
-          </button>
-        )}
-
-        {/* Registration Form */}
-        {showRegForm && (
-          <div className={`mb-8 p-6 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
-            <h2 className={`text-2xl font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-              Register New Entry
-            </h2>
-
-            <div className="space-y-4">
-              <div>
-                <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  Select Entry
-                </label>
-                <select
-                  value={selectedEntry}
-                  onChange={(e) => setSelectedEntry(e.target.value)}
-                  disabled={entriesLoading}
-                  className={`w-full px-4 py-2 rounded-lg border ${
-                    isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-                  }`}
-                >
-                  <option value="">-- Select Entry --</option>
-                  {entries.map(entry => (
-                    <option key={entry._id} value={entry._id}>
-                      {entry.entryName} ({entry.gameType})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className={`block text-sm font-medium mb-3 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  Game Types
-                </label>
-                <label className={`flex items-center gap-3 p-3 rounded border mb-2 cursor-pointer ${
-                  isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'
-                } ${selected2Wins ? (isDarkMode ? 'bg-red-900 border-red-600' : 'bg-red-50 border-red-300') : ''}`}>
-                  <input
-                    type="checkbox"
-                    checked={selected2Wins}
-                    onChange={(e) => setSelected2Wins(e.target.checked)}
-                    className="w-4 h-4"
-                  />
-                  <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>
-                    2-Wins / Meron (₱500)
-                  </span>
-                </label>
-
-                <label className={`flex items-center gap-3 p-3 rounded border cursor-pointer ${
-                  isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'
-                } ${selected3Wins ? (isDarkMode ? 'bg-blue-900 border-blue-600' : 'bg-blue-50 border-blue-300') : ''}`}>
-                  <input
-                    type="checkbox"
-                    checked={selected3Wins}
-                    onChange={(e) => setSelected3Wins(e.target.checked)}
-                    className="w-4 h-4"
-                  />
-                  <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>
-                    3-Wins / Wala (₱1,000)
-                  </span>
-                </label>
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <button
-                  onClick={handleRegisterEntry}
-                  disabled={submittingReg || !selectedEntry || (!selected2Wins && !selected3Wins)}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium flex items-center justify-center gap-2"
-                >
-                  {submittingReg ? <Loader size={18} className="animate-spin" /> : <Plus size={18} />}
-                  {submittingReg ? 'Registering...' : 'Register'}
-                </button>
-                <button
-                  onClick={() => {
-                    setShowRegForm(false);
-                    setSelectedEntry('');
-                    setSelected2Wins(false);
-                    setSelected3Wins(false);
-                  }}
-                  className={`px-6 py-2 rounded-lg border ${
-                    isDarkMode ? 'border-gray-600 text-gray-300 hover:bg-gray-700' : 'border-gray-300 text-gray-700 hover:bg-gray-100'
-                  }`}
-                >
-                  Cancel
-                </button>
               </div>
             </div>
           </div>
@@ -958,14 +934,34 @@ export default function ChickenFight() {
                           ₱{totalFees}
                         </td>
                         <td className="px-6 py-4">
-                          <button
-                            onClick={() => handleDeleteRegistration(reg._id)}
-                            className={`px-3 py-1 text-xs rounded font-medium ${
-                              isDarkMode ? 'bg-red-900 text-red-200 hover:bg-red-800' : 'bg-red-100 text-red-700'
-                            }`}
-                          >
-                            Delete
-                          </button>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleDeleteRegistration(reg._id)}
+                              className={`px-3 py-1 text-xs rounded font-medium ${
+                                isDarkMode ? 'bg-red-900 text-red-200 hover:bg-red-800' : 'bg-red-100 text-red-700'
+                              }`}
+                            >
+                              Delete
+                            </button>
+                            <button
+                              onClick={() => {
+                                const gameTypes = [];
+                                if (reg.registrations.find(r => r.gameType === '2wins')?.isPaid) gameTypes.push('2wins');
+                                if (reg.registrations.find(r => r.gameType === '3wins')?.isPaid) gameTypes.push('3wins');
+                                if (gameTypes.length > 0) {
+                                  gameTypes.forEach(gt => handleWithdrawPayment(reg._id, gt));
+                                }
+                              }}
+                              disabled={!reg.registrations.some(r => r.isPaid)}
+                              className={`px-3 py-1 text-xs rounded font-medium ${
+                                reg.registrations.some(r => r.isPaid)
+                                  ? isDarkMode ? 'bg-yellow-900 text-yellow-200 hover:bg-yellow-800' : 'bg-yellow-100 text-yellow-700'
+                                  : isDarkMode ? 'bg-gray-700 text-gray-500 cursor-not-allowed' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                              }`}
+                            >
+                              Withdraw
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
