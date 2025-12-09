@@ -871,7 +871,7 @@ export default function ChickenFight() {
               <div className={`text-3xl font-bold ${isDarkMode ? 'text-purple-400' : 'text-purple-600'}`}>
                 ₱{(() => {
                   const insuranceCount = registrations.filter(r => r.insurancePaid).length;
-                  return insuranceCount * 100; // Assuming 100 per insurance
+                  return insuranceCount * 5000; // 5000 per insurance
                 })()}
               </div>
               <div className={`text-xs ${isDarkMode ? 'text-purple-400' : 'text-purple-600'}`}>{registrations.filter(r => r.insurancePaid).length} entries</div>
@@ -908,7 +908,7 @@ export default function ChickenFight() {
                   
                   // Calculate insurance total
                   const insuranceCount = registrations.filter(r => r.insurancePaid).length;
-                  const insuranceTotal = insuranceCount * 100;
+                  const insuranceTotal = insuranceCount * 5000;
                   
                   // Net revenue after deducting champions and insurance
                   const netRevenue = totalCollected - meronChampionPayout - walaChampionPayout - insuranceTotal;
@@ -949,7 +949,13 @@ export default function ChickenFight() {
                   </tr>
                 </thead>
                 <tbody>
-                  {registrations.map((reg) => {
+                  {registrations.reduce((uniqueRegs, reg) => {
+                    // Prevent duplicates by checking if entry already exists
+                    if (!uniqueRegs.find(r => r._id === reg._id)) {
+                      uniqueRegs.push(reg);
+                    }
+                    return uniqueRegs;
+                  }, []).map((reg) => {
                     const reg2wins = reg.registrations.find(r => r.gameType === '2wins');
                     const reg3wins = reg.registrations.find(r => r.gameType === '3wins');
 
@@ -977,7 +983,7 @@ export default function ChickenFight() {
                           ) : <span className={isDarkMode ? 'text-gray-500' : 'text-gray-400'}>-</span>}
                         </td>
                         <td className="px-6 py-4 text-center">
-                          {reg3wins && !reg2wins ? (
+                          {reg3wins ? (
                             <div className="flex flex-col items-center gap-2">
                               <span className={reg3wins.isPaid ? 'text-green-600 font-bold text-sm' : 'text-gray-600 text-sm'}>
                                 {reg3wins.isPaid ? '✓ PAID' : 'UNPAID'}
@@ -992,8 +998,6 @@ export default function ChickenFight() {
                                 {reg3wins.isPaid ? '✓' : 'Paid'}
                               </button>
                             </div>
-                          ) : reg3wins ? (
-                            <span className={isDarkMode ? 'text-gray-500' : 'text-gray-400'}>-</span>
                           ) : <span className={isDarkMode ? 'text-gray-500' : 'text-gray-400'}>-</span>}
                         </td>
                         <td className="px-6 py-4 text-center">
