@@ -101,9 +101,9 @@ export default function BettingEventReport() {
     return (betAmount || 0) * 0.055;
   };
 
-  // Convert bet amount to points (1 PHP = 1 point)
+  // Convert bet amount to points (1500 PHP = 1 point)
   const convertToPoints = (betAmount) => {
-    return Math.round(betAmount || 0);
+    return Math.round((betAmount || 0) / 1500);
   };
 
   const ordinalSuffixOf = (i) => {
