@@ -964,14 +964,16 @@ export default function ChickenFight() {
                 </thead>
                 <tbody>
                   {(() => {
-                    // Use Map to ensure only latest version of each registration
-                    const regMap = new Map();
+                    // Deduplicate by entry name - keep only latest version of each entry
+                    const entryMap = new Map();
                     registrations.forEach(reg => {
-                      if (!regMap.has(reg._id) || new Date(reg.updatedAt || 0) > new Date(regMap.get(reg._id).updatedAt || 0)) {
-                        regMap.set(reg._id, reg);
+                      const entryName = reg.entryName;
+                      if (!entryMap.has(entryName) || new Date(reg.updatedAt || 0) > new Date(entryMap.get(entryName).updatedAt || 0)) {
+                        entryMap.set(entryName, reg);
                       }
                     });
-                    return Array.from(regMap.values()).map((reg) => {
+                    
+                    return Array.from(entryMap.values()).map((reg) => {
                       const reg2wins = reg.registrations.find(r => r.gameType === '2wins');
                       const reg3wins = reg.registrations.find(r => r.gameType === '3wins');
 
