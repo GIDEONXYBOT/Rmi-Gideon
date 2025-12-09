@@ -626,12 +626,10 @@ export default function ChickenFight() {
                 <div className="mt-3 p-3 bg-red-600 rounded text-center">
                   <div className="flex gap-1 flex-wrap justify-center">
                     {(() => {
-                      const meronFights = fights.filter(f => {
-                        const entry = entries.find(e => e.entryName === f.entryName);
-                        return entry?.gameType === '2wins';
-                      });
-                      return meronFights.length > 0 ? (
-                        meronFights.map((fight, idx) => (
+                      const meronEntry = entries.find(e => e._id === selectedMeronEntry);
+                      const selectedEntryFights = fights.filter(f => f.entryName === meronEntry?.entryName);
+                      return selectedEntryFights.length > 0 ? (
+                        selectedEntryFights.map((fight, idx) => (
                           <span key={idx} className="text-3xl font-bold">{fight.result}</span>
                         ))
                       ) : (
@@ -726,12 +724,10 @@ export default function ChickenFight() {
                 <div className="mt-3 p-3 bg-blue-600 rounded text-center">
                   <div className="flex gap-1 flex-wrap justify-center">
                     {(() => {
-                      const walaFights = fights.filter(f => {
-                        const entry = entries.find(e => e.entryName === f.entryName);
-                        return entry?.gameType === '3wins';
-                      });
-                      return walaFights.length > 0 ? (
-                        walaFights.map((fight, idx) => (
+                      const walaEntry = entries.find(e => e._id === selectedWalaEntry);
+                      const selectedEntryFights = fights.filter(f => f.entryName === walaEntry?.entryName);
+                      return selectedEntryFights.length > 0 ? (
+                        selectedEntryFights.map((fight, idx) => (
                           <span key={idx} className="text-3xl font-bold">{fight.result}</span>
                         ))
                       ) : (
