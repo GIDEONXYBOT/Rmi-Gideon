@@ -1033,7 +1033,7 @@ export default function ChickenFight() {
                           </div>
                         </td>
                         <td className="px-6 py-4 text-center">
-                          {reg2wins ? (
+                          {reg2wins && entry?.gameType === '2wins' ? (
                             reg2wins.isPaid ? (
                               <button
                                 onClick={() => handleWithdrawPayment(reg._id, '2wins')}
@@ -1056,7 +1056,7 @@ export default function ChickenFight() {
                           ) : <span className={isDarkMode ? 'text-gray-500' : 'text-gray-400'}>-</span>}
                         </td>
                         <td className="px-6 py-4 text-center">
-                          {reg3wins ? (
+                          {reg3wins && entry?.gameType === '3wins' ? (
                             reg3wins.isPaid ? (
                               <button
                                 onClick={() => handleWithdrawPayment(reg._id, '3wins')}
