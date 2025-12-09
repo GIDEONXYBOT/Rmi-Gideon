@@ -21,6 +21,8 @@ export default function BettingEventReport() {
   };
   const userRole = getCurrentUserRole();
   const isAdmin = userRole === 'admin' || userRole === 'super_admin';
+  const isSupervisor = userRole === 'supervisor';
+  const isTeller = userRole === 'teller';
 
   useEffect(() => {
     fetchBettingEventData();
@@ -279,7 +281,9 @@ export default function BettingEventReport() {
                 {isAdmin && (
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Payout</th>
                 )}
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">System Balance</th>
+                {!isTeller && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">System Balance</th>
+                )}
                 {isAdmin && (
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Commission</th>
                 )}
@@ -321,9 +325,11 @@ export default function BettingEventReport() {
                         {formatCurrency(staff.payout)}
                       </td>
                     )}
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                      {formatCurrency(staff.systemBalance)}
-                    </td>
+                    {!isTeller && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                        {formatCurrency(staff.systemBalance)}
+                      </td>
+                    )}
                     {isAdmin && (
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-purple-600 dark:text-purple-400 font-medium">
                         {formatCurrency(commission)}
