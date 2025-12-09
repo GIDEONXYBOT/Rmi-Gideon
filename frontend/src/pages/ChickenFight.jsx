@@ -621,6 +621,25 @@ export default function ChickenFight() {
                 {availableMeronLegBands.length === 0 && (
                   <p className="text-xs text-red-200 mt-1">All leg bands have already fought</p>
                 )}
+
+                {/* Meron Fight Results - Show below leg band selector */}
+                <div className="mt-3 p-3 bg-red-600 rounded text-center">
+                  <div className="flex gap-1 flex-wrap justify-center">
+                    {(() => {
+                      const meronFights = fights.filter(f => {
+                        const entry = entries.find(e => e.entryName === f.entryName);
+                        return entry?.gameType === '2wins';
+                      });
+                      return meronFights.length > 0 ? (
+                        meronFights.map((fight, idx) => (
+                          <span key={idx} className="text-3xl font-bold">{fight.result}</span>
+                        ))
+                      ) : (
+                        <span className="text-3xl font-bold text-gray-300">-</span>
+                      );
+                    })()}
+                  </div>
+                </div>
               </div>
             )}
 
@@ -636,25 +655,6 @@ export default function ChickenFight() {
             >
               MERON WINS
             </button>
-
-            {/* Meron Fight Results */}
-            <div className="mt-4 p-3 bg-red-600 rounded text-center">
-              <div className="flex gap-1 flex-wrap justify-center">
-                {(() => {
-                  const meronFights = fights.filter(f => {
-                    const entry = entries.find(e => e.entryName === f.entryName);
-                    return entry?.gameType === '2wins';
-                  });
-                  return meronFights.length > 0 ? (
-                    meronFights.map((fight, idx) => (
-                      <span key={idx} className="text-4xl font-bold">{fight.result}</span>
-                    ))
-                  ) : (
-                    <span className="text-4xl font-bold text-gray-300">0</span>
-                  );
-                })()}
-              </div>
-            </div>
           </div>
 
           {/* Fight Number Column */}
@@ -721,6 +721,25 @@ export default function ChickenFight() {
                 {availableWalaLegBands.length === 0 && (
                   <p className="text-xs text-blue-200 mt-1">All leg bands have already fought</p>
                 )}
+
+                {/* Wala Fight Results - Show below leg band selector */}
+                <div className="mt-3 p-3 bg-blue-600 rounded text-center">
+                  <div className="flex gap-1 flex-wrap justify-center">
+                    {(() => {
+                      const walaFights = fights.filter(f => {
+                        const entry = entries.find(e => e.entryName === f.entryName);
+                        return entry?.gameType === '3wins';
+                      });
+                      return walaFights.length > 0 ? (
+                        walaFights.map((fight, idx) => (
+                          <span key={idx} className="text-3xl font-bold">{fight.result}</span>
+                        ))
+                      ) : (
+                        <span className="text-3xl font-bold text-gray-300">-</span>
+                      );
+                    })()}
+                  </div>
+                </div>
               </div>
             )}
 
@@ -736,25 +755,6 @@ export default function ChickenFight() {
             >
               WALA WINS
             </button>
-
-            {/* Wala Fight Results */}
-            <div className="mt-4 p-3 bg-blue-600 rounded text-center">
-              <div className="flex gap-1 flex-wrap justify-center">
-                {(() => {
-                  const walaFights = fights.filter(f => {
-                    const entry = entries.find(e => e.entryName === f.entryName);
-                    return entry?.gameType === '3wins';
-                  });
-                  return walaFights.length > 0 ? (
-                    walaFights.map((fight, idx) => (
-                      <span key={idx} className="text-4xl font-bold">{fight.result}</span>
-                    ))
-                  ) : (
-                    <span className="text-4xl font-bold text-gray-300">0</span>
-                  );
-                })()}
-              </div>
-            </div>
           </div>
         </div>
 
