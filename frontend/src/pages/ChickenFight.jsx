@@ -91,6 +91,13 @@ export default function ChickenFight() {
     if (window.confirm('Are you sure you want to reset today\'s records? This action cannot be undone.')) {
       setFights([]);
       setFightNumber(0);
+      setRegistrations([]);
+      setSelectedMeronEntry('');
+      setSelectedMeronLegBand('');
+      setMeronLegBandSearch('');
+      setSelectedWalaEntry('');
+      setSelectedWalaLegBand('');
+      setWalaLegBandSearch('');
       localStorage.removeItem(`chicken-fight-${today}`);
       localStorage.removeItem(`chicken-fight-number-${today}`);
       setSuccess('Today\'s records have been reset');
