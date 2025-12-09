@@ -824,26 +824,60 @@ export default function ChickenFight() {
           <div className="mb-8">
             <h2 className={`text-2xl font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>💰 Statistics</h2>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4">
-              {/* Total Registered */}
+              {/* Total Registered - Based on Manage Entries */}
               <div className={`p-4 rounded-lg border ${isDarkMode ? 'bg-gradient-to-br from-gray-800 to-gray-900 border-gray-700' : 'bg-gradient-to-br from-white to-gray-50 border-gray-200'} shadow-md hover:shadow-lg transition`}>
                 <div className={`text-xs font-bold ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>TOTAL REGISTERED</div>
                 <div className={`text-4xl font-bold mt-2 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
-                  {stats.total}
+                  {entries.length}
                 </div>
               </div>
 
-              {/* 2-Wins Paid */}
+              {/* 2-Wins Paid - Based on Manage Entries */}
               <div className={`p-4 rounded-lg border ${isDarkMode ? 'bg-gradient-to-br from-red-900/30 to-red-900/20 border-red-700' : 'bg-gradient-to-br from-red-50 to-red-100 border-red-200'} shadow-md hover:shadow-lg transition`}>
-                <div className={`text-xs font-bold ${isDarkMode ? 'text-red-300' : 'text-red-700'}`}>2-WINS PAID</div>
-                <div className={`text-3xl font-bold mt-2 ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>{stats.paid2wins}/{stats.by2wins}</div>
-                <div className={`text-xs mt-1 font-mono ${isDarkMode ? 'text-red-300' : 'text-red-600'}`}>₱{stats.paid2wins * 500}</div>
+                <div className={`text-xs font-bold ${isDarkMode ? 'text-red-300' : 'text-red-700'}`}>2-WINS REGISTERED</div>
+                <div className={`text-3xl font-bold mt-2 ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>
+                  {(() => {
+                    const by2wins = entries.filter(e => e.gameType === '2wins').length;
+                    const paid2wins = registrations.filter(reg => {
+                      const entry = entries.find(e => e.entryName === reg.entryName);
+                      return entry?.gameType === '2wins' && reg.registrations.find(r => r.gameType === '2wins' && r.isPaid);
+                    }).length;
+                    return `${paid2wins}/${by2wins}`;
+                  })()}
+                </div>
+                <div className={`text-xs mt-1 font-mono ${isDarkMode ? 'text-red-300' : 'text-red-600'}`}>
+                  ₱{(() => {
+                    const paid2wins = registrations.filter(reg => {
+                      const entry = entries.find(e => e.entryName === reg.entryName);
+                      return entry?.gameType === '2wins' && reg.registrations.find(r => r.gameType === '2wins' && r.isPaid);
+                    }).length;
+                    return paid2wins * 500;
+                  })()}
+                </div>
               </div>
 
-              {/* 3-Wins Paid */}
+              {/* 3-Wins Paid - Based on Manage Entries */}
               <div className={`p-4 rounded-lg border ${isDarkMode ? 'bg-gradient-to-br from-blue-900/30 to-blue-900/20 border-blue-700' : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200'} shadow-md hover:shadow-lg transition`}>
-                <div className={`text-xs font-bold ${isDarkMode ? 'text-blue-300' : 'text-blue-700'}`}>3-WINS PAID</div>
-                <div className={`text-3xl font-bold mt-2 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>{stats.paid3wins}/{stats.by3wins}</div>
-                <div className={`text-xs mt-1 font-mono ${isDarkMode ? 'text-blue-300' : 'text-blue-600'}`}>₱{stats.paid3wins * 1000}</div>
+                <div className={`text-xs font-bold ${isDarkMode ? 'text-blue-300' : 'text-blue-700'}`}>3-WINS REGISTERED</div>
+                <div className={`text-3xl font-bold mt-2 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                  {(() => {
+                    const by3wins = entries.filter(e => e.gameType === '3wins').length;
+                    const paid3wins = registrations.filter(reg => {
+                      const entry = entries.find(e => e.entryName === reg.entryName);
+                      return entry?.gameType === '3wins' && reg.registrations.find(r => r.gameType === '3wins' && r.isPaid);
+                    }).length;
+                    return `${paid3wins}/${by3wins}`;
+                  })()}
+                </div>
+                <div className={`text-xs mt-1 font-mono ${isDarkMode ? 'text-blue-300' : 'text-blue-600'}`}>
+                  ₱{(() => {
+                    const paid3wins = registrations.filter(reg => {
+                      const entry = entries.find(e => e.entryName === reg.entryName);
+                      return entry?.gameType === '3wins' && reg.registrations.find(r => r.gameType === '3wins' && r.isPaid);
+                    }).length;
+                    return paid3wins * 1000;
+                  })()}
+                </div>
               </div>
 
               {/* Champion 2-Wins */}
