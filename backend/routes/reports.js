@@ -673,10 +673,10 @@ router.put("/unlock/:id", async (req, res) => {
 
 /**
  * 🎯 GET /api/reports/betting-event
- * Fetch betting event report data from external API (Super Admin Only)
+ * Fetch betting event report data from external API (Super Admin & Supervisor)
  * Supports date filtering with fromDate and toDate query parameters
  */
-router.get("/betting-event", requireAuth, requireRole(['super_admin']), async (req, res) => {
+router.get("/betting-event", requireAuth, requireRole(['super_admin', 'admin', 'supervisor']), async (req, res) => {
   try {
     console.log("🎯 Fetching betting event report data...");
 
