@@ -957,6 +957,7 @@ export default function ChickenFight() {
                   <tr className={isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}>
                     <th className={`px-6 py-3 text-left font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>Entry Name</th>
                     <th className={`px-6 py-3 text-center font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>2-Wins (₱500)</th>
+                    <th className={`px-6 py-3 text-center font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>3-Wins (₱1,000)</th>
                     <th className={`px-6 py-3 text-center font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>Insurance</th>
                     <th className={`px-6 py-3 text-left font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>Actions</th>
                   </tr>
@@ -993,6 +994,17 @@ export default function ChickenFight() {
                           ) : <span className={isDarkMode ? 'text-gray-500' : 'text-gray-400'}>-</span>}
                         </td>
                         <td className="px-6 py-4 text-center">
+                          {reg3wins ? (
+                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                              reg3wins.isPaid
+                                ? isDarkMode ? 'bg-green-900/30 text-green-300' : 'bg-green-100 text-green-700'
+                                : isDarkMode ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-700'
+                            }`}>
+                              {reg3wins.isPaid ? '✓ PAID' : 'UNPAID'}
+                            </span>
+                          ) : <span className={isDarkMode ? 'text-gray-500' : 'text-gray-400'}>-</span>}
+                        </td>
+                        <td className="px-6 py-4 text-center">
                           <div className="flex flex-col items-center gap-2">
                             <span className={reg.insurancePaid ? 'text-purple-600 font-bold text-sm' : 'text-gray-600 text-sm'}>
                               {reg.insurancePaid ? '✓' : '✗'}
@@ -1023,13 +1035,14 @@ export default function ChickenFight() {
                               onClick={() => {
                                 const gameTypes = [];
                                 if (reg.registrations.find(r => r.gameType === '2wins')?.isPaid) gameTypes.push('2wins');
+                                if (reg.registrations.find(r => r.gameType === '3wins')?.isPaid) gameTypes.push('3wins');
                                 if (gameTypes.length > 0) {
                                   gameTypes.forEach(gt => handleWithdrawPayment(reg._id, gt));
                                 }
                               }}
-                              disabled={!reg.registrations.find(r => r.gameType === '2wins')?.isPaid}
+                              disabled={!reg.registrations.some(r => r.isPaid)}
                               className={`px-3 py-1 text-xs rounded font-medium ${
-                                reg.registrations.find(r => r.gameType === '2wins')?.isPaid
+                                reg.registrations.some(r => r.isPaid)
                                   ? isDarkMode ? 'bg-yellow-900 text-yellow-200 hover:bg-yellow-800' : 'bg-yellow-100 text-yellow-700'
                                   : isDarkMode ? 'bg-gray-700 text-gray-500 cursor-not-allowed' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                               }`}
