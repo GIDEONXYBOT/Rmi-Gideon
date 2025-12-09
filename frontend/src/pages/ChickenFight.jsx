@@ -879,7 +879,45 @@ export default function ChickenFight() {
             <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
               <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Total Revenue</div>
               <div className={`text-3xl font-bold ${isDarkMode ? 'text-yellow-400' : 'text-yellow-600'}`}>
-                ₱{stats.totalRevenue}
+                ₱{(() => {
+                  // Calculate total revenue collected
+                  const totalCollected = stats.totalRevenue || 0;
+                  
+                  // Calculate champion payouts
+                  const meronChampionCount = Object.entries(
+                    fights.reduce((acc, fight) => {
+                      const entry = entries.find(e => e.entryName === fight.entryName);
+                      if (entry?.gameType === '2wins' && fight.result === 1) {
+                        acc[fight.entryName] = (acc[fight.entryName] || 0) + 1;
+                      }
+                      return acc;
+                    }, {})
+                  ).filter(([_, wins]) => wins >= 2).length;
+                  const meronChampionPayout = meronChampionCount * 500;
+                  
+                  const walaChampionCount = Object.entries(
+                    fights.reduce((acc, fight) => {
+                      const entry = entries.find(e => e.entryName === fight.entryName);
+                      if (entry?.gameType === '3wins' && fight.result === 1) {
+                        acc[fight.entryName] = (acc[fight.entryName] || 0) + 1;
+                      }
+                      return acc;
+                    }, {})
+                  ).filter(([_, wins]) => wins >= 3).length;
+                  const walaChampionPayout = walaChampionCount * 1000;
+                  
+                  // Calculate insurance total
+                  const insuranceCount = registrations.filter(r => r.insurancePaid).length;
+                  const insuranceTotal = insuranceCount * 100;
+                  
+                  // Net revenue after deducting champions and insurance
+                  const netRevenue = totalCollected - meronChampionPayout - walaChampionPayout - insuranceTotal;
+                  
+                  return Math.max(0, netRevenue);
+                })()}
+              </div>
+              <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                Gross: ₱{stats.totalRevenue} - Champions & Insurance
               </div>
             </div>
           </div>
