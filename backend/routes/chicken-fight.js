@@ -81,6 +81,32 @@ router.get('/entries', async (req, res) => {
   }
 });
 
+// Delete an entry
+router.delete('/entries/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const entry = await ChickenFightEntry.findById(id);
+    if (!entry) {
+      return res.status(404).json({ success: false, message: 'Entry not found' });
+    }
+
+    // Soft delete - mark as inactive
+    entry.isActive = false;
+    entry.deletedBy = req.user._id;
+    entry.deletedAt = new Date();
+    await entry.save();
+
+    res.json({
+      success: true,
+      message: 'Entry deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting entry:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // ============ BET ENDPOINTS ============
 
 // Place a bet

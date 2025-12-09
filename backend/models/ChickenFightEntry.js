@@ -40,6 +40,15 @@ const chickenFightEntrySchema = new mongoose.Schema(
     isActive: {
       type: Boolean,
       default: true
+    },
+    deletedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null
+    },
+    deletedAt: {
+      type: Date,
+      default: null
     }
   },
   { timestamps: true }
