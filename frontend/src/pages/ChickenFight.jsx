@@ -664,6 +664,24 @@ export default function ChickenFight() {
           <div className="bg-red-700 text-white rounded-lg p-8">
             <h2 className="text-2xl font-bold mb-4">MERON</h2>
             
+            {/* Leg Band Search */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">Search Leg Band</label>
+              <input
+                type="text"
+                value={meronLegBandSearch}
+                onChange={(e) => handleMeronLegBandSearch(e.target.value)}
+                placeholder="Enter leg band number..."
+                className="w-full px-4 py-2 rounded-lg bg-red-600 text-white border border-red-500 placeholder-red-300"
+              />
+              {meronLegBandSearch && selectedMeronEntry && (
+                <div className="mt-2 p-2 bg-red-600 rounded text-sm">
+                  <div className="font-medium">{meronEntry?.entryName}</div>
+                  <div className="text-xs">Leg Band: {selectedMeronLegBand}</div>
+                </div>
+              )}
+            </div>
+            
             {/* Available Entries - Only those with remaining leg bands */}
             <div className="mb-4 p-3 bg-red-600 rounded text-sm max-h-32 overflow-y-auto">
               <div className="font-medium mb-2">Available:</div>
@@ -735,23 +753,6 @@ export default function ChickenFight() {
                 )}
               </div>
             </div>
-            
-            {/* Available Entries - Only those with remaining leg bands */}
-            <div className="mb-4 p-3 bg-blue-600 rounded text-sm max-h-32 overflow-y-auto">
-              <div className="font-medium mb-2">Available:</div>
-              <div className="space-y-1">
-                {availableWalaEntries.map(entry => (
-                  <div key={entry._id} className="text-xs">
-                    {entry.entryName} ({entry.gameType})
-                  </div>
-                ))}
-                {availableWalaEntries.length === 0 && (
-                  <div className="text-xs text-blue-200">No entries available</div>
-                )}
-              </div>
-            </div>
-
-            {/* Leg Band Selector */}
 
             {/* Win Button */}
             <button
