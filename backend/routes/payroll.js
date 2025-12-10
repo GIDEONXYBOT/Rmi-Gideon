@@ -28,6 +28,38 @@ router.get("/all", async (req, res) => {
 });
 
 /* ========================================================
+   💰 PAYROLL MANAGEMENT: Get all payrolls with user details for admin
+======================================================== */
+router.get("/management", async (req, res) => {
+  try {
+    const payrolls = await Payroll.find()
+      .populate("user", "username name role")
+      .sort({ date: -1 })
+      .lean();
+
+    // Format data for management view
+    const formattedPayrolls = payrolls.map(p => ({
+      _id: p._id,
+      name: p.user?.name || "Unknown",
+      role: p.user?.role || "unknown",
+      date: p.date,
+      baseSalary: p.baseSalary,
+      totalOver: p.over || 0,
+      totalShort: p.short || 0,
+      totalDeductions: p.deduction || 0,
+      totalSalary: p.totalSalary,
+      approved: p.approved || false,
+      locked: p.locked || false,
+    }));
+
+    res.json({ success: true, payrolls: formattedPayrolls });
+  } catch (err) {
+    console.error("❌ Error fetching payroll management:", err);
+    res.status(500).json({ message: "Failed to fetch payroll management data" });
+  }
+});
+
+/* ========================================================
    💰 NEW: Get latest payroll by USER ID (for SidebarLayout)
 ======================================================== */
 router.get("/user/:userId", async (req, res) => {
