@@ -51,6 +51,31 @@ const chickenFightGameSchema = new mongoose.Schema(
     isFinalized: {
       type: Boolean,
       default: false
+    },
+    fights: [
+      {
+        meronEntry: String,
+        meronLegBand: String,
+        walaEntry: String,
+        walaLegBand: String,
+        winner: String,
+        timestamp: {
+          type: Date,
+          default: Date.now
+        }
+      }
+    ],
+    fightNumber: {
+      type: Number,
+      default: 0
+    },
+    lastUpdatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    lastUpdatedAt: {
+      type: Date,
+      default: Date.now
     }
   },
   { timestamps: true }

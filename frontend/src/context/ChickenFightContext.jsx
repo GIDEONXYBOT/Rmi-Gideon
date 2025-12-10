@@ -75,8 +75,14 @@ export function ChickenFightProvider({ children }) {
         }
       }
     } catch (error) {
-      // Silent fail on polling errors
-      console.debug('Polling update check failed (this is normal):', error.message);
+      // Log actual errors to help with debugging
+      if (error.response?.status === 401) {
+        console.warn('🔐 Auth token issue for chicken fight sync');
+      } else if (error.response?.status === 500) {
+        console.error('❌ Server error syncing chicken fight:', error.response?.data?.message);
+      } else {
+        console.debug('Polling update check issue:', error.message);
+      }
     }
   };
 
