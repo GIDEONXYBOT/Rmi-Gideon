@@ -1094,4 +1094,150 @@ router.get("/check/no-base-salary", requireAuth, requireRole(['admin', 'super_ad
   }
 });
 
+// Clean up duplicate payroll records for the same day
+router.post("/cleanup/duplicates", requireAuth, requireRole("admin", "super_admin"), async (req, res) => {
+  try {
+    const { daysBack = 7 } = req.body;
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysBack);
+
+    // Find all payroll records in the date range
+    const payrolls = await Payroll.find({
+      createdAt: { $gte: cutoffDate }
+    }).sort({ user: 1, createdAt: -1 });
+
+    // Group by user and date (ignoring time)
+    const grouped = {};
+    payrolls.forEach((payroll) => {
+      const dateKey = payroll.createdAt.toISOString().split("T")[0];
+      const userKey = `${payroll.user}-${dateKey}`;
+
+      if (!grouped[userKey]) {
+        grouped[userKey] = [];
+      }
+      grouped[userKey].push(payroll);
+    });
+
+    let totalDeleted = 0;
+    const deletedDetails = [];
+
+    // For each user-date combination with duplicates
+    for (const userKey in grouped) {
+      if (grouped[userKey].length > 1) {
+        // Sort by createdAt descending (newest first)
+        const records = grouped[userKey].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        const keepRecord = records[0]; // Keep the newest
+        const deleteRecords = records.slice(1); // Delete the rest
+
+        for (const record of deleteRecords) {
+          await Payroll.findByIdAndDelete(record._id);
+          totalDeleted++;
+          deletedDetails.push({
+            userId: keepRecord.user,
+            date: userKey,
+            deletedId: record._id.toString(),
+            keptId: keepRecord._id.toString(),
+            deletedAmount: record.totalSalary,
+            keptAmount: keepRecord.totalSalary
+          });
+        }
+      }
+    }
+
+    console.log(`✅ Cleaned up ${totalDeleted} duplicate payroll records`);
+    res.json({
+      success: true,
+      message: `Deleted ${totalDeleted} duplicate payroll records from past ${daysBack} days`,
+      totalDeleted,
+      details: deletedDetails
+    });
+  } catch (err) {
+    console.error("❌ Error cleaning up duplicates:", err);
+    res.status(500).json({ message: "Failed to clean up duplicates", error: err.message });
+  }
+});
+
+// Recalculate payroll totals with newly fixed salaries
+router.post("/recalculate/with-fixed-salaries", requireAuth, requireRole("admin", "super_admin"), async (req, res) => {
+  try {
+    const { userIds = null, daysBack = 30 } = req.body;
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysBack);
+
+    // Build query
+    let payrollQuery = { createdAt: { $gte: cutoffDate } };
+    if (userIds && Array.isArray(userIds) && userIds.length > 0) {
+      payrollQuery.user = { $in: userIds };
+    }
+
+    // Get payroll records to recalculate
+    const payrolls = await Payroll.find(payrollQuery).populate("user");
+
+    if (payrolls.length === 0) {
+      return res.json({
+        success: true,
+        message: "No payroll records found to recalculate",
+        totalRecalculated: 0
+      });
+    }
+
+    let totalRecalculated = 0;
+    const recalculatedDetails = [];
+
+    for (const payroll of payrolls) {
+      const user = payroll.user;
+      if (!user) continue;
+
+      const oldBaseSalary = payroll.baseSalary;
+      const oldTotalSalary = payroll.totalSalary;
+
+      // Update with current user's base salary
+      payroll.baseSalary = user.baseSalary || 0;
+
+      // Recalculate total salary
+      let newTotalSalary = payroll.baseSalary;
+
+      // Add withdrawals
+      if (payroll.withdrawals && Array.isArray(payroll.withdrawals)) {
+        newTotalSalary += payroll.withdrawals.reduce((sum, w) => sum + (w.amount || 0), 0);
+      }
+
+      // Add adjustments
+      if (payroll.adjustments && Array.isArray(payroll.adjustments)) {
+        newTotalSalary += payroll.adjustments.reduce((sum, a) => sum + (a.amount || 0), 0);
+      }
+
+      payroll.totalSalary = newTotalSalary;
+
+      // Mark as modified for subdocuments
+      payroll.markModified("baseSalary");
+      payroll.markModified("totalSalary");
+
+      await payroll.save();
+      totalRecalculated++;
+
+      recalculatedDetails.push({
+        userId: payroll.user._id.toString(),
+        payrollId: payroll._id.toString(),
+        oldBaseSalary,
+        newBaseSalary: payroll.baseSalary,
+        oldTotalSalary,
+        newTotalSalary: payroll.totalSalary,
+        difference: payroll.totalSalary - oldTotalSalary
+      });
+    }
+
+    console.log(`✅ Recalculated ${totalRecalculated} payroll records with fixed salaries`);
+    res.json({
+      success: true,
+      message: `Recalculated ${totalRecalculated} payroll records with fixed salaries`,
+      totalRecalculated,
+      details: recalculatedDetails
+    });
+  } catch (err) {
+    console.error("❌ Error recalculating payrolls:", err);
+    res.status(500).json({ message: "Failed to recalculate payrolls", error: err.message });
+  }
+});
+
 export default router;
