@@ -2,10 +2,24 @@ import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { AlertCircle, Plus, Loader, Check, X } from 'lucide-react';
 import { SettingsContext } from '../context/SettingsContext';
+import { ChickenFightContext } from '../context/ChickenFightContext';
 import { getApiUrl } from '../utils/apiConfig';
 
 export default function ChickenFight() {
   const { isDarkMode } = useContext(SettingsContext);
+  const { 
+    fights, 
+    setFights, 
+    fightNumber, 
+    setFightNumber, 
+    today,
+    syncing,
+    loadTodaysFights,
+    addFight,
+    removeFight,
+    updateFight
+  } = useContext(ChickenFightContext);
+  
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   
@@ -29,35 +43,15 @@ export default function ChickenFight() {
   const [selectedWalaEntry, setSelectedWalaEntry] = useState('');
   const [selectedWalaLegBand, setSelectedWalaLegBand] = useState('');
   const [walaLegBandSearch, setWalaLegBandSearch] = useState('');
-  const [fightNumber, setFightNumber] = useState(0);
-  const [fights, setFights] = useState([]); // Track fight results
   const [showHistory, setShowHistory] = useState(false);
   const [historyDates, setHistoryDates] = useState([]);
   const [selectedHistoryDate, setSelectedHistoryDate] = useState(null);
   const [historyFights, setHistoryFights] = useState([]);
 
-  const today = new Date().toISOString().split('T')[0];
-
-  // Load fights from localStorage on mount
+  // Load fights from context on mount
   useEffect(() => {
-    const savedFights = localStorage.getItem(`chicken-fight-${today}`);
-    const savedFightNumber = localStorage.getItem(`chicken-fight-number-${today}`);
-    
-    if (savedFights) {
-      setFights(JSON.parse(savedFights));
-    }
-    if (savedFightNumber) {
-      setFightNumber(parseInt(savedFightNumber));
-    }
-  }, [today]);
-
-  // Save fights to localStorage whenever they change
-  useEffect(() => {
-    localStorage.setItem(`chicken-fight-${today}`, JSON.stringify(fights));
-    localStorage.setItem(`chicken-fight-number-${today}`, fightNumber.toString());
-  }, [fights, fightNumber, today]);
-
-  // Load history dates on mount
+    loadTodaysFights();
+  }, []);
   useEffect(() => {
     loadHistoryDates();
   }, []);
