@@ -24,6 +24,7 @@ axios.interceptors.request.use(
 // Context
 import { SettingsProvider, SettingsContext } from "./context/SettingsContext.jsx";
 import { ToastProvider } from "./context/ToastContext.jsx";
+import { ChickenFightProvider } from "./context/ChickenFightContext.jsx";
 
 // Layout
 import SidebarLayout from "./components/SidebarLayout.jsx";
@@ -146,8 +147,9 @@ function App() {
     <ErrorBoundary>
       <SettingsProvider>
         <ToastProvider>
-          <BrowserRouter>
-            <Routes>
+          <ChickenFightProvider>
+            <BrowserRouter>
+              <Routes>
             {/* Redirect root to login */}
             <Route path="/" element={<Navigate to="/login" />} />
 
@@ -353,6 +355,8 @@ function App() {
                       <Route path="payroll" element={<Payroll />} />
                       <Route path="live-map" element={<AdminMapEditor />} />
                       <Route path="map-editor" element={<AdminMapEditor />} />
+                      <Route path="chicken-fight" element={<ChickenFight />} />
+                      <Route path="chicken-fight-entries" element={<ChickenFightEntries />} />
                       <Route path="settings" element={<AdminSettings />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
@@ -434,8 +438,9 @@ function App() {
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
-      </ToastProvider>
-    </SettingsProvider>
+          </ChickenFightProvider>
+        </ToastProvider>
+      </SettingsProvider>
     </ErrorBoundary>
   );
 }
