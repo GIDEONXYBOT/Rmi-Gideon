@@ -377,4 +377,88 @@ router.get('/game/results', async (req, res) => {
   }
 });
 
+// Save fight results for today
+router.post('/fights/save', async (req, res) => {
+  try {
+    const { fights, fightNumber } = req.body;
+
+    if (!Array.isArray(fights)) {
+      return res.status(400).json({ success: false, message: 'fights array is required' });
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    let game = await ChickenFightGame.findOne({ gameDate: today });
+
+    if (!game) {
+      game = new ChickenFightGame({
+        gameDate: today,
+        createdBy: req.user._id,
+        fights: fights,
+        fightNumber: fightNumber || 0
+      });
+    } else {
+      game.fights = fights;
+      game.fightNumber = fightNumber || 0;
+      game.lastUpdatedBy = req.user._id;
+      game.lastUpdatedAt = new Date();
+    }
+
+    await game.save();
+
+    res.json({
+      success: true,
+      message: 'Fights saved successfully',
+      game
+    });
+  } catch (error) {
+    console.error('Error saving fights:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get fight results for today
+router.get('/fights/today', async (req, res) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const game = await ChickenFightGame.findOne({ gameDate: today });
+
+    res.json({
+      success: true,
+      fights: game?.fights || [],
+      fightNumber: game?.fightNumber || 0,
+      game
+    });
+  } catch (error) {
+    console.error('Error fetching fights:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get fight results for a specific date
+router.get('/fights/:date', async (req, res) => {
+  try {
+    const { date } = req.params;
+    const startDate = new Date(`${date}T00:00:00Z`);
+    const endDate = new Date(`${date}T23:59:59Z`);
+
+    const game = await ChickenFightGame.findOne({
+      gameDate: { $gte: startDate, $lte: endDate }
+    });
+
+    res.json({
+      success: true,
+      fights: game?.fights || [],
+      fightNumber: game?.fightNumber || 0,
+      game
+    });
+  } catch (error) {
+    console.error('Error fetching fights for date:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 export default router;
