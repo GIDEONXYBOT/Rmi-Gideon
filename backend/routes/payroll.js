@@ -1201,14 +1201,29 @@ router.post("/recalculate/with-fixed-salaries", requireAuth, async (req, res) =>
       // Recalculate total salary
       let newTotalSalary = payroll.baseSalary;
 
-      // Add withdrawals
-      if (payroll.withdrawals && Array.isArray(payroll.withdrawals)) {
-        newTotalSalary += payroll.withdrawals.reduce((sum, w) => sum + (w.amount || 0), 0);
+      // Add "over" (bonus/extra earnings)
+      if (payroll.over) {
+        newTotalSalary += payroll.over;
       }
 
-      // Add adjustments
+      // Subtract "short" (deduction for shortfall)
+      if (payroll.short) {
+        newTotalSalary -= payroll.short;
+      }
+
+      // Subtract deduction
+      if (payroll.deduction) {
+        newTotalSalary -= payroll.deduction;
+      }
+
+      // Subtract withdrawal
+      if (payroll.withdrawal) {
+        newTotalSalary -= payroll.withdrawal;
+      }
+
+      // Add/subtract admin adjustments
       if (payroll.adjustments && Array.isArray(payroll.adjustments)) {
-        newTotalSalary += payroll.adjustments.reduce((sum, a) => sum + (a.amount || 0), 0);
+        newTotalSalary += payroll.adjustments.reduce((sum, a) => sum + (a.delta || 0), 0);
       }
 
       payroll.totalSalary = newTotalSalary;
