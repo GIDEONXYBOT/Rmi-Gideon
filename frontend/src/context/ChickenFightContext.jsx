@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { getApiUrl } from '../utils/apiConfig';
 
@@ -13,6 +13,8 @@ export function ChickenFightProvider({ children }) {
   const [historyFights, setHistoryFights] = useState([]);
   const [selectedHistoryDate, setSelectedHistoryDate] = useState(null);
   const [syncing, setSyncing] = useState(false);
+  const pollIntervalRef = useRef(null);
+  const lastSyncRef = useRef(null);
 
   const today = new Date().toISOString().split('T')[0];
   const API_URL = getApiUrl();
@@ -20,6 +22,14 @@ export function ChickenFightProvider({ children }) {
   // Load fights from backend on mount
   useEffect(() => {
     loadTodaysFights();
+    // Start polling for updates every 2 seconds
+    startPolling();
+
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
+    };
   }, [today]);
 
   // Save fights to backend whenever they change
@@ -28,6 +38,42 @@ export function ChickenFightProvider({ children }) {
       saveFightsToBackend();
     }
   }, [fights, fightNumber]);
+
+  const startPolling = () => {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+    }
+
+    pollIntervalRef.current = setInterval(() => {
+      checkForUpdates();
+    }, 2000); // Poll every 2 seconds
+  };
+
+  const checkForUpdates = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/api/chicken-fight/fights/today`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.data.success) {
+        const serverFights = response.data.fights || [];
+        const serverFightNumber = response.data.fightNumber || 0;
+
+        // Only update if data is different (to avoid unnecessary re-renders)
+        if (JSON.stringify(serverFights) !== JSON.stringify(fights) || 
+            serverFightNumber !== fightNumber) {
+          console.log('🔄 Syncing chicken fight data from server...');
+          setFights(serverFights);
+          setFightNumber(serverFightNumber);
+          lastSyncRef.current = new Date().getTime();
+        }
+      }
+    } catch (error) {
+      // Silent fail on polling errors
+      console.debug('Polling update check failed (this is normal):', error.message);
+    }
+  };
 
   const loadTodaysFights = async () => {
     try {
@@ -40,6 +86,7 @@ export function ChickenFightProvider({ children }) {
       if (response.data.success) {
         setFights(response.data.fights || []);
         setFightNumber(response.data.fightNumber || 0);
+        lastSyncRef.current = new Date().getTime();
       }
     } catch (error) {
       console.error('Error loading today\'s fights:', error);
@@ -64,10 +111,16 @@ export function ChickenFightProvider({ children }) {
   const saveFightsToBackend = async () => {
     try {
       const token = localStorage.getItem('token');
-      await axios.post(`${API_URL}/api/chicken-fight/fights/save`, 
+      const response = await axios.post(`${API_URL}/api/chicken-fight/fights/save`, 
         { fights, fightNumber },
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
+      
+      if (response.data.success) {
+        console.log('✅ Fights saved to server');
+        lastSyncRef.current = new Date().getTime();
+      }
+      
       // Also save to localStorage as backup
       localStorage.setItem(`chicken-fight-${today}`, JSON.stringify(fights));
       localStorage.setItem(`chicken-fight-number-${today}`, fightNumber.toString());
@@ -171,6 +224,7 @@ export function ChickenFightProvider({ children }) {
     updateFight,
     removeFight,
     loadTodaysFights,
+    checkForUpdates,
   };
 
   return (
