@@ -337,8 +337,8 @@ export default function SidebarLayout({ role, children }) {
     'betting-analytics': { to: r => `/${r}/betting-analytics`, icon: <BarChart3 size={18} />, text: 'Betting Analytics', roles: ['admin','super_admin'] },
     'betting-event-report': { to: r => `/${r}/betting-event-report`, icon: <TrendingUp size={18} />, text: 'Betting Event Report', roles: ['super_admin','admin','supervisor'] },
     'key-performance-indicator': { to: r => `/${r}/key-performance-indicator`, icon: <BarChart3 size={18} />, text: 'Key Performance Indicator', roles: ['admin','super_admin','supervisor'] },
-    'chicken-fight': { to: r => `/${r}/chicken-fight`, icon: <TrendingUp size={18} />, text: 'Chicken Fight', roles: ['admin','super_admin','supervisor'] },
-    'chicken-fight-entries': { to: r => `/${r}/chicken-fight-entries`, icon: <Settings size={18} />, text: 'Manage Entries', roles: ['admin','super_admin','supervisor'] },
+    'chicken-fight': { to: r => `/${r}/chicken-fight`, icon: <TrendingUp size={18} />, text: 'Chicken Fight', roles: ['admin','super_admin','supervisor','declarator'] },
+    'chicken-fight-entries': { to: r => `/${r}/chicken-fight-entries`, icon: <Settings size={18} />, text: 'Manage Entries', roles: ['admin','super_admin','supervisor','declarator'] },
     upload: { to: r => `/upload`, icon: <Camera size={18} />, text: 'Upload', roles: ['admin','super_admin','supervisor','teller','declarator','supervisor_teller'] },
     feed: { to: r => `/feed`, icon: <FileText size={18} />, text: 'Feed', roles: ['admin','super_admin','supervisor','teller','declarator','supervisor_teller'] },
     // Extra items that appear in config but not previously mapped
@@ -368,7 +368,7 @@ export default function SidebarLayout({ role, children }) {
     supervisor: ['dashboard','upload','feed','users','supervisor-report','teller-reports','teller-reports-viewer','teller-management','staff-performance','teller-month','history','payroll','suggested-schedule','key-performance-indicator','deployments','live-map','betting-event-report','chicken-fight','chicken-fight-entries'],
     supervisor_teller: ['dashboard','upload','feed','users','supervisor-report','teller-reports','teller-reports-viewer','teller-management','staff-performance','teller-month','history','payroll','suggested-schedule','deployments','live-map','betting-event-report','chicken-fight','chicken-fight-entries'],
     teller: ['dashboard','upload','feed','users','teller-reports','history','payroll','teller-month','suggested-schedule','deployments','live-map'],
-    declarator: ['dashboard','upload','feed','users','deployments','suggested-schedule','live-map','map-editor','settings'],
+    declarator: ['dashboard','upload','feed','users','deployments','suggested-schedule','live-map','map-editor','settings','chicken-fight','chicken-fight-entries'],
   };
 
   const [permissionsLoaded, setPermissionsLoaded] = useState(false);
