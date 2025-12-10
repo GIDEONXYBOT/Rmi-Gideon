@@ -1,4 +1,5 @@
 import React, { useState, useContext } from "react";
+import axios from "axios";
 import { SettingsContext } from "../context/SettingsContext";
 import { useToast } from "../context/ToastContext";
 import { getApiUrl } from "../utils/apiConfig";
@@ -20,28 +21,23 @@ const PayrollCleanupTools = () => {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`${apiBaseUrl}/api/payroll/cleanup/duplicates`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ daysBack }),
-        credentials: "include"
-      });
+      const token = localStorage.getItem("token");
+      const response = await axios.post(`${apiBaseUrl}/api/payroll/cleanup/duplicates`, 
+        { daysBack },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-      const data = await response.json();
-
-      if (response.ok) {
+      if (response.status === 200) {
         setResults({
           type: "duplicates",
-          ...data,
+          ...response.data,
           timestamp: new Date().toLocaleString()
         });
-        showToast(`✅ Deleted ${data.totalDeleted} duplicate payroll records`, "success");
-      } else {
-        showToast(`❌ ${data.message}`, "error");
+        showToast(`✅ Deleted ${response.data.totalDeleted} duplicate payroll records`, "success");
       }
     } catch (err) {
       console.error("❌ Error cleaning up duplicates:", err);
-      showToast(`❌ Error: ${err.message}`, "error");
+      showToast(`❌ Error: ${err.response?.data?.message || err.message}`, "error");
     } finally {
       setIsLoading(false);
     }
@@ -54,28 +50,23 @@ const PayrollCleanupTools = () => {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`${apiBaseUrl}/api/payroll/recalculate/with-fixed-salaries`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ daysBack }),
-        credentials: "include"
-      });
+      const token = localStorage.getItem("token");
+      const response = await axios.post(`${apiBaseUrl}/api/payroll/recalculate/with-fixed-salaries`, 
+        { daysBack },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-      const data = await response.json();
-
-      if (response.ok) {
+      if (response.status === 200) {
         setResults({
           type: "recalculate",
-          ...data,
+          ...response.data,
           timestamp: new Date().toLocaleString()
         });
-        showToast(`✅ Recalculated ${data.totalRecalculated} payroll records`, "success");
-      } else {
-        showToast(`❌ ${data.message}`, "error");
+        showToast(`✅ Recalculated ${response.data.totalRecalculated} payroll records`, "success");
       }
     } catch (err) {
       console.error("❌ Error recalculating payrolls:", err);
-      showToast(`❌ Error: ${err.message}`, "error");
+      showToast(`❌ Error: ${err.response?.data?.message || err.message}`, "error");
     } finally {
       setIsLoading(false);
     }
@@ -88,51 +79,34 @@ const PayrollCleanupTools = () => {
 
     setIsLoading(true);
     try {
+      const token = localStorage.getItem("token");
+      const headers = { Authorization: `Bearer ${token}` };
+
       // First cleanup duplicates
-      const cleanupResponse = await fetch(`${apiBaseUrl}/api/payroll/cleanup/duplicates`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ daysBack }),
-        credentials: "include"
-      });
+      const cleanupResponse = await axios.post(`${apiBaseUrl}/api/payroll/cleanup/duplicates`, 
+        { daysBack },
+        { headers }
+      );
 
-      const cleanupData = await cleanupResponse.json();
-
-      if (!cleanupResponse.ok) {
-        showToast(`❌ Cleanup failed: ${cleanupData.message}`, "error");
-        setIsLoading(false);
-        return;
-      }
-
-      showToast(`✅ Deleted ${cleanupData.totalDeleted} duplicate records`, "success");
+      showToast(`✅ Deleted ${cleanupResponse.data.totalDeleted} duplicate records`, "success");
 
       // Then recalculate
-      const recalcResponse = await fetch(`${apiBaseUrl}/api/payroll/recalculate/with-fixed-salaries`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ daysBack }),
-        credentials: "include"
-      });
-
-      const recalcData = await recalcResponse.json();
-
-      if (!recalcResponse.ok) {
-        showToast(`❌ Recalculation failed: ${recalcData.message}`, "error");
-        setIsLoading(false);
-        return;
-      }
+      const recalcResponse = await axios.post(`${apiBaseUrl}/api/payroll/recalculate/with-fixed-salaries`, 
+        { daysBack },
+        { headers }
+      );
 
       setResults({
         type: "both",
-        cleanup: cleanupData,
-        recalculate: recalcData,
+        cleanup: cleanupResponse.data,
+        recalculate: recalcResponse.data,
         timestamp: new Date().toLocaleString()
       });
 
       showToast(`✅ Cleanup and recalculation complete!`, "success");
     } catch (err) {
       console.error("❌ Error running operations:", err);
-      showToast(`❌ Error: ${err.message}`, "error");
+      showToast(`❌ Error: ${err.response?.data?.message || err.message}`, "error");
     } finally {
       setIsLoading(false);
     }
