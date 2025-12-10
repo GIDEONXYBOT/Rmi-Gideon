@@ -1047,4 +1047,51 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
+/* ========================================================
+   🔍 CHECK: Users without base salary
+======================================================== */
+router.get("/check/no-base-salary", requireAuth, requireRole(['admin', 'super_admin']), async (req, res) => {
+  try {
+    // Find all users without base salary (baseSalary is 0, null, or undefined)
+    const usersWithoutBaseSalary = await User.find({
+      $or: [
+        { baseSalary: { $exists: false } },
+        { baseSalary: null },
+        { baseSalary: 0 }
+      ],
+      role: 'teller', // Only check tellers
+      active: true
+    })
+    .select('username name email role baseSalary active')
+    .sort({ username: 1 })
+    .lean();
+
+    // Get their latest payroll records
+    const usersWithPayrolls = await Promise.all(
+      usersWithoutBaseSalary.map(async (user) => {
+        const latestPayroll = await Payroll.findOne({ user: user._id })
+          .select('baseSalary totalSalary createdAt')
+          .sort({ createdAt: -1 })
+          .lean();
+        
+        return {
+          ...user,
+          latestPayroll: latestPayroll || null
+        };
+      })
+    );
+
+    console.log(`✅ Found ${usersWithPayrolls.length} users without base salary`);
+    
+    res.json({ 
+      success: true, 
+      count: usersWithPayrolls.length,
+      users: usersWithPayrolls 
+    });
+  } catch (err) {
+    console.error("❌ Error checking users without base salary:", err);
+    res.status(500).json({ message: "Failed to check users without base salary", error: err.message });
+  }
+});
+
 export default router;
