@@ -41,17 +41,24 @@ export default function BettingEventReport() {
       setLoading(true);
       setError(null);
 
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('Authentication token not found. Please log in again.');
+        setLoading(false);
+        return;
+      }
+
       const url = `${getApiUrl()}/api/reports/betting-event`;
 
       const response = await axios.get(url, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         }
       });
 
       if (response.data.success) {
         setReportData({
-          data: response.data.data.data,
+          data: response.data.data.data || response.data.data,
           filtered: response.data.data.filtered,
           dateRange: response.data.data.dateRange
         });
@@ -61,7 +68,12 @@ export default function BettingEventReport() {
       }
     } catch (err) {
       console.error('Error fetching betting event data:', err);
-      setError(err.response?.data?.message || 'Failed to fetch betting event data');
+      const errorMessage = err.response?.data?.message || err.response?.status === 401 
+        ? 'Unauthorized - Please log in again' 
+        : err.response?.status === 403
+        ? 'Forbidden - You do not have permission to access this report'
+        : err.message || 'Failed to fetch betting event data';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
