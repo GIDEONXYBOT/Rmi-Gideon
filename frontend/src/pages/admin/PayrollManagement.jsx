@@ -72,13 +72,14 @@ export default function PayrollManagement() {
           <thead className="bg-indigo-600 text-white">
             <tr>
               <th className="p-2 border">Name</th>
-              <th className="p-2 border">Date</th>
               <th className="p-2 border">Role</th>
               <th className="p-2 border">Base</th>
               <th className="p-2 border">Over</th>
               <th className="p-2 border">Short</th>
               <th className="p-2 border">Deduction</th>
               <th className="p-2 border">Total</th>
+              <th className="p-2 border">Date</th>
+              <th className="p-2 border">Status</th>
               <th className="p-2 border">Status</th>
               <th className="p-2 border">Action</th>
             </tr>
@@ -87,7 +88,6 @@ export default function PayrollManagement() {
             {payrolls.map((p, i) => (
               <tr key={i} className="border hover:bg-gray-200 dark:hover:bg-gray-700">
                 <td className="p-2 border">{p.name}</td>
-                <td className="p-2 border">{p.date}</td>
                 <td className="p-2 border capitalize">{p.role}</td>
                 <td className="p-2 border text-right">₱{p.baseSalary}</td>
                 <td className="p-2 border text-right text-green-500">₱{p.totalOver}</td>
@@ -96,6 +96,7 @@ export default function PayrollManagement() {
                 <td className="p-2 border text-right font-semibold text-indigo-500">
                   ₱{p.totalSalary}
                 </td>
+                <td className="p-2 border">{p.date}</td>
                 <td className="p-2 border text-center">
                   {p.locked ? (
                     <span className="text-gray-400 font-semibold">Locked</span>
