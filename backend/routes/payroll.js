@@ -1191,8 +1191,12 @@ router.post("/recalculate/with-fixed-salaries", requireAuth, async (req, res) =>
       const oldBaseSalary = payroll.baseSalary;
       const oldTotalSalary = payroll.totalSalary;
 
-      // Update with current user's base salary
-      payroll.baseSalary = user.baseSalary || 0;
+      // Only update base salary if user's current salary is NOT zero
+      // This prevents zeroing out previously recorded salaries
+      if (user.baseSalary && user.baseSalary > 0) {
+        payroll.baseSalary = user.baseSalary;
+      }
+      // If user's salary is 0/null, keep the existing payroll base salary
 
       // Recalculate total salary
       let newTotalSalary = payroll.baseSalary;
