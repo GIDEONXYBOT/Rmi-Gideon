@@ -4,6 +4,7 @@ import { SettingsContext } from "../context/SettingsContext";
 import { useToast } from "../context/ToastContext";
 import { getApiUrl } from "../utils/apiConfig";
 import { AlertTriangle, CheckCircle, Loader2, RefreshCw, History } from "lucide-react";
+import UsersWithoutBaseSalary from "./UsersWithoutBaseSalary";
 
 export default function PayrollBaseSalaryFixer() {
   const { settings } = useContext(SettingsContext);
@@ -538,6 +539,11 @@ export default function PayrollBaseSalaryFixer() {
           )}
         </div>
       )}
+
+      {/* Users Without Base Salary Component */}
+      <div className="mt-8 border-t pt-6">
+        <UsersWithoutBaseSalary />
+      </div>
     </div>
   );
 }
