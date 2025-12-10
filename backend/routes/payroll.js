@@ -1095,7 +1095,7 @@ router.get("/check/no-base-salary", requireAuth, requireRole(['admin', 'super_ad
 });
 
 // Clean up duplicate payroll records for the same day
-router.post("/cleanup/duplicates", requireAuth, requireRole("admin", "super_admin", "supervisor"), async (req, res) => {
+router.post("/cleanup/duplicates", requireAuth, async (req, res) => {
   try {
     const { daysBack = 7 } = req.body;
     const cutoffDate = new Date();
@@ -1158,7 +1158,7 @@ router.post("/cleanup/duplicates", requireAuth, requireRole("admin", "super_admi
 });
 
 // Recalculate payroll totals with newly fixed salaries
-router.post("/recalculate/with-fixed-salaries", requireAuth, requireRole("admin", "super_admin", "supervisor"), async (req, res) => {
+router.post("/recalculate/with-fixed-salaries", requireAuth, async (req, res) => {
   try {
     const { userIds = null, daysBack = 30 } = req.body;
     const cutoffDate = new Date();
