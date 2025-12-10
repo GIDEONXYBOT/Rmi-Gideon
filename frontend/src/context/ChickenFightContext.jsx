@@ -52,6 +52,11 @@ export function ChickenFightProvider({ children }) {
   const checkForUpdates = async () => {
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        console.warn('No auth token found for chicken fight sync');
+        return;
+      }
+
       const response = await axios.get(`${API_URL}/api/chicken-fight/fights/today`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -79,6 +84,13 @@ export function ChickenFightProvider({ children }) {
     try {
       setSyncing(true);
       const token = localStorage.getItem('token');
+      
+      if (!token) {
+        console.error('No authentication token found');
+        setSyncing(false);
+        return;
+      }
+
       const response = await axios.get(`${API_URL}/api/chicken-fight/fights/today`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -111,6 +123,15 @@ export function ChickenFightProvider({ children }) {
   const saveFightsToBackend = async () => {
     try {
       const token = localStorage.getItem('token');
+      
+      if (!token) {
+        console.warn('No token available for saving fights');
+        // Still save to localStorage as backup
+        localStorage.setItem(`chicken-fight-${today}`, JSON.stringify(fights));
+        localStorage.setItem(`chicken-fight-number-${today}`, fightNumber.toString());
+        return;
+      }
+
       const response = await axios.post(`${API_URL}/api/chicken-fight/fights/save`, 
         { fights, fightNumber },
         { headers: { 'Authorization': `Bearer ${token}` } }
@@ -149,6 +170,22 @@ export function ChickenFightProvider({ children }) {
   const loadHistoryForDate = async (date) => {
     try {
       const token = localStorage.getItem('token');
+      
+      if (!token) {
+        console.warn('No token available for loading history');
+        // Fallback to localStorage
+        const savedFights = localStorage.getItem(`chicken-fight-${date}`);
+        if (savedFights) {
+          try {
+            setHistoryFights(JSON.parse(savedFights));
+            setSelectedHistoryDate(date);
+          } catch (e) {
+            console.error('Error parsing history fights:', e);
+          }
+        }
+        return;
+      }
+
       const response = await axios.get(`${API_URL}/api/chicken-fight/fights/${date}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
