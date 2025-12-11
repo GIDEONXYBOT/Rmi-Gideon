@@ -310,9 +310,16 @@ export default function ChickenFight() {
   // Fetch data on load
   useEffect(() => {
     const initialize = async () => {
+      // Fetch sequentially with small delays to avoid rate limiting
       await fetchEntries();
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
       await fetchRegistrations();
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
       await fetchStats();
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
       // Auto-register all entries that don't have registrations
       await autoRegisterEntries();
     };
@@ -390,7 +397,8 @@ export default function ChickenFight() {
     try {
       console.log(`📝 Fetching registrations for date: ${today}`);
       const response = await axios.get(`${getApiUrl()}/api/chicken-fight-registration/registrations`, {
-        params: { gameDate: today }
+        params: { gameDate: today },
+        timeout: 10000
       });
       console.log(`✅ Registrations response:`, response.data);
       if (response.data.success) {
@@ -401,9 +409,11 @@ export default function ChickenFight() {
         setRegistrations([]);
       }
     } catch (err) {
-      console.error('❌ Error fetching registrations:', err);
-      console.error('  Status:', err.response?.status);
-      console.error('  Message:', err.response?.data?.message || err.message);
+      // Suppress 429 rate limit errors from console
+      if (err.response?.status !== 429) {
+        console.error('❌ Error fetching registrations:', err.message);
+        console.error('  Status:', err.response?.status);
+      }
       setRegistrations([]);
     } finally {
       setRegistrationsLoading(false);
@@ -414,13 +424,17 @@ export default function ChickenFight() {
   const fetchStats = async () => {
     try {
       const response = await axios.get(`${getApiUrl()}/api/chicken-fight-registration/registrations-stats`, {
-        params: { gameDate: today }
+        params: { gameDate: today },
+        timeout: 10000
       });
       if (response.data.success) {
         setStats(response.data.stats);
       }
     } catch (err) {
-      console.error('Error fetching stats:', err);
+      // Suppress 429 rate limit errors from console
+      if (err.response?.status !== 429) {
+        console.error('Error fetching stats:', err.message);
+      }
     }
   };
 
@@ -495,27 +509,57 @@ export default function ChickenFight() {
     }
   };
 
-  // Auto-register all entries on page load
+  // Auto-register all entries on page load (with debounce and delays)
   const autoRegisterEntries = async () => {
     try {
-      const response = await axios.get(`${getApiUrl()}/api/chicken-fight/entries`);
+      const response = await axios.get(`${getApiUrl()}/api/chicken-fight/entries`, {
+        timeout: 10000
+      });
+      
       if (response.data.success && response.data.entries) {
-        for (const entry of response.data.entries) {
-          // Register each entry with both game types
-          await axios.post(`${getApiUrl()}/api/chicken-fight-registration/registrations`, {
-            entryId: entry._id,
-            entryName: entry.entryName,
-            gameTypes: ['2wins', '3wins'],
-            gameDate: today
-          }).catch(() => {
-            // Silently ignore if already registered
-          });
+        console.log(`🔄 Auto-registering ${response.data.entries.length} entries...`);
+        
+        // Register entries sequentially with delay to avoid rate limiting
+        const DELAY_MS = 200; // 200ms delay between requests
+        
+        for (let i = 0; i < response.data.entries.length; i++) {
+          const entry = response.data.entries[i];
+          
+          try {
+            await axios.post(`${getApiUrl()}/api/chicken-fight-registration/registrations`, {
+              entryId: entry._id,
+              entryName: entry.entryName,
+              gameTypes: ['2wins', '3wins'],
+              gameDate: today
+            }, {
+              timeout: 10000
+            }).then(() => {
+              console.log(`✅ Registered: ${entry.entryName}`);
+            }).catch((err) => {
+              // Silently ignore if already registered (409 conflict) or other errors
+              if (err.response?.status !== 409) {
+                console.warn(`⚠️ Registration skipped for ${entry.entryName}:`, err.response?.status);
+              }
+            });
+            
+            // Add delay between requests to avoid rate limiting
+            if (i < response.data.entries.length - 1) {
+              await new Promise(resolve => setTimeout(resolve, DELAY_MS));
+            }
+          } catch (err) {
+            console.error(`❌ Error registering ${entry.entryName}:`, err.message);
+          }
         }
-        fetchRegistrations();
-        fetchStats();
+        
+        console.log('✅ Auto-registration complete, fetching updated data...');
+        await fetchRegistrations();
+        await fetchStats();
       }
     } catch (err) {
-      console.error('Auto-registration error:', err);
+      // Suppress console spam for 429 errors - they're rate limit related
+      if (err.response?.status !== 429) {
+        console.error('Auto-registration error:', err.message);
+      }
     }
   };
 
