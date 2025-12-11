@@ -14,7 +14,7 @@ router.use(requireAuth);
 // Create new entry
 router.post('/entries', async (req, res) => {
   try {
-    const { entryName, gameType, legBandNumbers } = req.body;
+    const { entryName, gameType, legBandNumbers, legBandDetails } = req.body;
 
     // Validate input
     if (!entryName || !gameType || !legBandNumbers) {
@@ -36,10 +36,19 @@ router.post('/entries', async (req, res) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
+    // Build legBandDetails if provided
+    const details = legBandDetails && legBandDetails.length > 0
+      ? legBandDetails
+      : legBandNumbers.map(band => ({
+          legBand: band,
+          featherType: 'Unknown'
+        }));
+
     const entry = new ChickenFightEntry({
       entryName,
       gameType,
       legBandNumbers,
+      legBandDetails: details,
       createdBy: req.user._id,
       createdByName: req.user.name,
       gameDate: today
@@ -112,6 +121,47 @@ router.delete('/entries/:id', async (req, res) => {
     });
   } catch (error) {
     console.error('Error deleting entry:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Update entry
+router.put('/entries/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { entryName, legBandNumbers, legBandDetails } = req.body;
+
+    const entry = await ChickenFightEntry.findById(id);
+    if (!entry) {
+      return res.status(404).json({ success: false, message: 'Entry not found' });
+    }
+
+    if (entryName) entry.entryName = entryName;
+
+    if (legBandNumbers) {
+      const expectedLegCount = entry.gameType === '2wins' ? 2 : 3;
+      if (legBandNumbers.length !== expectedLegCount) {
+        return res.status(400).json({
+          success: false,
+          message: `${entry.gameType} requires ${expectedLegCount} leg band numbers`
+        });
+      }
+      entry.legBandNumbers = legBandNumbers;
+    }
+
+    if (legBandDetails && legBandDetails.length > 0) {
+      entry.legBandDetails = legBandDetails;
+    }
+
+    await entry.save();
+
+    res.json({
+      success: true,
+      message: 'Entry updated successfully',
+      entry
+    });
+  } catch (error) {
+    console.error('Error updating entry:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });

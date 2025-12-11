@@ -24,6 +24,16 @@ const chickenFightEntrySchema = new mongoose.Schema(
         message: props => `Leg band numbers must have ${props.instance.gameType === '2wins' ? 2 : 3} entries`
       }
     },
+    legBandDetails: [
+      {
+        legBand: String,
+        featherType: {
+          type: String,
+          enum: ['Meron', 'Wala', 'Unknown'],
+          default: 'Unknown'
+        }
+      }
+    ],
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
