@@ -196,7 +196,7 @@ export default function ChickenFight() {
         entryName: meronEntry.entryName,
         gameType: meronEntry.gameType,
         legResults: [
-          { legBand: selectedMeronLegBand, result: 'win' }
+          { legNumber: fightNumber + 1, result: 'win' }
         ]
       },
       {
@@ -204,7 +204,7 @@ export default function ChickenFight() {
         entryName: walaEntry.entryName,
         gameType: walaEntry.gameType,
         legResults: [
-          { legBand: selectedWalaLegBand, result: 'loss' }
+          { legNumber: fightNumber + 1, result: 'loss' }
         ]
       }
     ];
@@ -256,7 +256,7 @@ export default function ChickenFight() {
         entryName: meronEntry.entryName,
         gameType: meronEntry.gameType,
         legResults: [
-          { legBand: selectedMeronLegBand, result: 'loss' }
+          { legNumber: fightNumber + 1, result: 'loss' }
         ]
       },
       {
@@ -264,7 +264,7 @@ export default function ChickenFight() {
         entryName: walaEntry.entryName,
         gameType: walaEntry.gameType,
         legResults: [
-          { legBand: selectedWalaLegBand, result: 'win' }
+          { legNumber: fightNumber + 1, result: 'win' }
         ]
       }
     ];
