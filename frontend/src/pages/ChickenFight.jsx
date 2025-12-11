@@ -217,7 +217,13 @@ export default function ChickenFight() {
     setFightNumber(fightNumber + 1);
     
     // Record results to backend
-    await recordEntryResults(entryResults);
+    const recordSuccess = await recordEntryResults(entryResults);
+    
+    if (!recordSuccess) {
+      setError('Failed to record results to server. Please try again.');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
     
     setSuccess(`Meron (${meronEntry.entryName}) defeats Wala (${walaEntry.entryName})`);
     setSelectedMeronEntry('');
@@ -277,7 +283,13 @@ export default function ChickenFight() {
     setFightNumber(fightNumber + 1);
     
     // Record results to backend
-    await recordEntryResults(entryResults);
+    const recordSuccess = await recordEntryResults(entryResults);
+    
+    if (!recordSuccess) {
+      setError('Failed to record results to server. Please try again.');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
     
     setSuccess(`Wala (${walaEntry.entryName}) defeats Meron (${meronEntry.entryName})`);
     setSelectedMeronEntry('');

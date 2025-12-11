@@ -160,7 +160,14 @@ export function ChickenFightProvider({ children }) {
       console.error('❌ Server returned error:', response.data.message);
       return false;
     } catch (error) {
-      console.error('Error recording results:', error);
+      console.error('❌ Error recording results:', error);
+      if (error.response?.status === 401) {
+        console.error('⚠️ Authentication failed - token may be expired');
+      } else if (error.response?.status === 500) {
+        console.error('⚠️ Server error:', error.response?.data?.message);
+      } else if (error.code === 'ECONNABORTED') {
+        console.error('⚠️ Request timeout - server may be slow');
+      }
       return false;
     }
   }, [API_URL, today, loadTodaysFights]);
