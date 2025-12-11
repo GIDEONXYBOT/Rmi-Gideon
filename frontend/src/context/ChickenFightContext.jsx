@@ -81,6 +81,45 @@ export function ChickenFightProvider({ children }) {
     }
   }, [API_URL, today]);
 
+  const recordEntryResults = useCallback(async (entryResults) => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        console.warn('No token available for recording results');
+        return;
+      }
+
+      const response = await axios.put(
+        `${API_URL}/api/chicken-fight/game/results`,
+        { gameDate: today, entryResults },
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+
+      if (response.data.success) {
+        console.log('✅ Results recorded to server');
+        lastSyncRef.current = new Date().getTime();
+        
+        // Load updated game data to sync with other users
+        const gameResponse = await axios.get(`${API_URL}/api/chicken-fight/fights/today`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (gameResponse.data.success && gameResponse.data.game) {
+          // Trigger socket event emission on backend
+          if (socketRef.current && socketRef.current.connected) {
+            socketRef.current.emit('resultsRecorded', {
+              gameDate: today,
+              fight: gameResponse.data.game
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error recording results:', error);
+    }
+  }, [API_URL, today]);
+
   const saveFightsToBackend = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
@@ -429,6 +468,7 @@ export function ChickenFightProvider({ children }) {
     removeFight,
     loadTodaysFights,
     checkForUpdates,
+    recordEntryResults,
   };
 
   return (

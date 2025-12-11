@@ -15,9 +15,11 @@ export default function ChickenFight() {
     today,
     syncing,
     loadTodaysFights,
+    recordEntryResults,
     addFight,
     removeFight,
-    updateFight
+    updateFight,
+    entries: contextEntries
   } = useContext(ChickenFightContext);
   
   const [error, setError] = useState('');
@@ -168,11 +170,12 @@ export default function ChickenFight() {
     }
   };
 
-  const handleMeronWin = () => {
+  const handleMeronWin = async () => {
     if (!selectedMeronEntry || !selectedMeronLegBand || !selectedWalaEntry || !selectedWalaLegBand) {
       setError('Please select both Meron and Wala entries with leg bands');
       return;
     }
+    
     const meronFight = {
       id: fightNumber + 1,
       entryName: meronEntry.entryName,
@@ -185,21 +188,54 @@ export default function ChickenFight() {
       legBand: selectedWalaLegBand,
       result: 0  // 0 for loss
     };
-    setFights([...fights, meronFight, walaFight]);
+    
+    // Build entry results for backend
+    const entryResults = [
+      {
+        entryId: meronEntry._id,
+        entryName: meronEntry.entryName,
+        gameType: meronEntry.gameType,
+        legResults: [
+          { legBand: selectedMeronLegBand, result: 'win' }
+        ]
+      },
+      {
+        entryId: walaEntry._id,
+        entryName: walaEntry.entryName,
+        gameType: walaEntry.gameType,
+        legResults: [
+          { legBand: selectedWalaLegBand, result: 'loss' }
+        ]
+      }
+    ];
+    
+    // Update local state
+    const newFights = [...fights, meronFight, walaFight];
+    setFights(newFights);
     setFightNumber(fightNumber + 1);
+    
+    // Record results to backend
+    await recordEntryResults(entryResults);
+    
     setSuccess(`Meron (${meronEntry.entryName}) defeats Wala (${walaEntry.entryName})`);
     setSelectedMeronEntry('');
     setSelectedMeronLegBand('');
+    setMeronLegBandSearch('');
     setSelectedWalaEntry('');
     setSelectedWalaLegBand('');
+    setWalaLegBandSearch('');
     setTimeout(() => setSuccess(''), 2000);
+    
+    // Reload game data to sync
+    await loadGameData();
   };
 
-  const handleWalaWin = () => {
+  const handleWalaWin = async () => {
     if (!selectedMeronEntry || !selectedMeronLegBand || !selectedWalaEntry || !selectedWalaLegBand) {
       setError('Please select both Meron and Wala entries with leg bands');
       return;
     }
+    
     const meronFight = {
       id: fightNumber + 1,
       entryName: meronEntry.entryName,
@@ -212,14 +248,46 @@ export default function ChickenFight() {
       legBand: selectedWalaLegBand,
       result: 1  // 1 for win
     };
-    setFights([...fights, meronFight, walaFight]);
+    
+    // Build entry results for backend
+    const entryResults = [
+      {
+        entryId: meronEntry._id,
+        entryName: meronEntry.entryName,
+        gameType: meronEntry.gameType,
+        legResults: [
+          { legBand: selectedMeronLegBand, result: 'loss' }
+        ]
+      },
+      {
+        entryId: walaEntry._id,
+        entryName: walaEntry.entryName,
+        gameType: walaEntry.gameType,
+        legResults: [
+          { legBand: selectedWalaLegBand, result: 'win' }
+        ]
+      }
+    ];
+    
+    // Update local state
+    const newFights = [...fights, meronFight, walaFight];
+    setFights(newFights);
     setFightNumber(fightNumber + 1);
+    
+    // Record results to backend
+    await recordEntryResults(entryResults);
+    
     setSuccess(`Wala (${walaEntry.entryName}) defeats Meron (${meronEntry.entryName})`);
     setSelectedMeronEntry('');
     setSelectedMeronLegBand('');
+    setMeronLegBandSearch('');
     setSelectedWalaEntry('');
     setSelectedWalaLegBand('');
+    setWalaLegBandSearch('');
     setTimeout(() => setSuccess(''), 2000);
+    
+    // Reload game data to sync
+    await loadGameData();
   };
   
   // Stats
