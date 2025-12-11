@@ -335,7 +335,7 @@ export default function SidebarLayout({ role, children }) {
     'manage-betting': { to: r => `/${r}/manage-betting`, icon: <Settings size={18} />, text: 'Manage Betting Data', roles: ['admin','super_admin'] },
     'teller-mappings': { to: r => `/${r}/teller-mappings`, icon: <Link size={18} />, text: 'Teller Mappings', roles: ['super_admin'] },
     'betting-analytics': { to: r => `/${r}/betting-analytics`, icon: <BarChart3 size={18} />, text: 'Betting Analytics', roles: ['admin','super_admin'] },
-    'betting-event-report': { to: r => `/${r}/betting-event-report`, icon: <TrendingUp size={18} />, text: 'Betting Event Report', roles: ['super_admin','admin','supervisor'] },
+    'betting-event-report': { to: r => `/${r}/betting-event-report`, icon: <TrendingUp size={18} />, text: 'Betting Event Report', roles: ['super_admin','admin','supervisor','teller'] },
     'key-performance-indicator': { to: r => `/${r}/key-performance-indicator`, icon: <BarChart3 size={18} />, text: 'Key Performance Indicator', roles: ['admin','super_admin','supervisor'] },
     'chicken-fight': { to: r => `/${r}/chicken-fight`, icon: <TrendingUp size={18} />, text: 'Chicken Fight', roles: ['admin','super_admin','supervisor','declarator'] },
     'chicken-fight-entries': { to: r => `/${r}/chicken-fight-entries`, icon: <Settings size={18} />, text: 'Manage Entries', roles: ['admin','super_admin','supervisor','declarator'] },
@@ -367,7 +367,7 @@ export default function SidebarLayout({ role, children }) {
     admin: ['dashboard','upload','feed','users','supervisor-report','teller-reports','teller-reports-viewer','teller-management','teller-overview','report','cashflow','payroll','withdrawals','employees','user-approval','salary','history','teller-month','suggested-schedule','attendance-scheduler','deployments','assistant','map-editor','teller-betting','manage-betting','menu-config','manage-sidebars','betting-event-report','chicken-fight','chicken-fight-entries','key-performance-indicator','settings'],
     supervisor: ['dashboard','upload','feed','users','supervisor-report','teller-reports','teller-reports-viewer','teller-management','staff-performance','teller-month','history','payroll','suggested-schedule','key-performance-indicator','deployments','live-map','betting-event-report','chicken-fight','chicken-fight-entries'],
     supervisor_teller: ['dashboard','upload','feed','users','supervisor-report','teller-reports','teller-reports-viewer','teller-management','staff-performance','teller-month','history','payroll','suggested-schedule','deployments','live-map','betting-event-report','chicken-fight','chicken-fight-entries'],
-    teller: ['dashboard','upload','feed','users','teller-reports','history','payroll','teller-month','suggested-schedule','deployments','live-map'],
+    teller: ['dashboard','upload','feed','users','teller-reports','history','payroll','teller-month','suggested-schedule','deployments','live-map','betting-event-report'],
     declarator: ['dashboard','upload','feed','users','deployments','suggested-schedule','live-map','map-editor','settings','chicken-fight','chicken-fight-entries'],
   };
 
