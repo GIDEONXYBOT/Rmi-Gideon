@@ -94,9 +94,9 @@ export default function SidebarLayout({ role, children }) {
       const res = await axios.get(`${API}/api/admin/pending-count`, opts);
       setPendingCount(res.data?.pendingCount || 0);
     } catch (err) {
-      // If unauthorized or missing permissions, don't block the sidebar — show 0 and continue.
-      if (err?.response?.status === 401) {
-        console.warn('Pending count fetch unauthorized (401) — showing 0');
+      // If unauthorized or forbidden (lacking permissions), don't block the sidebar — show 0 and continue.
+      if (err?.response?.status === 401 || err?.response?.status === 403) {
+        console.debug('Pending count fetch unauthorized/forbidden — showing 0');
         setPendingCount(0);
         return;
       }

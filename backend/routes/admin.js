@@ -112,12 +112,19 @@ router.put('/users/:id/remove-penalty', requireAuth, requireRole(['super_admin',
   }
 });
 
-router.get("/pending-count", requirePermission('employees'), async (req, res) => {
+router.get("/pending-count", requireAuth, async (req, res) => {
   try {
-    const count = await User.countDocuments({
-      $or: [{ status: "pending" }, { active: false }],
-    });
-    res.json({ pendingCount: count });
+    // Only admin and super_admin can see the actual count
+    // Other authenticated users get 0 without error
+    if (req.user.role === 'admin' || req.user.role === 'super_admin') {
+      const count = await User.countDocuments({
+        $or: [{ status: "pending" }, { active: false }],
+      });
+      res.json({ pendingCount: count });
+    } else {
+      // Return 0 for non-admin users
+      res.json({ pendingCount: 0 });
+    }
   } catch (err) {
     console.error("❌ Error getting pending count:", err);
     res.status(500).json({ message: "Failed to fetch pending count" });
