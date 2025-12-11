@@ -16,8 +16,8 @@ export default function ChickenFightEntries() {
   const [entryName, setEntryName] = useState('');
   const [legBands, setLegBands] = useState(['', '']);
   const [legBandDetails, setLegBandDetails] = useState([
-    { legBand: '', featherType: 'Unknown' },
-    { legBand: '', featherType: 'Unknown' }
+    { legBand: '', featherType: '' },
+    { legBand: '', featherType: '' }
   ]);
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(null);
@@ -51,15 +51,15 @@ export default function ChickenFightEntries() {
     if (type === '2wins') {
       setLegBands(['', '']);
       setLegBandDetails([
-        { legBand: '', featherType: 'Unknown' },
-        { legBand: '', featherType: 'Unknown' }
+        { legBand: '', featherType: '' },
+        { legBand: '', featherType: '' }
       ]);
     } else if (type === '3wins') {
       setLegBands(['', '', '']);
       setLegBandDetails([
-        { legBand: '', featherType: 'Unknown' },
-        { legBand: '', featherType: 'Unknown' },
-        { legBand: '', featherType: 'Unknown' }
+        { legBand: '', featherType: '' },
+        { legBand: '', featherType: '' },
+        { legBand: '', featherType: '' }
       ]);
     }
   };
@@ -117,8 +117,8 @@ export default function ChickenFightEntries() {
           setEntryName('');
           setLegBands(gameType === '2wins' ? ['', ''] : ['', '', '']);
           setLegBandDetails(gameType === '2wins' 
-            ? [{ legBand: '', featherType: 'Unknown' }, { legBand: '', featherType: 'Unknown' }]
-            : [{ legBand: '', featherType: 'Unknown' }, { legBand: '', featherType: 'Unknown' }, { legBand: '', featherType: 'Unknown' }]
+            ? [{ legBand: '', featherType: '' }, { legBand: '', featherType: '' }]
+            : [{ legBand: '', featherType: '' }, { legBand: '', featherType: '' }, { legBand: '', featherType: '' }]
           );
           fetchEntries();
           setTimeout(() => setSuccess(''), 3000);
@@ -137,8 +137,8 @@ export default function ChickenFightEntries() {
           setEntryName('');
           setLegBands(gameType === '2wins' ? ['', ''] : ['', '', '']);
           setLegBandDetails(gameType === '2wins' 
-            ? [{ legBand: '', featherType: 'Unknown' }, { legBand: '', featherType: 'Unknown' }]
-            : [{ legBand: '', featherType: 'Unknown' }, { legBand: '', featherType: 'Unknown' }, { legBand: '', featherType: 'Unknown' }]
+            ? [{ legBand: '', featherType: '' }, { legBand: '', featherType: '' }]
+            : [{ legBand: '', featherType: '' }, { legBand: '', featherType: '' }, { legBand: '', featherType: '' }]
           );
           fetchEntries();
           setTimeout(() => setSuccess(''), 3000);
@@ -178,7 +178,7 @@ export default function ChickenFightEntries() {
     setLegBands(entry.legBandNumbers);
     setLegBandDetails(entry.legBandDetails || entry.legBandNumbers.map(band => ({
       legBand: band,
-      featherType: 'Unknown'
+      featherType: ''
     })));
   };
 
@@ -189,8 +189,8 @@ export default function ChickenFightEntries() {
     setGameType('2wins');
     setLegBands(['', '']);
     setLegBandDetails([
-      { legBand: '', featherType: 'Unknown' },
-      { legBand: '', featherType: 'Unknown' }
+      { legBand: '', featherType: '' },
+      { legBand: '', featherType: '' }
     ]);
   };
 
@@ -332,19 +332,17 @@ export default function ChickenFightEntries() {
                             : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500'
                         }`}
                       />
-                      <select
-                        value={legBandDetails[index]?.featherType || 'Unknown'}
+                      <input
+                        type="text"
+                        value={legBandDetails[index]?.featherType || ''}
                         onChange={(e) => handleFeatherTypeChange(index, e.target.value)}
+                        placeholder="Feather type"
                         className={`px-4 py-3 rounded-lg border transition ${
                           isDarkMode
-                            ? 'bg-gray-700 border-gray-600 text-white focus:border-blue-500 focus:bg-gray-600'
-                            : 'bg-white border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500'
+                            ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500 focus:border-blue-500 focus:bg-gray-600'
+                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500'
                         }`}
-                      >
-                        <option value="Unknown">Unknown</option>
-                        <option value="Meron">Meron</option>
-                        <option value="Wala">Wala</option>
-                      </select>
+                      />
                     </div>
                   ))}
                 </div>
