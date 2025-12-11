@@ -335,8 +335,11 @@ export function ChickenFightProvider({ children }) {
     });
 
     socketRef.current.on('connect_error', (error) => {
-      console.error('🔴 Socket.IO Connection Error:', error.message);
-      console.error('Error details:', error);
+      // Suppress timeout errors - they're expected and will retry
+      if (error.message !== 'timeout') {
+        console.error('🔴 Socket.IO Connection Error:', error.message);
+        console.error('Error details:', error);
+      }
     });
 
     socketRef.current.on('error', (error) => {

@@ -313,6 +313,8 @@ export default function ChickenFight() {
       await fetchEntries();
       await fetchRegistrations();
       await fetchStats();
+      // Auto-register all entries that don't have registrations
+      await autoRegisterEntries();
     };
     initialize();
   }, []);
