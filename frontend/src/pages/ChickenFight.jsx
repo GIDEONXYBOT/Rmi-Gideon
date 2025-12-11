@@ -383,14 +383,23 @@ export default function ChickenFight() {
   const fetchRegistrations = async () => {
     setRegistrationsLoading(true);
     try {
+      console.log(`📝 Fetching registrations for date: ${today}`);
       const response = await axios.get(`${getApiUrl()}/api/chicken-fight-registration/registrations`, {
         params: { gameDate: today }
       });
+      console.log(`✅ Registrations response:`, response.data);
       if (response.data.success) {
         setRegistrations(response.data.registrations || []);
+        console.log(`📊 Loaded ${response.data.count} registrations`);
+      } else {
+        console.warn('⚠️ API returned success: false');
+        setRegistrations([]);
       }
     } catch (err) {
-      console.error('Error fetching registrations:', err);
+      console.error('❌ Error fetching registrations:', err);
+      console.error('  Status:', err.response?.status);
+      console.error('  Message:', err.response?.data?.message || err.message);
+      setRegistrations([]);
     } finally {
       setRegistrationsLoading(false);
     }

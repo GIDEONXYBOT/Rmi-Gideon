@@ -20,9 +20,14 @@ router.get('/registrations', async (req, res) => {
       return res.status(400).json({ success: false, message: 'gameDate is required' });
     }
 
-    // Parse date and get start and end of day
-    const startDate = new Date(`${gameDate}T00:00:00Z`);
-    const endDate = new Date(`${gameDate}T23:59:59Z`);
+    console.log(`🔍 Fetching registrations for date: ${gameDate}`);
+
+    // Parse date properly - gameDate should be in YYYY-MM-DD format
+    const [year, month, day] = gameDate.split('-');
+    const startDate = new Date(year, month - 1, day, 0, 0, 0, 0);
+    const endDate = new Date(year, month - 1, day, 23, 59, 59, 999);
+
+    console.log(`📅 Date range: ${startDate.toISOString()} to ${endDate.toISOString()}`);
 
     const registrations = await ChickenFightRegistration.find({
       gameDate: {
@@ -30,6 +35,8 @@ router.get('/registrations', async (req, res) => {
         $lte: endDate
       }
     }).sort({ createdAt: -1 });
+
+    console.log(`✅ Found ${registrations.length} registrations`);
 
     res.json({
       success: true,
