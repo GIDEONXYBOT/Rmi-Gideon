@@ -23,6 +23,7 @@ export default function BettingEventReport() {
   const isAdmin = userRole === 'admin' || userRole === 'super_admin';
   const isSupervisor = userRole === 'supervisor';
   const isTeller = userRole === 'teller';
+  const canViewReport = isAdmin || isSupervisor || isTeller;
 
   useEffect(() => {
     fetchBettingEventData();
@@ -290,16 +291,34 @@ export default function BettingEventReport() {
                 {isAdmin && (
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Bet Amount</th>
                 )}
+                {isSupervisor && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Bet Amount</th>
+                )}
+                {isTeller && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Bet Amount</th>
+                )}
                 {isAdmin && (
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Payout</th>
                 )}
-                {!isTeller && (
+                {isSupervisor && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Payout</th>
+                )}
+                {isTeller && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Payout</th>
+                )}
+                {(isAdmin || isSupervisor) && (
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">System Balance</th>
                 )}
                 {isAdmin && (
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Commission</th>
                 )}
+                {isSupervisor && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Commission</th>
+                )}
                 {isAdmin && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Profit/Loss</th>
+                )}
+                {isSupervisor && (
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Profit/Loss</th>
                 )}
               </tr>
@@ -332,12 +351,32 @@ export default function BettingEventReport() {
                         {formatCurrency(staff.betAmount)}
                       </td>
                     )}
+                    {isSupervisor && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                        {formatCurrency(staff.betAmount)}
+                      </td>
+                    )}
+                    {isTeller && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                        {formatCurrency(staff.betAmount)}
+                      </td>
+                    )}
                     {isAdmin && (
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                         {formatCurrency(staff.payout)}
                       </td>
                     )}
-                    {!isTeller && (
+                    {isSupervisor && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                        {formatCurrency(staff.payout)}
+                      </td>
+                    )}
+                    {isTeller && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                        {formatCurrency(staff.payout)}
+                      </td>
+                    )}
+                    {(isAdmin || isSupervisor) && (
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                         {formatCurrency(staff.systemBalance)}
                       </td>
@@ -347,7 +386,19 @@ export default function BettingEventReport() {
                         {formatCurrency(commission)}
                       </td>
                     )}
+                    {isSupervisor && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-purple-600 dark:text-purple-400 font-medium">
+                        {formatCurrency(commission)}
+                      </td>
+                    )}
                     {isAdmin && (
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`text-sm font-medium ${profit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                          {profit >= 0 ? '+' : ''}{formatCurrency(profit)}
+                        </span>
+                      </td>
+                    )}
+                    {isSupervisor && (
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`text-sm font-medium ${profit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                           {profit >= 0 ? '+' : ''}{formatCurrency(profit)}
