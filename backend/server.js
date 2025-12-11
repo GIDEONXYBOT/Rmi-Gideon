@@ -298,11 +298,21 @@ const server = http.createServer(app);
 // ✅ Initialize Socket.IO
 const io = new Server(server, {
   cors: {
-    origin: ["https://gideon-reports.pages.dev", "http://localhost:3000", "http://localhost:5173"],
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    credentials: true
+    origin: [
+      "https://gideon-reports.pages.dev",
+      "https://www.rmi.gideonbot.xyz",
+      "https://rmi.gideonbot.xyz",
+      "http://localhost:3000",
+      "http://localhost:5173",
+      "http://192.168.0.167:5173"
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
   },
-  transports: ['websocket', 'polling']
+  transports: ['websocket', 'polling'],
+  pingInterval: 10000,
+  pingTimeout: 5000
 });
 
 // Make io available globally for routes

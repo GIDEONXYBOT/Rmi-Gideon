@@ -228,7 +228,9 @@ export function ChickenFightProvider({ children }) {
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
-      reconnectionAttempts: 5
+      reconnectionAttempts: 5,
+      transports: ['websocket', 'polling'],
+      withCredentials: true
     });
 
     socketRef.current.on('connect', () => {
@@ -239,6 +241,15 @@ export function ChickenFightProvider({ children }) {
 
     socketRef.current.on('disconnect', () => {
       console.log('❌ Disconnected from Chicken Fight socket');
+    });
+
+    socketRef.current.on('connect_error', (error) => {
+      console.error('🔴 Socket.IO Connection Error:', error.message);
+      console.error('Error details:', error);
+    });
+
+    socketRef.current.on('error', (error) => {
+      console.error('🔴 Socket.IO Error:', error);
     });
 
     // Listen for real-time updates
