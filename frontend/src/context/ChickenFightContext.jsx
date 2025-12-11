@@ -155,6 +155,71 @@ export function ChickenFightProvider({ children }) {
     }
   }, [API_URL, today]);
 
+  // Polling functions (must be defined before Socket.IO useEffect)
+  const checkForUpdates = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.warn('No auth token found for chicken fight sync');
+        return;
+      }
+
+      const response = await axios.get(`${API_URL}/api/chicken-fight/fights/today`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+        timeout: 10000
+      });
+
+      if (response.data.success) {
+        resetRetry();
+        const serverFights = response.data.fights || [];
+        const serverFightNumber = response.data.fightNumber || 0;
+
+        if (JSON.stringify(serverFights) !== JSON.stringify(fights) || 
+            serverFightNumber !== fightNumber) {
+          console.log('🔄 Syncing chicken fight data from server...');
+          setFights(serverFights);
+          setFightNumber(serverFightNumber);
+          lastSyncRef.current = new Date().getTime();
+        }
+      }
+    } catch (error) {
+      if (error.response?.status === 429) {
+        console.warn('⏱️ Rate limited - backing off requests');
+        // Pause polling on rate limit
+        if (pollIntervalRef.current) {
+          clearInterval(pollIntervalRef.current);
+        }
+        // Retry with exponential backoff
+        if (await handleRetry()) {
+          setTimeout(setupPolling, getRetryDelay());
+        }
+      } else if (error.response?.status === 401) {
+        console.warn('🔐 Auth token issue for chicken fight sync');
+        resetRetry();
+      } else if (error.response?.status === 500) {
+        console.error('❌ Server error:', error.response?.data?.message);
+        resetRetry();
+      } else if (error.code === 'ECONNABORTED') {
+        console.warn('⏱️ Request timeout - checking connectivity');
+      } else {
+        console.debug('Sync check issue:', error.message);
+        resetRetry();
+      }
+    }
+  }, [API_URL, fights, fightNumber]);
+
+  const setupPolling = useCallback(() => {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+    }
+
+    if (!document.hidden) {
+      pollIntervalRef.current = setInterval(() => {
+        checkForUpdates();
+      }, 5000);
+    }
+  }, [checkForUpdates]);
+
   // Initialize Socket.IO connection
   useEffect(() => {
     const socketUrl = API_URL.replace('/api', '');
@@ -211,7 +276,7 @@ export function ChickenFightProvider({ children }) {
         clearInterval(pollIntervalRef.current);
       }
     };
-  }, [today, API_URL, loadTodaysFights, loadEntries, loadRegistrations]);
+  }, [today, API_URL, loadTodaysFights, loadEntries, loadRegistrations, setupPolling]);
 
   // Auto-save fights whenever they change (with debounce to prevent too many saves)
   useEffect(() => {
@@ -224,81 +289,6 @@ export function ChickenFightProvider({ children }) {
     
     return () => clearTimeout(debounceTimer);
   }, [fights, fightNumber, saveFightsToBackend]);
-
-  // Exponential backoff retry logic
-  const setupPolling = () => {
-    if (pollIntervalRef.current) {
-      clearInterval(pollIntervalRef.current);
-    }
-
-    if (!document.hidden) {
-      pollIntervalRef.current = setInterval(() => {
-        checkForUpdates();
-      }, 5000);
-    }
-  };
-
-  const checkForUpdates = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        console.warn('No auth token found for chicken fight sync');
-        return;
-      }
-
-      const response = await axios.get(`${API_URL}/api/chicken-fight/fights/today`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-        timeout: 10000
-      });
-
-      if (response.data.success) {
-        resetRetry();
-        const serverFights = response.data.fights || [];
-        const serverFightNumber = response.data.fightNumber || 0;
-
-        if (JSON.stringify(serverFights) !== JSON.stringify(fights) || 
-            serverFightNumber !== fightNumber) {
-          console.log('🔄 Syncing chicken fight data from server...');
-          setFights(serverFights);
-          setFightNumber(serverFightNumber);
-          lastSyncRef.current = new Date().getTime();
-        }
-      }
-      }
-    } catch (error) {
-      if (error.response?.status === 429) {
-        console.warn('⏱️ Rate limited - backing off requests');
-        // Pause polling on rate limit
-        if (pollIntervalRef.current) {
-          clearInterval(pollIntervalRef.current);
-        }
-        // Retry with exponential backoff
-        if (await handleRetry()) {
-          setTimeout(setupPolling, getRetryDelay());
-        }
-      } else if (error.response?.status === 401) {
-        console.warn('🔐 Auth token issue for chicken fight sync');
-        resetRetry();
-      } else if (error.response?.status === 500) {
-        console.error('❌ Server error:', error.response?.data?.message);
-        resetRetry();
-      } else if (error.code === 'ECONNABORTED') {
-        console.warn('⏱️ Request timeout - checking connectivity');
-      } else {
-        console.debug('Sync check issue:', error.message);
-        resetRetry();
-      }
-    }
-  };
-
-  const handleRetry = async () => {
-    if (retryCountRef.current < MAX_RETRIES) {
-      retryCountRef.current++;
-      console.log(`Retry ${retryCountRef.current}/${MAX_RETRIES}`);
-      return true;
-    }
-    return false;
-  };
 
   // Page visibility listener
   useEffect(() => {
@@ -317,49 +307,7 @@ export function ChickenFightProvider({ children }) {
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, []);
-
-  const saveFightsToBackend = useCallback(async () => {
-    try {
-      const token = localStorage.getItem('token');
-      
-      if (!token) {
-        console.warn('No token available for saving fights');
-        localStorage.setItem(`chicken-fight-${today}`, JSON.stringify(fights));
-        localStorage.setItem(`chicken-fight-number-${today}`, fightNumber.toString());
-        return;
-      }
-
-      const response = await axios.post(`${API_URL}/api/chicken-fight/fights/save`, 
-        { fights, fightNumber },
-        { headers: { 'Authorization': `Bearer ${token}` } }
-      );
-      
-      if (response.data.success) {
-        console.log('✅ Fights saved to server');
-        lastSyncRef.current = new Date().getTime();
-        
-        // 🔄 Emit socket event to notify other clients
-        if (socketRef.current && socketRef.current.connected) {
-          socketRef.current.emit('fightsUpdated', {
-            gameDate: today,
-            fights,
-            fightNumber
-          });
-          console.log('📡 Socket event emitted to other clients');
-        }
-      }
-      
-      // Also save to localStorage as backup
-      localStorage.setItem(`chicken-fight-${today}`, JSON.stringify(fights));
-      localStorage.setItem(`chicken-fight-number-${today}`, fightNumber.toString());
-    } catch (error) {
-      console.error('Error saving fights to backend:', error);
-      // Still save to localStorage if backend fails
-      localStorage.setItem(`chicken-fight-${today}`, JSON.stringify(fights));
-      localStorage.setItem(`chicken-fight-number-${today}`, fightNumber.toString());
-    }
-  }, [fights, fightNumber, today, API_URL]);
+  }, [setupPolling]);
 
   const loadHistoryDates = () => {
     const dates = [];
