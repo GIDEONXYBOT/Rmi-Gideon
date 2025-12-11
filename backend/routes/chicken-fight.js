@@ -47,6 +47,15 @@ router.post('/entries', async (req, res) => {
 
     await entry.save();
 
+    // 🔄 Emit socket event for new entry
+    if (req.app.io) {
+      req.app.io.of('/chicken-fight').emit('entriesUpdated', {
+        gameDate: today.toISOString().split('T')[0],
+        type: 'entry_created',
+        entry
+      });
+    }
+
     res.json({
       success: true,
       message: 'Entry created successfully',
@@ -312,6 +321,17 @@ router.put('/game/results', async (req, res) => {
     game.entryResults = processedResults;
     game.isFinalized = true;
     await game.save();
+
+    // 🔄 Emit socket event for results
+    if (req.app.io) {
+      req.app.io.of('/chicken-fight').emit('resultsRecorded', {
+        gameDate: gameDateObj.toISOString().split('T')[0],
+        fight: {
+          entryResults: processedResults,
+          isFinalized: true
+        }
+      });
+    }
 
     // Update bets with payouts
     for (const result of processedResults) {

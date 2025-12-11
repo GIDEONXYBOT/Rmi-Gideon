@@ -5,7 +5,7 @@ import dotenv from "dotenv";
 import cors from "cors";
 import bodyParser from "body-parser";
 import http from "http";
-// import { Server } from "socket.io";
+import { Server } from "socket.io";
 import os from "os";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -174,6 +174,7 @@ import salariesRoutes from "./routes/salaries.js"; // /api/salaries (frontend ex
 import mediaRoutes from "./routes/media.js"; // /api/media (feed uploads)
 import chickenFightRoutes from "./routes/chicken-fight.js"; // 🐔 /api/chicken-fight
 import chickenFightRegistrationRoutes from "./routes/chicken-fight-registration.js"; // 🐔 /api/chicken-fight-registration
+import { initChickenFightSocket } from "./socket/chickenFightSocket.js"; // 🐔 Socket.IO handlers
 
 // Temporarily disable all routes to test basic server startup
 // app.use("/api/payroll", payrollRoutes);
@@ -293,18 +294,23 @@ app.get('/uploads/avatars/*', (req, res) => {
 
 // Start HTTP + Socket.IO
 const server = http.createServer(app);
-/*
+
+// ✅ Initialize Socket.IO
 const io = new Server(server, {
   cors: {
     origin: ["https://gideon-reports.pages.dev", "http://localhost:3000", "http://localhost:5173"],
     methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true
   },
+  transports: ['websocket', 'polling']
 });
 
-// Make io available globally
+// Make io available globally for routes
 app.io = io;
 global.io = io;
-*/
+
+// ✅ Initialize Socket.IO handlers
+initChickenFightSocket(io);
 
 // ======================================================
 // ✅ SOCKET EVENT HANDLERS (DISABLED FOR DEBUGGING)
