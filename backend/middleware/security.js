@@ -110,18 +110,25 @@ const securityMiddleware = (app) => {
   // Rate limiting
   const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // Limit each IP to 100 requests per windowMs
+    max: 1000, // Limit each IP to 1000 requests per windowMs (was 100)
     message: {
       error: 'Too many requests from this IP, please try again later.'
     },
     standardHeaders: true,
-    legacyHeaders: false
+    legacyHeaders: false,
+    skip: (req) => {
+      // Skip rate limiting for GET requests (read-only operations)
+      if (req.method === 'GET') {
+        return true;
+      }
+      return false;
+    }
   });
 
   // Authentication rate limiting (stricter)
   const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5, // Limit login attempts
+    max: 10, // Limit login attempts (was 5)
     message: {
       error: 'Too many login attempts, please try again later.'
     },

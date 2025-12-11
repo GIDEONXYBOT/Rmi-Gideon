@@ -17,10 +17,16 @@ export function SettingsProvider({ children }) {
   // Fetch settings from backend (use VITE_API_URL when available)
   const fetchSettings = async () => {
     try {
-      const res = await axios.get(`${getApiUrl()}/api/settings`);
+      // Add timeout and cache busting for fresh data
+      const res = await axios.get(`${getApiUrl()}/api/settings`, {
+        timeout: 10000
+      });
       setSettings(res.data);
     } catch (err) {
-      console.error("❌ Failed to fetch settings:", err);
+      // Suppress 429 rate limit errors from console
+      if (err.response?.status !== 429) {
+        console.error("❌ Failed to fetch settings:", err.message);
+      }
     } finally {
       setLoading(false);
     }

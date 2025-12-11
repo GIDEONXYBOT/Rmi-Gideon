@@ -66,7 +66,9 @@ export default function SidebarLayout({ role, children }) {
     try {
       setPayrollLoading(true);
       const API = getApiUrl(); // Get fresh API URL
-      const res = await axios.get(`${API}/api/payroll/user/${user._id}`);
+      const res = await axios.get(`${API}/api/payroll/user/${user._id}`, {
+        timeout: 10000
+      });
       const payrolls = res.data?.payrolls || [];
       // Prefer latest entry (sorted desc in backend), fallback to 0
       const latest = payrolls[0];
@@ -78,7 +80,11 @@ export default function SidebarLayout({ role, children }) {
         return sum;
       }, 0);
       setAvailableBalance(unwithdrawnSum);
-    } catch {
+    } catch (err) {
+      // Suppress 429 rate limit errors
+      if (err.response?.status !== 429) {
+        console.error('Payroll fetch error:', err.message);
+      }
       setPayrollTotal(0);
       setAvailableBalance(0);
     } finally {
@@ -93,6 +99,7 @@ export default function SidebarLayout({ role, children }) {
       const opts = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
       // Don't throw on 401/403 - treat as valid responses
       opts.validateStatus = (status) => status < 500;
+      opts.timeout = 10000;
       const res = await axios.get(`${API}/api/admin/pending-count`, opts);
       
       // If we get 403, it means user lacks permission - show 0
@@ -103,7 +110,10 @@ export default function SidebarLayout({ role, children }) {
       
       setPendingCount(res.data?.pendingCount || 0);
     } catch (err) {
-      // Network errors or server errors - silently fail
+      // Suppress 429 rate limit errors - network errors or server errors silently fail
+      if (err.response?.status !== 429) {
+        console.error('Pending count fetch error:', err.message);
+      }
       setPendingCount(0);
     }
   };
