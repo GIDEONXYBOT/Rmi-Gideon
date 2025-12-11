@@ -114,18 +114,20 @@ export default function ChickenFight() {
   const walaEntry = entries.find(e => e._id === selectedWalaEntry);
   const walaLegBands = walaEntry?.legBandNumbers || [];
 
-  // Get used leg bands (already fought)
-  const usedLegBands = new Set(fights.map(f => f.legBand).filter(Boolean));
+  // Get used fight numbers (leg numbers already used)
+  const usedLegNumbers = new Set(fights.map(f => f.legNumber).filter(Boolean));
+
+  // Note: We don't restrict leg bands anymore since a leg band can fight multiple times
+  // Only restriction is that same leg band can't fight in same fight (logically impossible)
 
   // Filter out already-used leg bands
-  const availableMeronLegBands = meronLegBands.filter(band => !usedLegBands.has(band));
-  const availableWalaLegBands = walaLegBands.filter(band => !usedLegBands.has(band));
+  const availableMeronLegBands = meronLegBands;
+  const availableWalaLegBands = walaLegBands;
 
-  // Get entries that still have available leg bands (not all used up)
+  // Get all entries that have leg bands
   const availableEntries = entries.filter(entry => {
     const entryLegBands = entry.legBandNumbers || [];
-    const unusedBands = entryLegBands.filter(band => !usedLegBands.has(band));
-    return unusedBands.length > 0;
+    return entryLegBands.length > 0;
   });
 
   // Filter Meron entries - exclude if already selected in Wala
@@ -316,6 +318,33 @@ export default function ChickenFight() {
       if (response.data.success && response.data.game) {
         setGameData(response.data.game);
         console.log('✅ Game data loaded:', response.data.game);
+        
+        // Sync fights array from gameData.entryResults
+        if (response.data.game.entryResults && response.data.game.entryResults.length > 0) {
+          const syncedFights = [];
+          const maxLegNumber = Math.max(
+            ...response.data.game.entryResults.flatMap(e => 
+              e.legResults?.map(l => l.legNumber) || []
+            ),
+            0
+          );
+          
+          // Populate fights array from entry results
+          response.data.game.entryResults.forEach(entry => {
+            entry.legResults?.forEach(leg => {
+              syncedFights.push({
+                legNumber: leg.legNumber,
+                entryId: entry.entryId,
+                entryName: entry.entryName,
+                result: leg.result === 'win' ? 1 : 0
+              });
+            });
+          });
+          
+          console.log('🔄 Syncing fights from gameData:', syncedFights);
+          setFights(syncedFights);
+          setFightNumber(maxLegNumber);
+        }
       }
     } catch (err) {
       console.error('Error loading game data:', err);

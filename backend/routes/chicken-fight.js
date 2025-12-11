@@ -279,6 +279,8 @@ router.put('/game/results', async (req, res) => {
       });
     }
 
+    console.log('📊 Processing entry results:', JSON.stringify(entryResults, null, 2));
+
     // Process each entry result
     const processedResults = entryResults.map(result => {
       const { entryId, entryName, gameType, legResults } = result;
@@ -317,6 +319,8 @@ router.put('/game/results', async (req, res) => {
         prize
       };
     });
+
+    console.log('✅ Processed results:', JSON.stringify(processedResults, null, 2));
 
     game.entryResults = processedResults;
     game.isFinalized = true;
