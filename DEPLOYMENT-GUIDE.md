@@ -35,7 +35,7 @@ This project has a two-part deployment architecture:
    In the Render dashboard, add these variables:
    ```
    NODE_ENV = production
-   MONGO_URI = your_mongodb_connection_string
+   MONGO_URI = mongodb+srv://rmi_admin:lD91v9R6zBcKLDQx@rmi-teller-report.fphrmaw.mongodb.net/?appName=rmi-teller-report
    ```
 
 4. **Deploy**
@@ -155,11 +155,16 @@ npm run production
 ## Database
 
 ### MongoDB Atlas Setup
-1. Create cluster at [mongodb.com/cloud](https://mongodb.com/cloud)
-2. Create database user with strong password
-3. Whitelist IP addresses (use 0.0.0.0/0 for Render)
-4. Get connection string: `mongodb+srv://user:pass@cluster.mongodb.net/dbname`
-5. Set as `MONGO_URI` environment variable in Render
+✅ **Already Configured**
+- Cluster: rmi-teller-report
+- Username: rmi_admin
+- Connection String: `mongodb+srv://rmi_admin:lD91v9R6zBcKLDQx@rmi-teller-report.fphrmaw.mongodb.net/?appName=rmi-teller-report`
+- Status: Ready for production
+
+Just ensure:
+1. IP whitelist includes 0.0.0.0/0 (for Render)
+2. Database user has correct permissions
+3. Connection string is added as `MONGO_URI` in Render environment variables
 
 ---
 
