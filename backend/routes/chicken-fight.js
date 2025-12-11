@@ -427,6 +427,15 @@ router.post('/fights/save', async (req, res) => {
 
     await game.save();
 
+    // 🔄 Emit socket event to notify all clients
+    if (req.app.io) {
+      req.app.io.of('/chicken-fight').emit('fightsUpdated', {
+        gameDate: today.toISOString().split('T')[0],
+        fights,
+        fightNumber
+      });
+    }
+
     res.json({
       success: true,
       message: 'Fights saved successfully',

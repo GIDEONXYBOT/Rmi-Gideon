@@ -80,6 +80,13 @@ export function ChickenFightProvider({ children }) {
     };
   }, [today, API_URL]);
 
+  // Auto-save fights whenever they change
+  useEffect(() => {
+    if (fights.length > 0 || fightNumber > 0) {
+      saveFightsToBackend();
+    }
+  }, [fights, fightNumber]);
+
   // Exponential backoff retry logic
   const getRetryDelay = () => {
     return 1000 * Math.pow(2, retryCountRef.current); // 1s, 2s, 4s
