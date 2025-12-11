@@ -91,16 +91,19 @@ export default function SidebarLayout({ role, children }) {
       const API = getApiUrl(); // Get fresh API URL
       const token = localStorage.getItem('token');
       const opts = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+      // Don't throw on 401/403 - treat as valid responses
+      opts.validateStatus = (status) => status < 500;
       const res = await axios.get(`${API}/api/admin/pending-count`, opts);
-      setPendingCount(res.data?.pendingCount || 0);
-    } catch (err) {
-      // If unauthorized or forbidden (lacking permissions), don't block the sidebar — show 0 and continue.
-      if (err?.response?.status === 401 || err?.response?.status === 403) {
-        console.debug('Pending count fetch unauthorized/forbidden — showing 0');
+      
+      // If we get 403, it means user lacks permission - show 0
+      if (res.status === 403 || res.status === 401) {
         setPendingCount(0);
         return;
       }
-      console.debug('Failed to fetch pending count:', err?.message || err);
+      
+      setPendingCount(res.data?.pendingCount || 0);
+    } catch (err) {
+      // Network errors or server errors - silently fail
       setPendingCount(0);
     }
   };
