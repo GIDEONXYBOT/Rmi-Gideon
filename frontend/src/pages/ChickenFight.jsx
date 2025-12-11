@@ -942,7 +942,31 @@ export default function ChickenFight() {
           {/* Fight Number Column */}
           <div className="bg-gray-800 text-white rounded-lg p-8 flex flex-col items-center justify-center">
             <div className="text-7xl font-bold mb-4">{fightNumber}</div>
-            <div className="text-lg font-bold">FIGHT</div>
+            <div className="text-lg font-bold mb-6">FIGHT</div>
+            <button
+              onClick={() => {
+                if (selectedMeronEntry && selectedMeronLegBand && selectedWalaEntry && selectedWalaLegBand) {
+                  recordEntryResults('draw');
+                  setFightNumber(fightNumber + 1);
+                  setSelectedMeronEntry('');
+                  setSelectedMeronLegBand('');
+                  setMeronLegBandSearch('');
+                  setSelectedWalaEntry('');
+                  setSelectedWalaLegBand('');
+                  setWalaLegBandSearch('');
+                  setSuccess('Draw recorded! Moving to next fight.');
+                  setTimeout(() => setSuccess(''), 3000);
+                }
+              }}
+              disabled={!selectedMeronEntry || !selectedMeronLegBand || !selectedWalaEntry || !selectedWalaLegBand}
+              className={`w-full py-3 font-bold rounded-lg text-lg transition ${
+                selectedMeronEntry && selectedMeronLegBand && selectedWalaEntry && selectedWalaLegBand
+                  ? 'bg-yellow-500 hover:bg-yellow-600 text-black cursor-pointer'
+                  : 'bg-yellow-900 text-gray-400 cursor-not-allowed opacity-50'
+              }`}
+            >
+              DRAW
+            </button>
           </div>
 
           {/* Wala Column */}
