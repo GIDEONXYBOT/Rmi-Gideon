@@ -23,6 +23,9 @@ export default function ChickenFight() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   
+  // Game data (includes entryResults)
+  const [gameData, setGameData] = useState(null);
+  
   // Entries
   const [entries, setEntries] = useState([]);
   const [entriesLoading, setEntriesLoading] = useState(false);
@@ -51,7 +54,9 @@ export default function ChickenFight() {
   // Load fights from context on mount
   useEffect(() => {
     loadTodaysFights();
+    loadGameData();
   }, []);
+  
   useEffect(() => {
     loadHistoryDates();
   }, []);
@@ -229,6 +234,25 @@ export default function ChickenFight() {
     };
     initialize();
   }, []);
+
+  // Load full game data including entry results
+  const loadGameData = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const response = await axios.get(`${getApiUrl()}/api/chicken-fight/fights/today`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.data.success && response.data.game) {
+        setGameData(response.data.game);
+        console.log('✅ Game data loaded:', response.data.game);
+      }
+    } catch (err) {
+      console.error('Error loading game data:', err);
+    }
+  };
 
   // Fetch available entries
   const fetchEntries = async () => {
