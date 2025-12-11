@@ -320,19 +320,28 @@ router.put('/game/results', async (req, res) => {
 
     game.entryResults = processedResults;
     game.isFinalized = true;
-    await game.save();
+    const savedGame = await game.save();
 
-    // 🔄 Emit socket event for results
+    console.log('💾 Game results saved to database:', {
+      gameDate: gameDateObj.toISOString().split('T')[0],
+      entryResults: processedResults.length,
+      isFinalized: true
+    });
+
+    // 🔄 Emit socket event for results to all users in this date's room
     if (req.app.io) {
       const gameDate = gameDateObj.toISOString().split('T')[0];
-      req.app.io.of('/chicken-fight').to(`fights-${gameDate}`).emit('resultsRecorded', {
+      const eventData = {
         gameDate,
-        fight: {
-          entryResults: processedResults,
-          isFinalized: true
-        }
-      });
-      console.log(`📡 Results socket event emitted to fights-${gameDate} room`);
+        entryResults: processedResults,
+        isFinalized: true,
+        updatedAt: new Date().toISOString()
+      };
+      
+      req.app.io.of('/chicken-fight').to(`fights-${gameDate}`).emit('resultsRecorded', eventData);
+      console.log(`📡 Results socket event emitted to fights-${gameDate} room`, eventData);
+    } else {
+      console.warn('⚠️ Socket.IO not available for emitting results event');
     }
 
     // Update bets with payouts
