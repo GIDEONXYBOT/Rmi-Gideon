@@ -294,16 +294,10 @@ export default function BettingEventReport() {
                 {isSupervisor && (
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Bet Amount</th>
                 )}
-                {isTeller && (
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Bet Amount</th>
-                )}
                 {isAdmin && (
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Payout</th>
                 )}
                 {isSupervisor && (
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Payout</th>
-                )}
-                {isTeller && (
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Payout</th>
                 )}
                 {(isAdmin || isSupervisor) && (
@@ -356,22 +350,12 @@ export default function BettingEventReport() {
                         {formatCurrency(staff.betAmount)}
                       </td>
                     )}
-                    {isTeller && (
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                        {formatCurrency(staff.betAmount)}
-                      </td>
-                    )}
                     {isAdmin && (
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                         {formatCurrency(staff.payout)}
                       </td>
                     )}
                     {isSupervisor && (
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                        {formatCurrency(staff.payout)}
-                      </td>
-                    )}
-                    {isTeller && (
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                         {formatCurrency(staff.payout)}
                       </td>
