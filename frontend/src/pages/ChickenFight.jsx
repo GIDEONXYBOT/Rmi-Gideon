@@ -679,14 +679,16 @@ export default function ChickenFight() {
                       {isChampion && <span>★</span>}
                       <span className="truncate">{entryData.name}</span>
                     </div>
-                    {/* Win/Loss Indicators - Show actual results (1 for win, 0 for loss) */}
+                    {/* Win/Loss/Draw Indicators - Show actual results (1 for win, 0 for loss, 0.5 for draw) */}
                     <div className="flex gap-1 items-center flex-shrink-0">
                       {entryFights.map((fight, idx) => (
                         <span
                           key={idx}
-                          className={`font-bold text-sm ${fight.result === 1 ? 'text-white' : 'text-red-200'}`}
+                          className={`font-bold text-sm ${
+                            fight.result === 1 ? 'text-white' : fight.result === 0.5 ? 'text-yellow-200' : 'text-red-200'
+                          }`}
                         >
-                          {fight.result}
+                          {fight.result === 0.5 ? '1/2' : fight.result}
                         </span>
                       ))}
                     </div>
@@ -944,9 +946,53 @@ export default function ChickenFight() {
             <div className="text-7xl font-bold mb-4">{fightNumber}</div>
             <div className="text-lg font-bold mb-6">FIGHT</div>
             <button
-              onClick={() => {
+              onClick={async () => {
                 if (selectedMeronEntry && selectedMeronLegBand && selectedWalaEntry && selectedWalaLegBand) {
-                  recordEntryResults('draw');
+                  // Build entry results for draw (both entries get 0.5)
+                  const entryResults = [
+                    {
+                      entryId: meronEntry._id,
+                      entryName: meronEntry.entryName,
+                      gameType: meronEntry.gameType,
+                      legResults: [
+                        { legNumber: fightNumber + 1, result: 'draw' }
+                      ]
+                    },
+                    {
+                      entryId: walaEntry._id,
+                      entryName: walaEntry.entryName,
+                      gameType: walaEntry.gameType,
+                      legResults: [
+                        { legNumber: fightNumber + 1, result: 'draw' }
+                      ]
+                    }
+                  ];
+                  
+                  // Add draws to local fights array
+                  const meronFight = {
+                    id: fightNumber + 1,
+                    entryName: meronEntry.entryName,
+                    legBand: selectedMeronLegBand,
+                    result: 0.5  // 0.5 for draw
+                  };
+                  const walaFight = {
+                    id: fightNumber + 1,
+                    entryName: walaEntry.entryName,
+                    legBand: selectedWalaLegBand,
+                    result: 0.5  // 0.5 for draw
+                  };
+                  
+                  const newFights = [...fights, meronFight, walaFight];
+                  setFights(newFights);
+                  
+                  const recordSuccess = await recordEntryResults(entryResults);
+                  
+                  if (!recordSuccess) {
+                    setError('Failed to record draw. Please try again.');
+                    setTimeout(() => setError(''), 3000);
+                    return;
+                  }
+                  
                   setFightNumber(fightNumber + 1);
                   setSelectedMeronEntry('');
                   setSelectedMeronLegBand('');
@@ -956,13 +1002,16 @@ export default function ChickenFight() {
                   setWalaLegBandSearch('');
                   setSuccess('Draw recorded! Moving to next fight.');
                   setTimeout(() => setSuccess(''), 3000);
+                  
+                  // Reload game data to sync
+                  await loadGameData();
                 }
               }}
               disabled={!selectedMeronEntry || !selectedMeronLegBand || !selectedWalaEntry || !selectedWalaLegBand}
               className={`w-full py-3 font-bold rounded-lg text-lg transition ${
                 selectedMeronEntry && selectedMeronLegBand && selectedWalaEntry && selectedWalaLegBand
-                  ? 'bg-yellow-500 hover:bg-yellow-600 text-black cursor-pointer'
-                  : 'bg-yellow-900 text-gray-400 cursor-not-allowed opacity-50'
+                  ? 'bg-green-500 hover:bg-green-600 text-white cursor-pointer'
+                  : 'bg-green-900 text-gray-400 cursor-not-allowed opacity-50'
               }`}
             >
               DRAW
