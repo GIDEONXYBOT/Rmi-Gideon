@@ -334,28 +334,31 @@ export default function ChickenFight() {
         // Sync fights array from gameData.entryResults
         if (response.data.game.entryResults && response.data.game.entryResults.length > 0) {
           const syncedFights = [];
-          const maxLegNumber = Math.max(
-            ...response.data.game.entryResults.flatMap(e => 
-              e.legResults?.map(l => l.legNumber) || []
-            ),
-            0
+          const legNumbers = response.data.game.entryResults.flatMap(e => 
+            e.legResults?.map(l => l.legNumber) || []
           );
+          const maxLegNumber = legNumbers.length > 0 ? Math.max(...legNumbers) : 0;
+          
+          console.log('📊 Leg numbers found:', legNumbers, 'Max:', maxLegNumber);
           
           // Populate fights array from entry results
           response.data.game.entryResults.forEach(entry => {
             entry.legResults?.forEach(leg => {
+              const resultValue = leg.result === 'win' ? 1 : leg.result === 'draw' ? 0.5 : 0;
               syncedFights.push({
                 legNumber: leg.legNumber,
                 entryId: entry.entryId,
                 entryName: entry.entryName,
-                result: leg.result === 'win' ? 1 : 0
+                result: resultValue
               });
             });
           });
           
           console.log('🔄 Syncing fights from gameData:', syncedFights);
           setFights(syncedFights);
-          setFightNumber(maxLegNumber);
+          const newFightNumber = Number.isFinite(maxLegNumber) ? maxLegNumber : 0;
+          console.log('📝 Setting fight number to:', newFightNumber);
+          setFightNumber(newFightNumber);
         }
       }
     } catch (err) {
@@ -943,7 +946,7 @@ export default function ChickenFight() {
 
           {/* Fight Number Column */}
           <div className="bg-gray-800 text-white rounded-lg p-8 flex flex-col items-center justify-center">
-            <div className="text-7xl font-bold mb-4">{fightNumber}</div>
+            <div className="text-7xl font-bold mb-4">{Number.isFinite(fightNumber) ? fightNumber : 0}</div>
             <div className="text-lg font-bold mb-6">FIGHT</div>
             <button
               onClick={async () => {
