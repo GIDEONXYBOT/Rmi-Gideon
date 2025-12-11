@@ -324,13 +324,15 @@ router.put('/game/results', async (req, res) => {
 
     // 🔄 Emit socket event for results
     if (req.app.io) {
-      req.app.io.of('/chicken-fight').emit('resultsRecorded', {
-        gameDate: gameDateObj.toISOString().split('T')[0],
+      const gameDate = gameDateObj.toISOString().split('T')[0];
+      req.app.io.of('/chicken-fight').to(`fights-${gameDate}`).emit('resultsRecorded', {
+        gameDate,
         fight: {
           entryResults: processedResults,
           isFinalized: true
         }
       });
+      console.log(`📡 Results socket event emitted to fights-${gameDate} room`);
     }
 
     // Update bets with payouts
@@ -429,11 +431,13 @@ router.post('/fights/save', async (req, res) => {
 
     // 🔄 Emit socket event to notify all clients
     if (req.app.io) {
-      req.app.io.of('/chicken-fight').emit('fightsUpdated', {
-        gameDate: today.toISOString().split('T')[0],
+      const gameDate = today.toISOString().split('T')[0];
+      req.app.io.of('/chicken-fight').to(`fights-${gameDate}`).emit('fightsUpdated', {
+        gameDate,
         fights,
         fightNumber
       });
+      console.log(`📡 Socket event emitted to fights-${gameDate} room`);
     }
 
     res.json({

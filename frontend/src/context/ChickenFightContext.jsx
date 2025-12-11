@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import { io } from 'socket.io-client';
 import { getApiUrl } from '../utils/apiConfig';
@@ -36,6 +36,7 @@ export function ChickenFightProvider({ children }) {
 
     socketRef.current.on('connect', () => {
       console.log('✅ Connected to Chicken Fight socket');
+      // Join room for today's fights
       socketRef.current.emit('joinTodaysFights', { gameDate: today });
     });
 
@@ -80,12 +81,17 @@ export function ChickenFightProvider({ children }) {
     };
   }, [today, API_URL]);
 
-  // Auto-save fights whenever they change
+  // Auto-save fights whenever they change (with debounce to prevent too many saves)
   useEffect(() => {
-    if (fights.length > 0 || fightNumber > 0) {
+    if (fights.length === 0 && fightNumber === 0) return;
+    
+    const debounceTimer = setTimeout(() => {
+      console.log('💾 Auto-saving fights...');
       saveFightsToBackend();
-    }
-  }, [fights, fightNumber]);
+    }, 1000); // Wait 1 second after last change before saving
+    
+    return () => clearTimeout(debounceTimer);
+  }, [fights, fightNumber, saveFightsToBackend]);
 
   // Exponential backoff retry logic
   const getRetryDelay = () => {
@@ -235,13 +241,12 @@ export function ChickenFightProvider({ children }) {
     }
   };
 
-  const saveFightsToBackend = async () => {
+  const saveFightsToBackend = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       
       if (!token) {
         console.warn('No token available for saving fights');
-        // Still save to localStorage as backup
         localStorage.setItem(`chicken-fight-${today}`, JSON.stringify(fights));
         localStorage.setItem(`chicken-fight-number-${today}`, fightNumber.toString());
         return;
@@ -257,12 +262,13 @@ export function ChickenFightProvider({ children }) {
         lastSyncRef.current = new Date().getTime();
         
         // 🔄 Emit socket event to notify other clients
-        if (socketRef.current) {
+        if (socketRef.current && socketRef.current.connected) {
           socketRef.current.emit('fightsUpdated', {
             gameDate: today,
             fights,
             fightNumber
           });
+          console.log('📡 Socket event emitted to other clients');
         }
       }
       
@@ -275,7 +281,7 @@ export function ChickenFightProvider({ children }) {
       localStorage.setItem(`chicken-fight-${today}`, JSON.stringify(fights));
       localStorage.setItem(`chicken-fight-number-${today}`, fightNumber.toString());
     }
-  };
+  }, [fights, fightNumber, today, API_URL]);
 
   const loadHistoryDates = () => {
     const dates = [];
@@ -344,7 +350,7 @@ export function ChickenFightProvider({ children }) {
     saveFightsToBackend();
   };
 
-  const loadEntries = async () => {
+  const loadEntries = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
@@ -359,9 +365,9 @@ export function ChickenFightProvider({ children }) {
     } catch (error) {
       console.error('Error loading entries:', error);
     }
-  };
+  }, [API_URL]);
 
-  const loadRegistrations = async () => {
+  const loadRegistrations = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
@@ -377,7 +383,7 @@ export function ChickenFightProvider({ children }) {
     } catch (error) {
       console.error('Error loading registrations:', error);
     }
-  };
+  }, [API_URL, today]);
 
   const addFight = (fight) => {
     const newFights = [...fights, fight];
