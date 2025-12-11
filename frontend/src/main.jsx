@@ -331,6 +331,8 @@ function App() {
                       <Route path="history" element={<TellerReportsHistory />} />
                       <Route path="settings" element={<AdminSettings />} />
                       <Route path="deployments" element={<TellerDeployments />} />
+                      <Route path="live-map" element={<AdminMapEditor />} />
+                      <Route path="betting-event-report" element={<BettingEventReport />} />
                       
                       {/* ✅ Added: Suggested Schedule (real-time) */}
                       <Route path="suggested-schedule" element={<ScheduleRotation />} />
