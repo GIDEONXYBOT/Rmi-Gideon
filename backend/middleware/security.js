@@ -19,6 +19,7 @@ const securityMiddleware = (app) => {
         'https://www.rmi.gideonbot.xyz',
         'https://rmi.gideonbot.xyz',
         'https://gideon-reports.pages.dev',
+        'https://rmi-backend-zhdr.onrender.com', // Backend itself for CORS preflight
         'https://your-domain.pages.dev', // Replace with your Cloudflare domain
         'http://localhost:3000',
         'http://localhost:5173',

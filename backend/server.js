@@ -46,6 +46,15 @@ app.get('/api/health', (req, res) => {
   res.json(clientInfo);
 });
 
+// Handle CORS preflight requests for all routes
+app.options('*', (req, res) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Cache-Control, Pragma, x-requested-with');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.sendStatus(200);
+});
+
 // Production Security Middleware (must be first)
 if (process.env.NODE_ENV === 'production') {
   securityMiddleware(app);
