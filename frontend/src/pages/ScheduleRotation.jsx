@@ -178,6 +178,7 @@ export default function ScheduleRotation() {
       if (!token) {
         console.error('❌ No token found in localStorage');
         showToast({ type: "error", message: "Authentication required. Please log in again." });
+        setLoading(false);
         return;
       }
       
@@ -215,30 +216,34 @@ export default function ScheduleRotation() {
         // Default: fetch tomorrow's schedule
         let queryStr = `?range=${workDaysRange}`;
         console.log('🔍 Fetching tomorrow schedule with query:', queryStr);
-        try {
-          const res = await axios.get(`${API}/api/schedule/tomorrow${queryStr}`, {
-            headers: { Authorization: `Bearer ${token}` },
-            timeout: 30000
-          });
-          console.log('🔍 /api/schedule/tomorrow response:', res.data?.schedule?.map(s=>({id:s._id,tellerName:s.tellerName,rangeWorkDays:s.rangeWorkDays,range:s.range})));
-          setTomorrowAssignments(res.data.schedule || []);
-        } catch (scheduleErr) {
-          console.error("❌ Failed to fetch schedule/tomorrow:", scheduleErr.message);
-          if (scheduleErr.response?.status === 401) {
-            showToast({ type: "error", message: "Session expired. Please log in again." });
-          } else if (scheduleErr.response?.status === 403) {
-            showToast({ type: "error", message: "Permission denied to view schedule." });
-          } else if (scheduleErr.code === 'ECONNABORTED') {
-            showToast({ type: "error", message: "Request timeout. Backend is slow." });
-          } else {
-            showToast({ type: "error", message: `Failed to load schedule: ${scheduleErr.message}` });
-          }
-          throw scheduleErr;
-        }
+        const res = await axios.get(`${API}/api/schedule/tomorrow${queryStr}`, {
+          headers: { Authorization: `Bearer ${token}` },
+          timeout: 30000
+        });
+        console.log('🔍 /api/schedule/tomorrow response:', res.data?.schedule?.map(s=>({id:s._id,tellerName:s.tellerName,rangeWorkDays:s.rangeWorkDays,range:s.range})));
+        setTomorrowAssignments(res.data.schedule || []);
       }
     } catch (err) {
-      console.error("❌ Error in fetchData:", err);
-      // Error already shown via toast above
+      console.error("❌ Failed to fetch schedule:", err);
+      
+      // Show specific error message based on error type
+      let errorMsg = "Failed to load schedule data.";
+      
+      if (err.response?.status === 401) {
+        errorMsg = "Session expired. Please log in again.";
+      } else if (err.response?.status === 403) {
+        errorMsg = "Permission denied to view schedule.";
+      } else if (err.response?.status === 500) {
+        errorMsg = `Server error: ${err.response?.data?.message || 'Internal server error'}`;
+      } else if (err.code === 'ECONNABORTED') {
+        errorMsg = "Request timeout (30s). Backend might be slow.";
+      } else if (err.code === 'ECONNREFUSED') {
+        errorMsg = "Cannot connect to backend.";
+      } else if (err.message) {
+        errorMsg = `Error: ${err.message}`;
+      }
+      
+      showToast({ type: "error", message: errorMsg });
     } finally {
       setLoading(false);
     }
