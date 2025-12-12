@@ -4,6 +4,7 @@
  * - Uses current browser hostname (auto-detects IP if accessed via IP)
  * - Backend strict port: 5000
  * - Maps production domains to backend endpoints
+ * - Handles mobile network requests
  * 
  * IMPORTANT: Always use getApiUrl() function, NOT the API_URL constant
  */
@@ -16,6 +17,7 @@ export function getApiUrl() {
   }
 
   const hostname = window.location.hostname;
+  const protocol = window.location.protocol;
   
   // Map production domains to their respective backends
   const domainMap = {
@@ -25,17 +27,26 @@ export function getApiUrl() {
 
   // Check if we have a mapped domain
   if (domainMap[hostname]) {
+    console.log('✅ Using mapped domain:', domainMap[hostname]);
     return domainMap[hostname];
   }
 
   // Check for environment variable (works with Cloudflare/Vercel env vars)
   const envUrl = import.meta.env.VITE_API_URL;
   if (envUrl) {
+    console.log('✅ Using env variable API URL:', envUrl);
     return envUrl;
   }
 
-  // Default: use the current hostname with port 5000 (for localhost development)
-  return `http://${hostname}:5000`;
+  // Check for localhost or 127.0.0.1 (development)
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    console.log('✅ Using localhost development URL');
+    return 'http://localhost:5000';
+  }
+
+  // For mobile/network access via IP address, try to connect to port 5000
+  console.log('✅ Using IP address with port 5000:', `${protocol}//${hostname}:5000`);
+  return `${protocol}//${hostname}:5000`;
 }
 
 // Export hostname getter
@@ -47,6 +58,10 @@ export function createSocket(io, options = {}) {
   console.log('🔌 Creating socket with URL:', socketUrl);
   return io(socketUrl, {
     transports: ["websocket", "polling"],
+    reconnection: true,
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 5000,
+    reconnectionAttempts: 5,
     ...options
   });
 }

@@ -4,8 +4,17 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-route
 import "./index.css";
 import axios from "axios";
 
-// Set axios default timeout to 30 seconds to handle Render free tier sleep
-axios.defaults.timeout = 30000;
+// Detect if running on mobile device
+const isMobileDevice = () => {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent
+  );
+};
+
+// Set axios default timeout - longer for mobile devices to account for slower connections
+const timeoutMs = isMobileDevice() ? 45000 : 30000; // 45s for mobile, 30s for desktop
+axios.defaults.timeout = timeoutMs;
+console.log(`⏱️ Axios timeout set to ${timeoutMs}ms (Mobile: ${isMobileDevice()})`);
 
 // Add axios interceptor to include Authorization header
 axios.interceptors.request.use(
@@ -14,9 +23,26 @@ axios.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    // Ensure timeout is set on each request
+    config.timeout = timeoutMs;
     return config;
   },
   (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Add axios response interceptor for better mobile error handling
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Log network errors for debugging
+    if (error.code === 'ECONNABORTED') {
+      console.error('⏱️ Request timeout (network too slow)');
+    } else if (!error.response) {
+      // Network error - no response from server
+      console.error('🌐 Network error - could not reach backend:', error.message);
+    }
     return Promise.reject(error);
   }
 );
