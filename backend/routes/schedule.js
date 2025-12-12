@@ -956,11 +956,20 @@ router.get("/suggest/:dayKey", async (req, res) => {
       console.log(`📊 Calculating weekly worked days from ${weekStart} to ${weekEnd} (Monday-Sunday)`);
     }
 
-    const assigned = await DailyTellerAssignment.find({ dayKey }).distinct("tellerId");
+    // Get tomorrow's date (the target day for suggestions)
+    const targetDate = DateTime.fromISO(dayKey).setZone("Asia/Manila");
+    const tomorrow = targetDate.plus({ days: 1 }).toFormat("yyyy-MM-dd");
+
+    // Find tellers already assigned to the target day AND tomorrow
+    const assignedToday = await DailyTellerAssignment.find({ dayKey }).distinct("tellerId");
+    const assignedTomorrow = await DailyTellerAssignment.find({ dayKey: tomorrow }).distinct("tellerId");
+    
+    // Exclude both today's and tomorrow's assignments
+    const excludedIds = [...new Set([...assignedToday, ...assignedTomorrow])];
 
     // Find available tellers, exclude those with active penalties
     const availableTellers = await User.find({
-      _id: { $nin: assigned },
+      _id: { $nin: excludedIds },
       role: { $in: ["teller", "supervisor_teller"] },
       status: "approved",
       $or: [
