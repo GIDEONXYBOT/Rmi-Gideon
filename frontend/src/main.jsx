@@ -127,6 +127,7 @@ import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import RegisterPage from "./pages/RegisterPage.jsx";
 import MobileDebugPage from "./pages/MobileDebugPage.jsx";
+import ConnectivityTest from "./pages/ConnectivityTest.jsx";
 
 // Shared Pages
 import Dashboard from "./pages/Dashboard.jsx";
@@ -250,6 +251,7 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/mobile-debug" element={<MobileDebugPage />} />
+            <Route path="/connectivity-test" element={<ConnectivityTest />} />
             {/* Small auth wrapper — only requires a token (component defined below) */}
 
             {/* Universal upload page — open to any logged-in user */}
