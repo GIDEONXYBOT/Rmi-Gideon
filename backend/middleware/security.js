@@ -16,6 +16,9 @@ const securityMiddleware = (app) => {
 
       // Static allowed origins (can include scheme and host, or host-only patterns)
       const allowedOrigins = [
+        'https://www.rmi.gideonbot.xyz',
+        'https://rmi.gideonbot.xyz',
+        'https://gideon-reports.pages.dev',
         'https://your-domain.pages.dev', // Replace with your Cloudflare domain
         'http://localhost:3000',
         'http://localhost:5173',
