@@ -12,9 +12,43 @@ const isMobileDevice = () => {
 };
 
 // Set axios default timeout - longer for mobile devices to account for slower connections
-const timeoutMs = isMobileDevice() ? 45000 : 30000; // 45s for mobile, 30s for desktop
+const timeoutMs = isMobileDevice() ? 60000 : 30000; // 60s for mobile, 30s for desktop
 axios.defaults.timeout = timeoutMs;
 console.log(`⏱️ Axios timeout set to ${timeoutMs}ms (Mobile: ${isMobileDevice()})`);
+
+// Add retry logic for failed requests (especially important for mobile/slow connections)
+const axiosRetry = async (config, retries = 3, delay = 1000) => {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const response = await axios.request(config);
+      return response;
+    } catch (error) {
+      // Don't retry on 4xx errors (auth, validation, etc)
+      if (error.response && error.response.status >= 400 && error.response.status < 500) {
+        throw error;
+      }
+      
+      // Retry on 5xx errors or network errors
+      if (i < retries - 1) {
+        const backoffDelay = delay * Math.pow(2, i); // Exponential backoff
+        console.warn(`⚠️ Request failed, retrying in ${backoffDelay}ms (attempt ${i + 1}/${retries})...`);
+        await new Promise(resolve => setTimeout(resolve, backoffDelay));
+      } else {
+        throw error;
+      }
+    }
+  }
+};
+
+// Override axios request to add retry logic for mobile
+const originalRequest = axios.request;
+axios.request = function(config) {
+  // Add retry logic for GET requests (safe to retry)
+  if (config.method === 'GET' || config.method === 'get') {
+    return axiosRetry(config, isMobileDevice() ? 4 : 2, isMobileDevice() ? 1500 : 1000);
+  }
+  return originalRequest.call(this, config);
+};
 
 // Add axios interceptor to include Authorization header
 axios.interceptors.request.use(
@@ -39,9 +73,13 @@ axios.interceptors.response.use(
     // Log network errors for debugging
     if (error.code === 'ECONNABORTED') {
       console.error('⏱️ Request timeout (network too slow)');
+    } else if (error.code === 'ECONNREFUSED') {
+      console.error('🔌 Connection refused - backend may be offline');
     } else if (!error.response) {
       // Network error - no response from server
       console.error('🌐 Network error - could not reach backend:', error.message);
+    } else {
+      console.error('❌ Backend error:', error.response.status, error.message);
     }
     return Promise.reject(error);
   }

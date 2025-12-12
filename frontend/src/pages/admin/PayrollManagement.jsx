@@ -1,16 +1,21 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Lock, CheckCircle } from "lucide-react";
-
-const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
+import { getApiUrl } from "../../utils/apiConfig.js";
 
 export default function PayrollManagement() {
   const [payrolls, setPayrolls] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const fetchPayrolls = async () => {
     try {
-      const res = await axios.get(`${API}/api/payroll/management`);
+      setLoading(true);
+      setError(null);
+      const API = getApiUrl();
+      const res = await axios.get(`${API}/api/payroll/management`, {
+        timeout: 30000
+      });
       const data = res.data?.payrolls?.length ? res.data.payrolls : [
         {
           name: "Sample Teller",
@@ -37,20 +42,35 @@ export default function PayrollManagement() {
       ];
       setPayrolls(data);
     } catch (err) {
-      console.error(err);
+      console.error('Failed to load payrolls:', err);
+      setError(err.response?.data?.message || err.message || 'Failed to load payroll data');
     } finally {
       setLoading(false);
     }
   };
 
   const handleApprove = async (id) => {
-    await axios.post(`${API}/api/payroll/approve/${id}`);
-    fetchPayrolls();
+    try {
+      const API = getApiUrl();
+      await axios.post(`${API}/api/payroll/approve/${id}`, {}, {
+        timeout: 30000
+      });
+      fetchPayrolls();
+    } catch (err) {
+      console.error('Failed to approve payroll:', err);
+    }
   };
 
   const handleLock = async (id) => {
-    await axios.post(`${API}/api/payroll/lock/${id}`);
-    fetchPayrolls();
+    try {
+      const API = getApiUrl();
+      await axios.post(`${API}/api/payroll/lock/${id}`, {}, {
+        timeout: 30000
+      });
+      fetchPayrolls();
+    } catch (err) {
+      console.error('Failed to lock payroll:', err);
+    }
   };
 
   useEffect(() => {
@@ -61,6 +81,22 @@ export default function PayrollManagement() {
     return (
       <div className="text-center text-gray-400 mt-10 animate-pulse">
         Loading Payroll Management...
+      </div>
+    );
+
+  if (error)
+    return (
+      <div className="p-6 text-center">
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+          <h3 className="font-semibold text-red-800 dark:text-red-200 mb-2">Failed to Load Payroll Data</h3>
+          <p className="text-red-700 dark:text-red-300 text-sm mb-4">{error}</p>
+          <button
+            onClick={fetchPayrolls}
+            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm"
+          >
+            Retry
+          </button>
+        </div>
       </div>
     );
 
@@ -97,8 +133,7 @@ export default function PayrollManagement() {
                   ₱{p.totalSalary}
                 </td>
                 <td className="p-2 border">{p.date}</td>
-                <td className="p-2 border text-center">
-                  {p.locked ? (
+                <td className="p-2 border text-center">                  {p.locked ? (
                     <span className="text-gray-400 font-semibold">Locked</span>
                   ) : p.approved ? (
                     <span className="text-green-400 font-semibold">Approved</span>
