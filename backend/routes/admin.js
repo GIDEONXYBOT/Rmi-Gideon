@@ -201,7 +201,7 @@ router.get("/financial-summary/:date", requireAuth, async (req, res) => {
     
     // Check if user is SuperAdmin
     const user = await User.findById(req.userId).lean();
-    if (user?.role !== 'admin' || !user?.isSuperAdmin) {
+    if (user?.role !== 'super_admin') {
       return res.status(403).json({ message: "Access denied. SuperAdmin required." });
     }
 
