@@ -11,6 +11,29 @@ const isMobileDevice = () => {
   );
 };
 
+// Import getApiUrl for health checks
+import { getApiUrl } from './utils/apiConfig.js';
+
+// Pre-flight health check to warm up backend on cold starts
+const preFlightHealthCheck = async () => {
+  try {
+    const apiUrl = getApiUrl();
+    console.log(`🔍 Pre-flight health check to ${apiUrl}/api/health`);
+    const response = await axios.get(`${apiUrl}/api/health`, {
+      timeout: 15000 // 15s timeout for initial check
+    });
+    console.log('✅ Backend is healthy, proceeding with app load');
+    return true;
+  } catch (error) {
+    console.warn('⚠️ Pre-flight health check failed, but app will retry on demand:', error.message);
+    // Don't block app load, let the retry logic handle it
+    return false;
+  }
+};
+
+// Run health check on app start
+preFlightHealthCheck();
+
 // Set axios default timeout - longer for mobile devices to account for slower connections
 const timeoutMs = isMobileDevice() ? 60000 : 30000; // 60s for mobile, 30s for desktop
 axios.defaults.timeout = timeoutMs;
@@ -59,6 +82,7 @@ axios.interceptors.request.use(
     }
     // Ensure timeout is set on each request
     config.timeout = timeoutMs;
+    console.log(`📤 ${config.method.toUpperCase()} ${config.url}`);
     return config;
   },
   (error) => {
@@ -68,18 +92,23 @@ axios.interceptors.request.use(
 
 // Add axios response interceptor for better mobile error handling
 axios.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log(`✅ ${response.status} ${response.config.url}`);
+    return response;
+  },
   (error) => {
     // Log network errors for debugging
+    const errorMsg = error.message || 'Unknown error';
+    const url = error.config?.url || 'unknown';
+    
     if (error.code === 'ECONNABORTED') {
-      console.error('⏱️ Request timeout (network too slow)');
+      console.error(`⏱️ Timeout on ${error.config?.method?.toUpperCase()} ${url}`);
     } else if (error.code === 'ECONNREFUSED') {
-      console.error('🔌 Connection refused - backend may be offline');
-    } else if (!error.response) {
-      // Network error - no response from server
-      console.error('🌐 Network error - could not reach backend:', error.message);
+      console.error(`🔌 Connection refused on ${error.config?.method?.toUpperCase()} ${url}`);
+    } else if (error.response) {
+      console.error(`❌ ${error.response.status} on ${error.config?.method?.toUpperCase()} ${url}: ${error.response.statusText}`);
     } else {
-      console.error('❌ Backend error:', error.response.status, error.message);
+      console.error(`🌐 Network error on ${error.config?.method?.toUpperCase()} ${url}: ${errorMsg}`);
     }
     return Promise.reject(error);
   }
