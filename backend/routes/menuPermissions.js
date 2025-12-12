@@ -124,7 +124,8 @@ router.post("/initialize", requireAuth, requireRole(['super_admin']), async (req
           "assistant",
           "menu-config",
           "manage-sidebars",
-          "settings"
+          "settings",
+          "financial-summary"
         ] },
     ];
 

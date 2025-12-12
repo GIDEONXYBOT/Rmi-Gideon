@@ -5,6 +5,8 @@ import User from "../models/User.js";
 import TellerReport from "../models/TellerReport.js";
 import Payroll from "../models/Payroll.js";
 import PayrollAuditLog from "../models/PayrollAuditLog.js";
+import Cashflow from "../models/Cashflow.js";
+import AdminFinance from "../models/AdminFinance.js";
 import { sendPayrollUpdateNotification, sendErrorNotification } from '../services/emailService.js';
 import bcrypt from "bcrypt";
 
@@ -187,6 +189,127 @@ router.get("/payroll-summary", async (req, res) => {
   } catch (err) {
     console.error("❌ Error fetching payroll summary:", err);
     res.status(500).json({ message: "Failed to fetch payroll summary" });
+  }
+});
+
+/* ========================================================
+   📊 DAILY FINANCIAL SUMMARY REPORT (SuperAdmin Only)
+======================================================== */
+router.get("/financial-summary/:date", requireAuth, async (req, res) => {
+  try {
+    const { date } = req.params; // Expected format: YYYY-MM-DD
+    
+    // Check if user is SuperAdmin
+    const user = await User.findById(req.userId).lean();
+    if (user?.role !== 'admin' || !user?.isSuperAdmin) {
+      return res.status(403).json({ message: "Access denied. SuperAdmin required." });
+    }
+
+    // Parse the date to get start and end of day
+    const startDate = new Date(date);
+    startDate.setHours(0, 0, 0, 0);
+    const endDate = new Date(date);
+    endDate.setHours(23, 59, 59, 999);
+
+    // Fetch all payroll records for this date
+    const payrolls = await Payroll.find({
+      date: date,
+      approved: true
+    }).populate('user').lean();
+
+    // Fetch cashflow transactions for this date
+    const cashflows = await Cashflow.find({
+      date: { $gte: startDate, $lte: endDate }
+    }).lean();
+
+    // Fetch admin finance data for this date
+    const adminFinance = await AdminFinance.findOne({
+      date: { $gte: startDate, $lte: endDate }
+    }).lean();
+
+    // Calculate salary data by role
+    const expenseByRole = {};
+    const roles = ["teller", "admin", "supervisor", "supervisor_teller", "head_watcher", "sub_watcher", "declarator"];
+    
+    roles.forEach(role => {
+      const rolePayrolls = payrolls.filter(p => p.role === role);
+      expenseByRole[role] = {
+        count: rolePayrolls.length,
+        totalSalary: rolePayrolls.reduce((sum, p) => sum + (p.totalSalary || 0), 0),
+        totalOver: rolePayrolls.reduce((sum, p) => sum + (p.over || 0), 0),
+      };
+    });
+
+    // Calculate totals
+    const totalSalary = payrolls.reduce((sum, p) => sum + (p.totalSalary || 0), 0);
+    const totalOver = payrolls.reduce((sum, p) => sum + (p.over || 0), 0);
+    const totalExpense = payrolls.reduce((sum, p) => sum + (p.deduction || 0), 0);
+
+    // Categorize expenses from cashflow
+    const expenses = {
+      pettyCash: 0,
+      registration: 0,
+      meals: 0,
+      water: 0,
+      thermal: 0,
+      other: 0
+    };
+
+    cashflows.forEach(cf => {
+      if (cf.type === 'expense') {
+        const desc = cf.description.toLowerCase();
+        if (desc.includes('petty')) expenses.pettyCash += cf.amount;
+        else if (desc.includes('registration') || desc.includes('permit')) expenses.registration += cf.amount;
+        else if (desc.includes('meal') || desc.includes('food')) expenses.meals += cf.amount;
+        else if (desc.includes('water')) expenses.water += cf.amount;
+        else if (desc.includes('thermal') || desc.includes('print')) expenses.thermal += cf.amount;
+        else expenses.other += cf.amount;
+      }
+    });
+
+    // Admin finance data
+    const opCommission = adminFinance?.commission || 0;
+    const adminExpense = adminFinance?.expenses || 0;
+    const adminDraw = adminFinance?.draw || 0;
+
+    // Calculate cash position (mock data - would need actual transaction logic)
+    const revolvingMoney = 0; // Would need transaction data
+    const systemBalance = 0; // Would need transaction data
+    const cashOnHand = 0; // Would need transaction data
+    const difference = 0; // Would need transaction data
+
+    res.json({
+      date,
+      cashPosition: {
+        revolvingMoney,
+        systemBalance,
+        cashOnHand,
+        difference
+      },
+      salary: {
+        totalSalary,
+        totalOver,
+        opCommission,
+        adminExpense,
+        adminDraw
+      },
+      expenseByRole,
+      expenses,
+      adminData: {
+        commission: opCommission,
+        draw: adminDraw,
+        expenses: adminExpense
+      },
+      totals: {
+        totalPayrollExpense: totalSalary + totalExpense,
+        totalCashExpense: Object.values(expenses).reduce((a, b) => a + b, 0),
+        grandTotal: totalSalary + totalExpense + Object.values(expenses).reduce((a, b) => a + b, 0)
+      }
+    });
+
+  } catch (err) {
+    console.error("❌ Error fetching financial summary:", err);
+    res.status(500).json({ message: "Failed to fetch financial summary", error: err.message });
   }
 });
 
