@@ -18,8 +18,11 @@ export function SettingsProvider({ children }) {
   const fetchSettings = async () => {
     try {
       // Add timeout and cache busting for fresh data
+      // Use longer timeout for mobile on initial load
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const timeout = isMobile ? 45000 : 30000; // 45s for mobile, 30s for desktop on settings fetch
       const res = await axios.get(`${getApiUrl()}/api/settings`, {
-        timeout: 10000
+        timeout: timeout
       });
       setSettings(res.data);
     } catch (err) {
