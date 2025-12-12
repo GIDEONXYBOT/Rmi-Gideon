@@ -5,9 +5,8 @@ import { getApiUrl } from '../utils/apiConfig';
 import { UserCircle, Camera, Upload, X } from 'lucide-react';
 import { AvatarEditor } from '../components/AvatarEditor';
 
-const API = getApiUrl();
-
 export default function MyProfile() {
+  const API = getApiUrl();
   const { user, setUser } = useContext(SettingsContext);
   const [uploading, setUploading] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);

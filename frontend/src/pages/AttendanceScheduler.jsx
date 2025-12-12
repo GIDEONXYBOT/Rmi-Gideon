@@ -21,12 +21,13 @@ import {
   RefreshCw
 } from "lucide-react";
 
-const API = getApiUrl();
-
 export default function AttendanceScheduler() {
   const { user, settings } = useContext(SettingsContext);
   const { showToast } = useToast();
   const dark = settings?.theme?.mode === "dark";
+  
+  // Get API URL fresh each time to avoid stale references
+  const API = getApiUrl();
 
   // State management
   const [tellers, setTellers] = useState([]);

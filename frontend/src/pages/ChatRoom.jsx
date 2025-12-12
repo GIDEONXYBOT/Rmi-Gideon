@@ -7,10 +7,10 @@ import { NOTIFICATION_SOUND } from "../utils/constants.js";
 import { getSocket } from "../socket";
 import { getApiUrl } from "../utils/apiConfig";
 
-const API = getApiUrl();
 let globalSocket = null;
 
 export default function FloatingChat() {
+  const API = getApiUrl();
   const { user, settings } = useContext(SettingsContext);
   const dark = settings?.theme?.mode === "dark";
 

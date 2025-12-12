@@ -27,13 +27,14 @@ import { getSocket } from "../socket";
 import { getApiUrl } from "../utils/apiConfig";
 import PlanAbsence from "../components/PlanAbsence";
 
-const API = getApiUrl();
-
 export default function ScheduleRotation() {
   const { user, settings } = useContext(SettingsContext);
   const { showToast } = useToast();
   const navigate = useNavigate();
   const dark = settings?.theme?.mode === "dark";
+  
+  // Get API URL fresh each time to avoid stale references
+  const API = getApiUrl();
 
   const [tomorrowAssignments, setTomorrowAssignments] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -174,6 +175,12 @@ export default function ScheduleRotation() {
       setLoading(true);
       const token = localStorage.getItem("token");
       
+      if (!token) {
+        console.error('❌ No token found in localStorage');
+        showToast({ type: "error", message: "Authentication required. Please log in again." });
+        return;
+      }
+      
       // If custom date range is enabled, fetch from that range
       if (useCustomDateRange && customRangeStart && customRangeEnd) {
         console.log('🔍 Fetching assignments for custom range:', customRangeStart, 'to', customRangeEnd);
@@ -189,14 +196,15 @@ export default function ScheduleRotation() {
           const dateStr = currentDate.toISOString().slice(0, 10);
           try {
             const res = await axios.get(`${API}/api/schedule/by-date/${dateStr}`, {
-              headers: { Authorization: `Bearer ${token}` }
+              headers: { Authorization: `Bearer ${token}` },
+              timeout: 30000
             });
             if (res.data.schedule && res.data.schedule.length > 0) {
               allAssignments.push(...res.data.schedule);
               console.log(`  ✅ ${dateStr}: ${res.data.schedule.length} assignments`);
             }
           } catch (err) {
-            console.log(`  ⚠️ ${dateStr}: No data or error`);
+            console.log(`  ⚠️ ${dateStr}: No data or error`, err.message);
           }
           currentDate.setDate(currentDate.getDate() + 1);
         }
@@ -207,15 +215,30 @@ export default function ScheduleRotation() {
         // Default: fetch tomorrow's schedule
         let queryStr = `?range=${workDaysRange}`;
         console.log('🔍 Fetching tomorrow schedule with query:', queryStr);
-        const res = await axios.get(`${API}/api/schedule/tomorrow${queryStr}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        console.log('🔍 /api/schedule/tomorrow response:', res.data?.schedule?.map(s=>({id:s._id,tellerName:s.tellerName,rangeWorkDays:s.rangeWorkDays,range:s.range})));
-        setTomorrowAssignments(res.data.schedule || []);
+        try {
+          const res = await axios.get(`${API}/api/schedule/tomorrow${queryStr}`, {
+            headers: { Authorization: `Bearer ${token}` },
+            timeout: 30000
+          });
+          console.log('🔍 /api/schedule/tomorrow response:', res.data?.schedule?.map(s=>({id:s._id,tellerName:s.tellerName,rangeWorkDays:s.rangeWorkDays,range:s.range})));
+          setTomorrowAssignments(res.data.schedule || []);
+        } catch (scheduleErr) {
+          console.error("❌ Failed to fetch schedule/tomorrow:", scheduleErr.message);
+          if (scheduleErr.response?.status === 401) {
+            showToast({ type: "error", message: "Session expired. Please log in again." });
+          } else if (scheduleErr.response?.status === 403) {
+            showToast({ type: "error", message: "Permission denied to view schedule." });
+          } else if (scheduleErr.code === 'ECONNABORTED') {
+            showToast({ type: "error", message: "Request timeout. Backend is slow." });
+          } else {
+            showToast({ type: "error", message: `Failed to load schedule: ${scheduleErr.message}` });
+          }
+          throw scheduleErr;
+        }
       }
     } catch (err) {
-      console.error("❌ Failed to fetch schedule:", err);
-      showToast({ type: "error", message: "Failed to load schedule data." });
+      console.error("❌ Error in fetchData:", err);
+      // Error already shown via toast above
     } finally {
       setLoading(false);
     }
