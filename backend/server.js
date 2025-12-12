@@ -30,20 +30,41 @@ function getLocalIP() {
 dotenv.config();
 const app = express();
 
+// 🔧 Health check CORS preflight - MUST come before security middleware
+app.options('/api/health', (req, res) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.sendStatus(200);
+});
+
 // 🔧 Health check and connectivity test endpoint (before security middleware)
 app.get('/api/health', (req, res) => {
-  const clientInfo = {
-    timestamp: new Date().toISOString(),
-    clientIP: req.ip || req.connection.remoteAddress,
-    userAgent: req.headers['user-agent'],
-    origin: req.headers.origin,
-    host: req.headers.host,
-    serverIP: getLocalIP(),
-    message: 'Backend server is running'
-  };
+  try {
+    const clientInfo = {
+      timestamp: new Date().toISOString(),
+      clientIP: req.ip || req.connection.remoteAddress,
+      userAgent: req.headers['user-agent'],
+      origin: req.headers.origin,
+      host: req.headers.host,
+      serverIP: getLocalIP(),
+      message: 'Backend server is running',
+      uptime: process.uptime(),
+      nodeVersion: process.version
+    };
 
-  console.log('🏥 Health check requested:', clientInfo);
-  res.json(clientInfo);
+    console.log('🏥 Health check requested:', clientInfo);
+    
+    // Set explicit CORS headers for health check
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    
+    res.json(clientInfo);
+  } catch (error) {
+    console.error('❌ Error in health check:', error);
+    res.status(500).json({ message: 'Health check error', error: error.message });
+  }
 });
 
 // Handle CORS preflight requests for all routes

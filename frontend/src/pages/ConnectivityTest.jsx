@@ -12,10 +12,10 @@ export default function ConnectivityTest() {
       const apiUrl = getApiUrl();
 
       // Test 1: Basic health check
+      const healthStart = Date.now();
       try {
-        const start = Date.now();
-        const res = await axios.get(`${apiUrl}/api/health`, { timeout: 5000 });
-        const duration = Date.now() - start;
+        const res = await axios.get(`${apiUrl}/api/health`, { timeout: 3000 });
+        const duration = Date.now() - healthStart;
         testResults.push({
           name: 'Health Check',
           status: '✅ PASS',
@@ -23,19 +23,21 @@ export default function ConnectivityTest() {
           data: res.data
         });
       } catch (err) {
+        const duration = Date.now() - healthStart;
         testResults.push({
           name: 'Health Check',
           status: '❌ FAIL',
+          duration: `${duration}ms`,
           error: err.message,
           code: err.code
         });
       }
 
       // Test 2: Settings endpoint
+      const settingsStart = Date.now();
       try {
-        const start = Date.now();
         const res = await axios.get(`${apiUrl}/api/settings`, { timeout: 10000 });
-        const duration = Date.now() - start;
+        const duration = Date.now() - settingsStart;
         testResults.push({
           name: 'Settings Endpoint',
           status: '✅ PASS',
@@ -43,12 +45,14 @@ export default function ConnectivityTest() {
           hasData: !!res.data
         });
       } catch (err) {
+        const duration = Date.now() - settingsStart;
         testResults.push({
           name: 'Settings Endpoint',
           status: '❌ FAIL',
+          duration: `${duration}ms`,
           error: err.message,
           code: err.code,
-          status: err.response?.status
+          statusCode: err.response?.status
         });
       }
 
@@ -91,11 +95,12 @@ export default function ConnectivityTest() {
               {result.duration && <p><strong>Duration:</strong> {result.duration}</p>}
               {result.error && <p><strong>Error:</strong> {result.error}</p>}
               {result.code && <p><strong>Error Code:</strong> {result.code}</p>}
+              {result.statusCode && <p><strong>HTTP Status:</strong> {result.statusCode}</p>}
               {result.apiUrl && <p><strong>API URL:</strong> {result.apiUrl}</p>}
               {result.hostname && <p><strong>Hostname:</strong> {result.hostname}</p>}
               {result.isMobile !== undefined && <p><strong>Is Mobile:</strong> {result.isMobile ? 'YES' : 'NO'}</p>}
               {result.userAgent && <p><strong>User Agent:</strong> {result.userAgent}...</p>}
-              {result.data && <pre style={{ overflow: 'auto', maxHeight: '200px' }}>{JSON.stringify(result.data, null, 2)}</pre>}
+              {result.data && <pre style={{ overflow: 'auto', maxHeight: '200px', backgroundColor: '#111' }}>{JSON.stringify(result.data, null, 2)}</pre>}
             </div>
           ))}
         </div>
