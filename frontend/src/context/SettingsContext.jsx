@@ -30,6 +30,25 @@ export function SettingsProvider({ children }) {
       if (err.response?.status !== 429) {
         console.error("❌ Failed to fetch settings:", err.message);
       }
+      
+      // Use default settings if fetch fails (don't block app load)
+      console.log("⚠️ Using default settings due to fetch failure");
+      setSettings({
+        theme: {
+          mode: "light",
+          lightBg: "#ffffff",
+          lightFont: "#000000",
+          darkBg: "#1e1e1e",
+          darkFont: "#ffffff"
+        },
+        baseSalaries: {
+          teller: 450,
+          supervisor: 600,
+          admin: 0,
+          head_watcher: 450,
+          sub_watcher: 400
+        }
+      });
     } finally {
       setLoading(false);
     }
