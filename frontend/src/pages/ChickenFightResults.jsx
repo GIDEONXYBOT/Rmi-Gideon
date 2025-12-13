@@ -14,6 +14,8 @@ export default function ChickenFightResults() {
   // Navigation
   const [currentFightNum, setCurrentFightNum] = useState(0);
   const [jumpToFight, setJumpToFight] = useState('');
+  const [searchedEntryName, setSearchedEntryName] = useState(''); // Track searched entry
+  const [entryFights, setEntryFights] = useState([]); // Store all fights for an entry
   
   // Edit modal
   const [showEditModal, setShowEditModal] = useState(false);
@@ -81,6 +83,8 @@ export default function ChickenFightResults() {
     if (!searchTerm) return;
     
     setError('');
+    setSearchedEntryName('');
+    setEntryFights([]);
     
     // Try to match fight number first
     const fightNum = parseInt(searchTerm);
@@ -96,9 +100,32 @@ export default function ChickenFightResults() {
       if (!fights) continue;
       
       for (const fight of fights) {
-        // Check if entry name matches
+        // Check if entry name matches - collect ALL fights for this entry
         if (fight.entryName.toLowerCase().includes(searchTerm)) {
-          setCurrentFightNum(legNum);
+          const matchedEntry = fight.entryName;
+          const allEntryFights = [];
+          
+          // Collect all fights for this entry across all leg numbers
+          for (const checkLegNum of legNumbers) {
+            const checkFights = fightsByLeg[checkLegNum];
+            if (checkFights) {
+              for (const checkFight of checkFights) {
+                if (checkFight.entryName === matchedEntry) {
+                  allEntryFights.push({
+                    legNumber: checkLegNum,
+                    fight: checkFight
+                  });
+                }
+              }
+            }
+          }
+          
+          // Sort by leg number
+          allEntryFights.sort((a, b) => a.legNumber - b.legNumber);
+          
+          setSearchedEntryName(matchedEntry);
+          setEntryFights(allEntryFights);
+          setCurrentFightNum(allEntryFights[0].legNumber);
           setJumpToFight('');
           return;
         }
@@ -113,6 +140,8 @@ export default function ChickenFightResults() {
             const legBandNumber = fight.legBandNumbers[legBandIdx];
             if (legBandNumber && legBandNumber.toString() === searchTerm) {
               setCurrentFightNum(legNum);
+              setSearchedEntryName('');
+              setEntryFights([]);
               setJumpToFight('');
               return;
             }
@@ -272,7 +301,8 @@ export default function ChickenFightResults() {
           </div>
         )}
         
-        {/* Navigation Section */}
+        {/* Navigation Section - Hide when showing entry search results */}
+        {!searchedEntryName && (
         <div className={`rounded-lg shadow p-6 mb-8 ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
           <h2 className={`text-2xl font-bold mb-6 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
             Navigate Fights
@@ -344,6 +374,93 @@ export default function ChickenFightResults() {
             Total fights: <strong>{maxFightNum}</strong> | Current: <strong>Fight #{currentFightNum}</strong>
           </p>
         </div>
+        )}
+        
+        {/* All Fights for Searched Entry */}
+        {searchedEntryName && entryFights.length > 0 && (
+          <div className={`rounded-lg shadow p-8 mb-8 ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+            <h2 className={`text-2xl font-bold mb-6 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+              All Fights for "{searchedEntryName}"
+            </h2>
+            <div className="grid grid-cols-1 gap-6">
+              {entryFights.map((item, idx) => {
+                const fights = fightsByLeg[item.legNumber];
+                return (
+                  <div key={idx} className={`p-6 rounded-lg border-2 ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-300'}`}>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                        Fight #{item.legNumber}
+                      </h3>
+                      <div className={`text-sm font-medium px-3 py-1 rounded ${
+                        item.fight.legResult?.result === 'win'
+                          ? isDarkMode ? 'bg-green-900/50 text-green-400' : 'bg-green-100 text-green-700'
+                          : item.fight.legResult?.result === 'loss'
+                          ? isDarkMode ? 'bg-red-900/50 text-red-400' : 'bg-red-100 text-red-700'
+                          : isDarkMode ? 'bg-yellow-900/50 text-yellow-400' : 'bg-yellow-100 text-yellow-700'
+                      }`}>
+                        {item.fight.legResult?.result === 'win' ? '✓ WIN' : item.fight.legResult?.result === 'loss' ? '✗ LOSS' : '◐ DRAW'}
+                      </div>
+                    </div>
+                    {fights && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {fights.map((fight, fIdx) => {
+                          const legNum = fight.legResult?.legNumber || item.legNumber;
+                          const legBandIdx = legNum - 1;
+                          const legBandNumber = fight.legBandNumbers?.[legBandIdx];
+                          const legBandDetail = fight.legBandDetails?.[legBandIdx];
+                          
+                          return (
+                            <div key={fIdx} className={`p-4 rounded ${
+                              isDarkMode ? 'bg-gray-800' : 'bg-white'
+                            }`}>
+                              <div className="font-medium mb-2">{fight.entryName}</div>
+                              <div className="text-sm space-y-1 mb-3">
+                                <div><span className="opacity-75">Game Type:</span> {fight.gameType}</div>
+                                {legBandNumber && (
+                                  <div className="font-mono">
+                                    <span className="opacity-75">Leg Band:</span> #{legBandNumber}
+                                    {legBandDetail?.featherType && <div className="text-xs opacity-75 ml-2">{legBandDetail.featherType}</div>}
+                                  </div>
+                                )}
+                              </div>
+                              <button
+                                onClick={() => {
+                                  setSearchedEntryName('');
+                                  setEntryFights([]);
+                                  setCurrentFightNum(item.legNumber);
+                                }}
+                                className={`text-sm px-2 py-1 rounded transition ${
+                                  isDarkMode
+                                    ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                                    : 'bg-blue-500 hover:bg-blue-600 text-white'
+                                }`}
+                              >
+                                View Details
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <button
+              onClick={() => {
+                setSearchedEntryName('');
+                setEntryFights([]);
+              }}
+              className={`mt-6 px-4 py-2 rounded-lg font-medium transition ${
+                isDarkMode
+                  ? 'bg-gray-700 hover:bg-gray-600 text-white'
+                  : 'bg-gray-300 hover:bg-gray-400 text-gray-900'
+              }`}
+            >
+              Clear Search
+            </button>
+          </div>
+        )}
         
         {/* Fight Details */}
         {currentFight ? (
