@@ -127,7 +127,7 @@ export default function ChickenFightResults() {
       });
       
       const res = await axios.put(
-        `${getApiUrl()}/api/chicken-fight/game`,
+        `${getApiUrl()}/api/chicken-fight/game/results`,
         {
           gameDate: gameData.gameDate,
           entryResults: updatedEntryResults
@@ -165,7 +165,7 @@ export default function ChickenFightResults() {
       }).filter(entry => entry.legResults.length > 0); // Remove entries with no fights
       
       const res = await axios.put(
-        `${getApiUrl()}/api/chicken-fight/game`,
+        `${getApiUrl()}/api/chicken-fight/game/results`,
         {
           gameDate: gameData.gameDate,
           entryResults: updatedEntryResults,
