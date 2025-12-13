@@ -26,14 +26,13 @@ export default function ChickenFightResults() {
     setError('');
     try {
       const token = localStorage.getItem('token');
-      const today = new Date().toISOString().split('T')[0];
-      const res = await axios.get(`${getApiUrl()}/api/chicken-fight/today`, {
+      const res = await axios.get(`${getApiUrl()}/api/chicken-fight/fights/today`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
       if (res.data.success && res.data.game) {
         setGameData(res.data.game);
-        setCurrentFightNum(0);
+        setCurrentFightNum(1);
       } else {
         setError('No game data found for today');
       }
