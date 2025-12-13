@@ -613,6 +613,12 @@ export default function ChickenFight() {
             RESULT
           </button>
           
+          {/* Fight Number Display */}
+          <div className={`text-center p-3 rounded mb-4 font-bold ${isDarkMode ? 'bg-gray-700 text-yellow-300' : 'bg-gray-200 text-yellow-700'}`}>
+            <div className="text-xs opacity-75">FIGHT #</div>
+            <div className="text-2xl">{Number.isFinite(fightNumber) ? fightNumber : 0}</div>
+          </div>
+          
           {/* Score Summary with Champions */}
           <div className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-400'} mb-4 space-y-2`}>
             {(() => {
