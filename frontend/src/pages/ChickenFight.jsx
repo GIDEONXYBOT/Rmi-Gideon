@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { AlertCircle, Plus, Loader, Check, X } from 'lucide-react';
 import { SettingsContext } from '../context/SettingsContext';
@@ -6,7 +7,9 @@ import { ChickenFightContext } from '../context/ChickenFightContext';
 import { getApiUrl } from '../utils/apiConfig';
 
 export default function ChickenFight() {
-  const { isDarkMode } = useContext(SettingsContext);
+  const navigate = useNavigate();
+  const { isDarkMode, user } = useContext(SettingsContext);
+  const userRole = user?.role || 'admin';
   const { 
     fights, 
     setFights, 
@@ -602,7 +605,13 @@ export default function ChickenFight() {
       {/* Left Sidebar - RESULT */}
       <div className={`w-48 ${isDarkMode ? 'bg-gray-800' : 'bg-gray-900'} text-white p-4 overflow-y-auto`}>
         <div className="mb-6">
-          <div className="font-bold text-white bg-gray-700 p-3 rounded mb-2 text-center">RESULT</div>
+          <button 
+            onClick={() => navigate(`/${userRole}/chicken-fight-results`)}
+            className="w-full font-bold text-white bg-gray-700 hover:bg-gray-600 p-3 rounded mb-2 text-center transition duration-200 cursor-pointer"
+            title="Click to edit/delete fight results"
+          >
+            RESULT
+          </button>
           
           {/* Score Summary with Champions */}
           <div className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-400'} mb-4 space-y-2`}>
