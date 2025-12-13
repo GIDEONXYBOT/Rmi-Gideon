@@ -1,0 +1,505 @@
+import React, { useState, useEffect, useContext } from 'react';
+import axios from 'axios';
+import { AlertCircle, Edit2, Trash2, X, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { SettingsContext } from '../context/SettingsContext';
+import { getApiUrl } from '../utils/apiConfig';
+
+export default function ChickenFightResults() {
+  const { isDarkMode } = useContext(SettingsContext);
+  const [gameData, setGameData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  
+  // Navigation
+  const [currentFightNum, setCurrentFightNum] = useState(0);
+  const [jumpToFight, setJumpToFight] = useState('');
+  
+  // Edit modal
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingFightIndex, setEditingFightIndex] = useState(null);
+  const [editData, setEditData] = useState(null);
+  
+  // Load game data
+  const loadGameData = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const token = localStorage.getItem('token');
+      const today = new Date().toISOString().split('T')[0];
+      const res = await axios.get(`${getApiUrl()}/api/chicken-fight/today`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (res.data.success && res.data.game) {
+        setGameData(res.data.game);
+        setCurrentFightNum(0);
+      } else {
+        setError('No game data found for today');
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to load game data');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  useEffect(() => {
+    loadGameData();
+  }, []);
+  
+  // Get fights grouped by leg number
+  const getFightsByLegNumber = () => {
+    if (!gameData?.entryResults) return {};
+    
+    const grouped = {};
+    gameData.entryResults.forEach(entry => {
+      entry.legResults?.forEach(leg => {
+        if (!grouped[leg.legNumber]) {
+          grouped[leg.legNumber] = [];
+        }
+        grouped[leg.legNumber].push({
+          ...entry,
+          legResult: leg
+        });
+      });
+    });
+    return grouped;
+  };
+  
+  const fightsByLeg = getFightsByLegNumber();
+  const legNumbers = Object.keys(fightsByLeg).map(Number).sort((a, b) => a - b);
+  const maxFightNum = legNumbers.length > 0 ? Math.max(...legNumbers) : 0;
+  
+  const getCurrentFight = () => {
+    const fights = fightsByLeg[currentFightNum];
+    if (!fights || fights.length < 2) return null;
+    return fights;
+  };
+  
+  const handleJumpToFight = () => {
+    const num = parseInt(jumpToFight);
+    if (num > 0 && num <= maxFightNum) {
+      setCurrentFightNum(num);
+      setJumpToFight('');
+    }
+  };
+  
+  const handleEditClick = (fights) => {
+    setEditingFightIndex(currentFightNum);
+    setEditData({
+      legNumber: currentFightNum,
+      meron: fights[0],
+      wala: fights[1]
+    });
+    setShowEditModal(true);
+  };
+  
+  const handleUpdateFight = async () => {
+    if (!editData) return;
+    
+    setError('');
+    setSuccess('');
+    
+    try {
+      const token = localStorage.getItem('token');
+      
+      // Build the update payload
+      const updatedEntryResults = gameData.entryResults.map(entry => {
+        const updated = { ...entry };
+        
+        if (editData.meron?.entryId === entry._id) {
+          updated.legResults = updated.legResults.map(leg => 
+            leg.legNumber === currentFightNum 
+              ? { ...leg, result: editData.meron.legResult.result }
+              : leg
+          );
+        }
+        
+        if (editData.wala?.entryId === entry._id) {
+          updated.legResults = updated.legResults.map(leg => 
+            leg.legNumber === currentFightNum 
+              ? { ...leg, result: editData.wala.legResult.result }
+              : leg
+          );
+        }
+        
+        return updated;
+      });
+      
+      const res = await axios.put(
+        `${getApiUrl()}/api/chicken-fight/game`,
+        {
+          gameDate: gameData.gameDate,
+          entryResults: updatedEntryResults
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+      
+      if (res.data.success) {
+        setSuccess('Fight updated successfully!');
+        setShowEditModal(false);
+        setTimeout(() => setSuccess(''), 2000);
+        loadGameData();
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to update fight');
+    }
+  };
+  
+  const handleDeleteFight = async () => {
+    if (!window.confirm(`Delete fight #${currentFightNum}? This cannot be undone.`)) return;
+    
+    setError('');
+    setSuccess('');
+    
+    try {
+      const token = localStorage.getItem('token');
+      
+      // Remove fights with this leg number
+      const updatedEntryResults = gameData.entryResults.map(entry => {
+        const updated = { ...entry };
+        updated.legResults = updated.legResults.filter(leg => leg.legNumber !== currentFightNum);
+        return updated;
+      }).filter(entry => entry.legResults.length > 0); // Remove entries with no fights
+      
+      const res = await axios.put(
+        `${getApiUrl()}/api/chicken-fight/game`,
+        {
+          gameDate: gameData.gameDate,
+          entryResults: updatedEntryResults,
+          fightNumber: gameData.fightNumber - 1
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+      
+      if (res.data.success) {
+        setSuccess('Fight deleted successfully!');
+        setTimeout(() => setSuccess(''), 2000);
+        
+        // Navigate to previous fight
+        if (currentFightNum > 1) {
+          setCurrentFightNum(currentFightNum - 1);
+        }
+        loadGameData();
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to delete fight');
+    }
+  };
+  
+  const currentFight = getCurrentFight();
+  
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+  
+  return (
+    <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-white'}`}>
+      {/* Header */}
+      <div className={`${isDarkMode ? 'bg-gradient-to-r from-gray-800 to-gray-900 border-gray-700' : 'bg-gradient-to-r from-white to-gray-50 border-gray-200'} border-b sticky top-0 z-10 shadow-lg`}>
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <h1 className={`text-4xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+            🐓 Edit/Delete Fight Results
+          </h1>
+          <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mt-2 text-lg`}>
+            Manage individual fight results
+          </p>
+        </div>
+      </div>
+      
+      {/* Content */}
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Alerts */}
+        {error && (
+          <div className={`p-4 rounded-lg flex items-center gap-3 border mb-4 ${isDarkMode ? 'bg-red-900/30 text-red-300 border-red-600' : 'bg-red-50 text-red-800 border-red-300'}`}>
+            <AlertCircle size={20} />
+            <span className="flex-1">{error}</span>
+            <button onClick={() => setError('')} className="hover:opacity-70"><X size={18} /></button>
+          </div>
+        )}
+        
+        {success && (
+          <div className={`p-4 rounded-lg flex items-center gap-3 border mb-4 ${isDarkMode ? 'bg-green-900/30 text-green-300 border-green-600' : 'bg-green-50 text-green-800 border-green-300'}`}>
+            <span>{success}</span>
+          </div>
+        )}
+        
+        {/* Navigation Section */}
+        <div className={`rounded-lg shadow p-6 mb-8 ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+          <h2 className={`text-2xl font-bold mb-6 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+            Navigate Fights
+          </h2>
+          
+          <div className="flex flex-col md:flex-row gap-4 items-center mb-6">
+            {/* Navigation Buttons */}
+            <div className="flex gap-2 items-center">
+              <button
+                onClick={() => setCurrentFightNum(Math.max(1, currentFightNum - 1))}
+                disabled={currentFightNum <= 1}
+                className={`p-2 rounded-lg ${
+                  currentFightNum <= 1
+                    ? isDarkMode ? 'bg-gray-700 text-gray-500 cursor-not-allowed' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    : isDarkMode ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'
+                }`}
+              >
+                <ChevronLeft size={20} />
+              </button>
+              
+              <span className={`text-2xl font-bold w-16 text-center ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                {currentFightNum}
+              </span>
+              
+              <button
+                onClick={() => setCurrentFightNum(Math.min(maxFightNum, currentFightNum + 1))}
+                disabled={currentFightNum >= maxFightNum}
+                className={`p-2 rounded-lg ${
+                  currentFightNum >= maxFightNum
+                    ? isDarkMode ? 'bg-gray-700 text-gray-500 cursor-not-allowed' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    : isDarkMode ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'
+                }`}
+              >
+                <ChevronRight size={20} />
+              </button>
+            </div>
+            
+            {/* Jump to Fight */}
+            <div className="flex gap-2 items-center flex-1 max-w-md">
+              <div className="relative flex-1">
+                <Search size={18} className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`} />
+                <input
+                  type="number"
+                  min="1"
+                  max={maxFightNum}
+                  value={jumpToFight}
+                  onChange={(e) => setJumpToFight(e.target.value)}
+                  placeholder={`Jump to fight (1-${maxFightNum})`}
+                  onKeyPress={(e) => e.key === 'Enter' && handleJumpToFight()}
+                  className={`w-full pl-10 pr-4 py-2 rounded-lg border ${
+                    isDarkMode
+                      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
+                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+                  }`}
+                />
+              </div>
+              <button
+                onClick={handleJumpToFight}
+                className={`px-4 py-2 rounded-lg font-medium transition ${
+                  isDarkMode
+                    ? 'bg-green-600 hover:bg-green-700 text-white'
+                    : 'bg-green-500 hover:bg-green-600 text-white'
+                }`}
+              >
+                Go
+              </button>
+            </div>
+          </div>
+          
+          <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+            Total fights: <strong>{maxFightNum}</strong> | Current: <strong>Fight #{currentFightNum}</strong>
+          </p>
+        </div>
+        
+        {/* Fight Details */}
+        {currentFight ? (
+          <div className={`rounded-lg shadow p-8 mb-8 ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+            <div className="flex items-center justify-between mb-8">
+              <h2 className={`text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                Fight #{currentFightNum}
+              </h2>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => handleEditClick(currentFight)}
+                  className={`px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition ${
+                    isDarkMode
+                      ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                      : 'bg-blue-500 hover:bg-blue-600 text-white'
+                  }`}
+                >
+                  <Edit2 size={18} />
+                  Edit
+                </button>
+                <button
+                  onClick={handleDeleteFight}
+                  className={`px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition ${
+                    isDarkMode
+                      ? 'bg-red-600 hover:bg-red-700 text-white'
+                      : 'bg-red-500 hover:bg-red-600 text-white'
+                  }`}
+                >
+                  <Trash2 size={18} />
+                  Delete
+                </button>
+              </div>
+            </div>
+            
+            {/* Fight Results */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {currentFight.map((fight, idx) => (
+                <div
+                  key={idx}
+                  className={`p-6 rounded-lg border-2 ${
+                    fight.legResult.result === 'win'
+                      ? isDarkMode ? 'bg-green-900/30 border-green-700' : 'bg-green-50 border-green-300'
+                      : fight.legResult.result === 'loss'
+                      ? isDarkMode ? 'bg-red-900/30 border-red-700' : 'bg-red-50 border-red-300'
+                      : isDarkMode ? 'bg-yellow-900/30 border-yellow-700' : 'bg-yellow-50 border-yellow-300'
+                  }`}
+                >
+                  <div className={`text-sm font-medium mb-2 ${
+                    fight.legResult.result === 'win'
+                      ? isDarkMode ? 'text-green-400' : 'text-green-600'
+                      : fight.legResult.result === 'loss'
+                      ? isDarkMode ? 'text-red-400' : 'text-red-600'
+                      : isDarkMode ? 'text-yellow-400' : 'text-yellow-600'
+                  }`}>
+                    {fight.legResult.result === 'win' ? '✓ WIN' : fight.legResult.result === 'loss' ? '✗ LOSS' : '◐ DRAW'}
+                  </div>
+                  
+                  <div className={`text-2xl font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                    {fight.entryName}
+                  </div>
+                  
+                  <div className={`space-y-2 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                    <div>
+                      <span className="font-medium">Game Type:</span>
+                      <span className="ml-2">{fight.gameType}</span>
+                    </div>
+                    {fight.legResults && fight.legResults[0] && (
+                      <>
+                        <div>
+                          <span className="font-medium">Leg Band:</span>
+                          <span className="ml-2 font-mono">{fight.legResults[0].legBand || '—'}</span>
+                        </div>
+                        <div>
+                          <span className="font-medium">Leg Number:</span>
+                          <span className="ml-2">#{fight.legResults[0].legNumber}</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : currentFightNum > 0 ? (
+          <div className={`rounded-lg shadow p-8 text-center ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+            <p className={`text-lg ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+              No fight data for Fight #{currentFightNum}
+            </p>
+          </div>
+        ) : (
+          <div className={`rounded-lg shadow p-8 text-center ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+            <p className={`text-lg ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+              Select a fight to view details
+            </p>
+          </div>
+        )}
+      </div>
+      
+      {/* Edit Modal */}
+      {showEditModal && editData && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className={`p-6 rounded-lg w-full max-w-2xl max-h-96 overflow-y-auto ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                Edit Fight #{currentFightNum}
+              </h2>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="p-1 hover:bg-gray-700 rounded"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="space-y-6">
+              {/* Meron */}
+              <div>
+                <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  {editData.meron?.entryName} - Result
+                </label>
+                <select
+                  value={editData.meron?.legResult?.result || ''}
+                  onChange={(e) => setEditData({
+                    ...editData,
+                    meron: {
+                      ...editData.meron,
+                      legResult: { ...editData.meron.legResult, result: e.target.value }
+                    }
+                  })}
+                  className={`w-full px-4 py-2 rounded-lg border ${
+                    isDarkMode
+                      ? 'bg-gray-700 border-gray-600 text-white'
+                      : 'bg-white border-gray-300'
+                  }`}
+                >
+                  <option value="win">Win</option>
+                  <option value="loss">Loss</option>
+                  <option value="draw">Draw</option>
+                </select>
+              </div>
+              
+              {/* Wala */}
+              <div>
+                <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  {editData.wala?.entryName} - Result
+                </label>
+                <select
+                  value={editData.wala?.legResult?.result || ''}
+                  onChange={(e) => setEditData({
+                    ...editData,
+                    wala: {
+                      ...editData.wala,
+                      legResult: { ...editData.wala.legResult, result: e.target.value }
+                    }
+                  })}
+                  className={`w-full px-4 py-2 rounded-lg border ${
+                    isDarkMode
+                      ? 'bg-gray-700 border-gray-600 text-white'
+                      : 'bg-white border-gray-300'
+                  }`}
+                >
+                  <option value="win">Win</option>
+                  <option value="loss">Loss</option>
+                  <option value="draw">Draw</option>
+                </select>
+              </div>
+            </div>
+            
+            <div className="flex gap-3 mt-8">
+              <button
+                onClick={handleUpdateFight}
+                className={`flex-1 px-4 py-2 rounded-lg font-medium transition ${
+                  isDarkMode
+                    ? 'bg-green-600 hover:bg-green-700 text-white'
+                    : 'bg-green-500 hover:bg-green-600 text-white'
+                }`}
+              >
+                Save Changes
+              </button>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className={`flex-1 px-4 py-2 rounded-lg border font-medium transition ${
+                  isDarkMode
+                    ? 'bg-gray-700 hover:bg-gray-600 text-white border-gray-600'
+                    : 'bg-white hover:bg-gray-100 text-gray-900 border-gray-300'
+                }`}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

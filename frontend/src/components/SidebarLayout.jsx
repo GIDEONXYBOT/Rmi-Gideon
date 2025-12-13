@@ -26,6 +26,7 @@ import {
   Link,
   Camera,
   TrendingUp,
+  Edit2,
 } from "lucide-react";
 
 import FloatingChat from "../pages/ChatRoom.jsx"; // ✅ floating chat import
@@ -352,6 +353,7 @@ export default function SidebarLayout({ role, children }) {
     'key-performance-indicator': { to: r => `/${r}/key-performance-indicator`, icon: <BarChart3 size={18} />, text: 'Key Performance Indicator', roles: ['admin','super_admin','supervisor'] },
     'chicken-fight': { to: r => `/${r}/chicken-fight`, icon: <TrendingUp size={18} />, text: 'Chicken Fight', roles: ['admin','super_admin','supervisor','declarator'] },
     'chicken-fight-entries': { to: r => `/${r}/chicken-fight-entries`, icon: <Settings size={18} />, text: 'Manage Entries', roles: ['admin','super_admin','supervisor','declarator'] },
+    'chicken-fight-results': { to: r => `/${r}/chicken-fight-results`, icon: <Edit2 size={18} />, text: 'Edit/Delete Results', roles: ['admin','super_admin','supervisor','declarator'] },
     'financial-summary': { to: r => `/${r}/financial-summary`, icon: <TrendingUp size={18} />, text: 'Financial Summary', roles: ['admin','super_admin'] },
     upload: { to: r => `/upload`, icon: <Camera size={18} />, text: 'Upload', roles: ['admin','super_admin','supervisor','teller','declarator','supervisor_teller'] },
     feed: { to: r => `/feed`, icon: <FileText size={18} />, text: 'Feed', roles: ['admin','super_admin','supervisor','teller','declarator','supervisor_teller'] },
