@@ -486,7 +486,7 @@ export default function ChickenFightResults() {
                           isDarkMode ? 'bg-purple-900/50 border border-purple-700' : 'bg-purple-100 border border-purple-300'
                         }`}>
                           <div className="text-xs opacity-75">Leg Band:</div>
-                          <div className="font-bold text-lg">#{legBandNumber}</div>
+                          <div className="font-bold text-lg">{legBandNumber ? `#${legBandNumber}` : 'N/A'}</div>
                           {legBandDetail?.featherType && (
                             <div className="text-xs opacity-75">{legBandDetail.featherType}</div>
                           )}
@@ -574,7 +574,7 @@ export default function ChickenFightResults() {
                                       : 'bg-purple-100 border border-purple-300'
                                   }`}
                                 >
-                                  <div className="font-bold">#{legBandNumber}</div>
+                                  <div className="font-bold">{legBandNumber ? `#${legBandNumber}` : 'N/A'}</div>
                                   {legBandDetail?.featherType && (
                                     <div className="text-xs opacity-75">{legBandDetail.featherType}</div>
                                   )}
@@ -596,7 +596,7 @@ export default function ChickenFightResults() {
                                       : 'bg-blue-100 border border-blue-300'
                                   }`}
                                 >
-                                  #{band}
+                                  {band ? `#${band}` : 'N/A'}
                                 </span>
                               ))}
                             </div>
