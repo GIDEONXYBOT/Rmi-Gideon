@@ -80,6 +80,8 @@ export default function ChickenFightResults() {
     const searchTerm = jumpToFight.trim().toLowerCase();
     if (!searchTerm) return;
     
+    setError('');
+    
     // Try to match fight number first
     const fightNum = parseInt(searchTerm);
     if (!isNaN(fightNum) && fightNum > 0 && fightNum <= maxFightNum) {
@@ -102,9 +104,14 @@ export default function ChickenFightResults() {
         }
         
         // Check if leg band number matches
-        if (fight.legBandNumbers) {
-          for (const band of fight.legBandNumbers) {
-            if (band.toString() === searchTerm) {
+        if (fight.legBandNumbers && fight.legBandNumbers.length > 0) {
+          const legNum = fight.legResult?.legNumber || 0;
+          const legBandIdx = legNum - 1;
+          
+          // Check the specific leg band that fought in this fight
+          if (legBandIdx >= 0 && legBandIdx < fight.legBandNumbers.length) {
+            const legBandNumber = fight.legBandNumbers[legBandIdx];
+            if (legBandNumber && legBandNumber.toString() === searchTerm) {
               setCurrentFightNum(legNum);
               setJumpToFight('');
               return;
@@ -342,9 +349,33 @@ export default function ChickenFightResults() {
         {currentFight ? (
           <div className={`rounded-lg shadow p-8 mb-8 ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
             <div className="flex items-center justify-between mb-8">
-              <h2 className={`text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                Fight #{currentFightNum}
-              </h2>
+              <div>
+                <h2 className={`text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                  Fight #{currentFightNum}
+                </h2>
+                {currentFight && currentFight[0] && currentFight[0].legResult && (
+                  <div className="mt-3 flex flex-wrap gap-3">
+                    {currentFight.map((fight, idx) => {
+                      const legNum = fight.legResult?.legNumber || currentFightNum;
+                      const legBandIdx = legNum - 1;
+                      const legBandNumber = fight.legBandNumbers?.[legBandIdx];
+                      const legBandDetail = fight.legBandDetails?.[legBandIdx];
+                      
+                      return (
+                        <div key={idx} className={`px-3 py-2 rounded-lg ${
+                          isDarkMode ? 'bg-purple-900/50 border border-purple-700' : 'bg-purple-100 border border-purple-300'
+                        }`}>
+                          <div className="text-xs opacity-75">Leg Band:</div>
+                          <div className="font-bold text-lg">#{legBandNumber}</div>
+                          {legBandDetail?.featherType && (
+                            <div className="text-xs opacity-75">{legBandDetail.featherType}</div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
               <div className="flex gap-3">
                 <button
                   onClick={() => handleEditClick(currentFight)}
