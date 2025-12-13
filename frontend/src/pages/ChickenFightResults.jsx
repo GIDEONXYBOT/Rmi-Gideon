@@ -77,11 +77,44 @@ export default function ChickenFightResults() {
   };
   
   const handleJumpToFight = () => {
-    const num = parseInt(jumpToFight);
-    if (num > 0 && num <= maxFightNum) {
-      setCurrentFightNum(num);
+    const searchTerm = jumpToFight.trim().toLowerCase();
+    if (!searchTerm) return;
+    
+    // Try to match fight number first
+    const fightNum = parseInt(searchTerm);
+    if (!isNaN(fightNum) && fightNum > 0 && fightNum <= maxFightNum) {
+      setCurrentFightNum(fightNum);
       setJumpToFight('');
+      return;
     }
+    
+    // Search through fights for entry name or leg band
+    for (const legNum of legNumbers) {
+      const fights = fightsByLeg[legNum];
+      if (!fights) continue;
+      
+      for (const fight of fights) {
+        // Check if entry name matches
+        if (fight.entryName.toLowerCase().includes(searchTerm)) {
+          setCurrentFightNum(legNum);
+          setJumpToFight('');
+          return;
+        }
+        
+        // Check if leg band number matches
+        if (fight.legBandNumbers) {
+          for (const band of fight.legBandNumbers) {
+            if (band.toString() === searchTerm) {
+              setCurrentFightNum(legNum);
+              setJumpToFight('');
+              return;
+            }
+          }
+        }
+      }
+    }
+    
+    setError(`No fight found for: "${jumpToFight}"`);
   };
   
   const handleEditClick = (fights) => {
@@ -275,12 +308,10 @@ export default function ChickenFightResults() {
               <div className="relative flex-1">
                 <Search size={18} className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`} />
                 <input
-                  type="number"
-                  min="1"
-                  max={maxFightNum}
+                  type="text"
                   value={jumpToFight}
                   onChange={(e) => setJumpToFight(e.target.value)}
-                  placeholder={`Jump to fight (1-${maxFightNum})`}
+                  placeholder="Search: #fight, entry name, or leg band"
                   onKeyPress={(e) => e.key === 'Enter' && handleJumpToFight()}
                   className={`w-full pl-10 pr-4 py-2 rounded-lg border ${
                     isDarkMode
