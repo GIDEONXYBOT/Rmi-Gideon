@@ -132,18 +132,21 @@ export default function ChickenFightResults() {
         
         // Check if leg band number matches
         if (fight.legBandNumbers && fight.legBandNumbers.length > 0) {
-          const legNum = fight.legResult?.legNumber || 0;
-          const legBandIdx = legNum - 1;
-          
-          // Check the specific leg band that fought in this fight
-          if (legBandIdx >= 0 && legBandIdx < fight.legBandNumbers.length) {
-            const legBandNumber = fight.legBandNumbers[legBandIdx];
+          // Search through all leg bands for this entry
+          for (let i = 0; i < fight.legBandNumbers.length; i++) {
+            const legBandNumber = fight.legBandNumbers[i];
             if (legBandNumber && legBandNumber.toString() === searchTerm) {
-              setCurrentFightNum(legNum);
-              setSearchedEntryName('');
-              setEntryFights([]);
-              setJumpToFight('');
-              return;
+              // Found the leg band, now find which fight it participated in
+              const bandLegNumber = i + 1; // Convert index to leg number
+              
+              // Find the fight where this leg band actually fought
+              if (fightsByLeg[bandLegNumber]) {
+                setCurrentFightNum(bandLegNumber);
+                setSearchedEntryName('');
+                setEntryFights([]);
+                setJumpToFight('');
+                return;
+              }
             }
           }
         }
