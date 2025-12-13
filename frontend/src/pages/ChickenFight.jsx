@@ -1004,11 +1004,18 @@ export default function ChickenFight() {
             {selectedMeronEntry && meronEntry && (
               <div className="mb-4 p-3 bg-red-600 rounded text-sm">
                 <div className="font-medium mb-2">Entry Score</div>
-                <div className="space-y-1">
+                <div className="space-y-2">
                   <div className="text-sm font-bold">{meronEntry.entryName}</div>
                   <div className="text-xs text-red-100">Type: {meronEntry.gameType}</div>
-                  <div className="text-lg font-bold mt-2">
-                    Wins: {fights.filter(f => f.entryName === meronEntry.entryName && f.result === 1).length}
+                  <div className="border-t border-red-500 pt-2 mt-2">
+                    <div className="flex justify-between mb-1">
+                      <span className="text-xs">Total Fights:</span>
+                      <span className="text-sm font-bold">{fights.filter(f => f.entryName === meronEntry.entryName).length}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-xs">Wins:</span>
+                      <span className="text-lg font-bold text-yellow-300">{fights.filter(f => f.entryName === meronEntry.entryName && f.result === 1).length}</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1143,11 +1150,18 @@ export default function ChickenFight() {
             {selectedWalaEntry && walaEntry && (
               <div className="mb-4 p-3 bg-blue-600 rounded text-sm">
                 <div className="font-medium mb-2">Entry Score</div>
-                <div className="space-y-1">
+                <div className="space-y-2">
                   <div className="text-sm font-bold">{walaEntry.entryName}</div>
                   <div className="text-xs text-blue-100">Type: {walaEntry.gameType}</div>
-                  <div className="text-lg font-bold mt-2">
-                    Wins: {fights.filter(f => f.entryName === walaEntry.entryName && f.result === 1).length}
+                  <div className="border-t border-blue-500 pt-2 mt-2">
+                    <div className="flex justify-between mb-1">
+                      <span className="text-xs">Total Fights:</span>
+                      <span className="text-sm font-bold">{fights.filter(f => f.entryName === walaEntry.entryName).length}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-xs">Wins:</span>
+                      <span className="text-lg font-bold text-yellow-300">{fights.filter(f => f.entryName === walaEntry.entryName && f.result === 1).length}</span>
+                    </div>
                   </div>
                 </div>
               </div>
