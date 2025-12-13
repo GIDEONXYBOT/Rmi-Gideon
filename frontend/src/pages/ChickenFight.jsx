@@ -44,6 +44,7 @@ export default function ChickenFight() {
   const [selectedEntry, setSelectedEntry] = useState('');
   const [selected2Wins, setSelected2Wins] = useState(false);
   const [selected2WinsFee, setSelected2WinsFee] = useState(500); // 300 or 500
+  const [global2WinsFee, setGlobal2WinsFee] = useState(500); // Global default for all 2-Wins
   const [selected3Wins, setSelected3Wins] = useState(false);
   const [submittingReg, setSubmittingReg] = useState(false);
   const [selectedMeronEntry, setSelectedMeronEntry] = useState('');
@@ -481,7 +482,7 @@ export default function ChickenFight() {
       gameTypes.push('2wins');
       registrations.push({
         gameType: '2wins',
-        registrationFee: selected2WinsFee
+        registrationFee: global2WinsFee
       });
     }
     if (selected3Wins) {
@@ -1526,6 +1527,42 @@ export default function ChickenFight() {
 
         {/* Registrations Table */}
         <div>
+          {/* Global 2-Wins Fee Selector */}
+          <div className={`rounded-lg p-4 mb-4 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'} border`}>
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className={`text-sm font-bold mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  2-Wins Registration Fee (Global Default)
+                </h3>
+                <p className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+                  Choose the default fee for all 2-Wins registrations
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setGlobal2WinsFee(300)}
+                  className={`px-4 py-2 rounded-lg font-bold transition ${
+                    global2WinsFee === 300
+                      ? isDarkMode ? 'bg-red-600 text-white' : 'bg-red-500 text-white'
+                      : isDarkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-100'
+                  }`}
+                >
+                  ₱300
+                </button>
+                <button
+                  onClick={() => setGlobal2WinsFee(500)}
+                  className={`px-4 py-2 rounded-lg font-bold transition ${
+                    global2WinsFee === 500
+                      ? isDarkMode ? 'bg-red-600 text-white' : 'bg-red-500 text-white'
+                      : isDarkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-100'
+                  }`}
+                >
+                  ₱500
+                </button>
+              </div>
+            </div>
+          </div>
+
           <div className="flex items-center justify-between mb-4">
             <h2 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
               Registrations
@@ -1566,7 +1603,7 @@ export default function ChickenFight() {
                 <thead>
                   <tr className={isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}>
                     <th className={`px-6 py-3 text-left font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>Entry Name</th>
-                    <th className={`px-6 py-3 text-center font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>2-Wins (₱{selected2WinsFee})</th>
+                    <th className={`px-6 py-3 text-center font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>2-Wins (₱{global2WinsFee})</th>
                     <th className={`px-6 py-3 text-center font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>3-Wins (₱1,000)</th>
                     <th className={`px-6 py-3 text-center font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>Insurance</th>
                     <th className={`px-6 py-3 text-left font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>Actions</th>
