@@ -43,6 +43,7 @@ export default function ChickenFight() {
   const [showRegForm, setShowRegForm] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState('');
   const [selected2Wins, setSelected2Wins] = useState(false);
+  const [selected2WinsFee, setSelected2WinsFee] = useState(500); // 300 or 500
   const [selected3Wins, setSelected3Wins] = useState(false);
   const [submittingReg, setSubmittingReg] = useState(false);
   const [selectedMeronEntry, setSelectedMeronEntry] = useState('');
@@ -474,8 +475,22 @@ export default function ChickenFight() {
 
     const entry = entries.find(e => e._id === selectedEntry);
     const gameTypes = [];
-    if (selected2Wins) gameTypes.push('2wins');
-    if (selected3Wins) gameTypes.push('3wins');
+    const registrations = [];
+    
+    if (selected2Wins) {
+      gameTypes.push('2wins');
+      registrations.push({
+        gameType: '2wins',
+        registrationFee: selected2WinsFee
+      });
+    }
+    if (selected3Wins) {
+      gameTypes.push('3wins');
+      registrations.push({
+        gameType: '3wins',
+        registrationFee: 1000
+      });
+    }
 
     setSubmittingReg(true);
     try {
@@ -483,12 +498,14 @@ export default function ChickenFight() {
         entryId: selectedEntry,
         entryName: entry.entryName,
         gameTypes,
+        registrations,
         gameDate: today
       });
 
       setSuccess(`Entry "${entry.entryName}" registered successfully!`);
       setSelectedEntry('');
       setSelected2Wins(false);
+      setSelected2WinsFee(500);
       setSelected3Wins(false);
       setShowRegForm(false);
       fetchRegistrations();
@@ -1232,11 +1249,12 @@ export default function ChickenFight() {
                 </div>
                 <div className={`text-xs mt-1 font-mono ${isDarkMode ? 'text-red-300' : 'text-red-600'}`}>
                   ₱{(() => {
-                    const paid2wins = registrations.filter(reg => {
+                    const total = registrations.reduce((sum, reg) => {
                       const entry = entries.find(e => e.entryName === reg.entryName);
-                      return entry?.gameType === '2wins' && reg.registrations.find(r => r.gameType === '2wins' && r.isPaid);
-                    }).length;
-                    return paid2wins * 500;
+                      const reg2wins = reg.registrations.find(r => r.gameType === '2wins' && r.isPaid);
+                      return entry?.gameType === '2wins' && reg2wins ? sum + (reg2wins.registrationFee || 500) : sum;
+                    }, 0);
+                    return total;
                   })()}
                 </div>
               </div>
@@ -1356,11 +1374,133 @@ export default function ChickenFight() {
           </div>
         )}
 
+        {/* Register Entry Form Modal */}
+        {showRegForm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className={`rounded-lg p-6 w-full max-w-md ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+              <h3 className={`text-lg font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Register Entry</h3>
+              
+              {/* Entry Selection */}
+              <div className="mb-4">
+                <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Select Entry
+                </label>
+                <select
+                  value={selectedEntry}
+                  onChange={(e) => setSelectedEntry(e.target.value)}
+                  className={`w-full px-4 py-2 rounded-lg border ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
+                >
+                  <option value="">Choose an entry...</option>
+                  {entries.map(entry => (
+                    <option key={entry._id} value={entry._id}>
+                      {entry.entryName} ({entry.gameType.toUpperCase()})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Game Type Selection */}
+              <div className="mb-6 space-y-3">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="2wins"
+                    checked={selected2Wins}
+                    onChange={(e) => setSelected2Wins(e.target.checked)}
+                    className="w-4 h-4"
+                  />
+                  <label htmlFor="2wins" className={`font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    2-Wins
+                  </label>
+                  
+                  {/* 2-Wins Fee Selection */}
+                  {selected2Wins && (
+                    <div className="ml-auto flex gap-2">
+                      <button
+                        onClick={() => setSelected2WinsFee(300)}
+                        className={`px-3 py-1 text-sm rounded ${
+                          selected2WinsFee === 300
+                            ? isDarkMode ? 'bg-red-600 text-white' : 'bg-red-500 text-white'
+                            : isDarkMode ? 'bg-gray-600 text-gray-300' : 'bg-gray-200'
+                        }`}
+                      >
+                        ₱300
+                      </button>
+                      <button
+                        onClick={() => setSelected2WinsFee(500)}
+                        className={`px-3 py-1 text-sm rounded ${
+                          selected2WinsFee === 500
+                            ? isDarkMode ? 'bg-red-600 text-white' : 'bg-red-500 text-white'
+                            : isDarkMode ? 'bg-gray-600 text-gray-300' : 'bg-gray-200'
+                        }`}
+                      >
+                        ₱500
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="3wins"
+                    checked={selected3Wins}
+                    onChange={(e) => setSelected3Wins(e.target.checked)}
+                    className="w-4 h-4"
+                  />
+                  <label htmlFor="3wins" className={`font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    3-Wins (₱1,000)
+                  </label>
+                </div>
+              </div>
+
+              {/* Buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowRegForm(false);
+                    setSelectedEntry('');
+                    setSelected2Wins(false);
+                    setSelected2WinsFee(500);
+                    setSelected3Wins(false);
+                  }}
+                  className={`flex-1 px-4 py-2 rounded-lg font-medium ${
+                    isDarkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'
+                  }`}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleRegisterEntry}
+                  disabled={submittingReg || !selectedEntry || (!selected2Wins && !selected3Wins)}
+                  className={`flex-1 px-4 py-2 rounded-lg font-medium text-white ${
+                    submittingReg || !selectedEntry || (!selected2Wins && !selected3Wins)
+                      ? isDarkMode ? 'bg-blue-900 cursor-not-allowed' : 'bg-blue-300 cursor-not-allowed'
+                      : isDarkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'
+                  }`}
+                >
+                  {submittingReg ? 'Registering...' : 'Register'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Registrations Table */}
         <div>
-          <h2 className={`text-2xl font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-            Registrations
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+              Registrations
+            </h2>
+            <button
+              onClick={() => setShowRegForm(true)}
+              className={`px-4 py-2 rounded-lg font-medium text-white transition ${
+                isDarkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'
+              }`}
+            >
+              + Register Entry
+            </button>
+          </div>
           {registrationsLoading ? (
             <div className="flex justify-center py-12">
               <Loader className="animate-spin text-blue-600" size={32} />
@@ -1375,7 +1515,7 @@ export default function ChickenFight() {
                 <thead>
                   <tr className={isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}>
                     <th className={`px-6 py-3 text-left font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>Entry Name</th>
-                    <th className={`px-6 py-3 text-center font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>2-Wins (₱500)</th>
+                    <th className={`px-6 py-3 text-center font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>2-Wins (₱{selected2WinsFee})</th>
                     <th className={`px-6 py-3 text-center font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>3-Wins (₱1,000)</th>
                     <th className={`px-6 py-3 text-center font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>Insurance</th>
                     <th className={`px-6 py-3 text-left font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>Actions</th>
