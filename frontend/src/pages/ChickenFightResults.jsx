@@ -372,17 +372,30 @@ export default function ChickenFightResults() {
                       <span className="font-medium">Game Type:</span>
                       <span className="ml-2">{fight.gameType}</span>
                     </div>
+                    {fight.legBandNumbers && fight.legBandNumbers.length > 0 && (
+                      <div>
+                        <span className="font-medium">Leg Bands:</span>
+                        <div className="ml-2 flex flex-wrap gap-2 mt-1">
+                          {fight.legBandNumbers.map((band, bandIdx) => (
+                            <span 
+                              key={bandIdx}
+                              className={`px-2 py-1 rounded font-mono text-xs ${
+                                isDarkMode 
+                                  ? 'bg-blue-900/50 border border-blue-700' 
+                                  : 'bg-blue-100 border border-blue-300'
+                              }`}
+                            >
+                              #{band}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     {fight.legResults && fight.legResults[0] && (
-                      <>
-                        <div>
-                          <span className="font-medium">Leg Band:</span>
-                          <span className="ml-2 font-mono">{fight.legResults[0].legBand || '—'}</span>
-                        </div>
-                        <div>
-                          <span className="font-medium">Leg Number:</span>
-                          <span className="ml-2">#{fight.legResults[0].legNumber}</span>
-                        </div>
-                      </>
+                      <div>
+                        <span className="font-medium">Leg Number:</span>
+                        <span className="ml-2">#{fight.legResults[0].legNumber}</span>
+                      </div>
                     )}
                   </div>
                 </div>
