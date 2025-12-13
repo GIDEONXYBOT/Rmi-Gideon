@@ -1012,9 +1012,18 @@ export default function ChickenFight() {
                       <span className="text-xs">Total Fights:</span>
                       <span className="text-sm font-bold">{fights.filter(f => f.entryName === meronEntry.entryName).length}</span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="flex justify-between mb-2">
                       <span className="text-xs">Wins:</span>
                       <span className="text-lg font-bold text-yellow-300">{fights.filter(f => f.entryName === meronEntry.entryName && f.result === 1).length}</span>
+                    </div>
+                    {/* Fight Sequence */}
+                    <div className="text-center">
+                      <div className="text-xs text-red-200 mb-1">Sequence:</div>
+                      <div className="text-2xl font-bold tracking-wider">
+                        {fights.filter(f => f.entryName === meronEntry.entryName)
+                          .map(f => f.result === 1 ? '1' : f.result === 0.5 ? '½' : '0')
+                          .join('') || '-'}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1024,9 +1033,9 @@ export default function ChickenFight() {
             {/* Win Button */}
             <button
               onClick={handleMeronWin}
-              disabled={!selectedMeronEntry || !selectedMeronLegBand}
+              disabled={!selectedMeronEntry || !selectedMeronLegBand || usedLegBands.has(selectedMeronLegBand) || usedLegBands.has(selectedWalaLegBand)}
               className={`w-full py-3 font-bold rounded-lg text-lg transition ${
-                selectedMeronEntry && selectedMeronLegBand
+                selectedMeronEntry && selectedMeronLegBand && !usedLegBands.has(selectedMeronLegBand) && !usedLegBands.has(selectedWalaLegBand)
                   ? 'bg-red-500 hover:bg-red-600 text-white cursor-pointer'
                   : 'bg-red-900 text-gray-400 cursor-not-allowed opacity-50'
               }`}
@@ -1158,9 +1167,18 @@ export default function ChickenFight() {
                       <span className="text-xs">Total Fights:</span>
                       <span className="text-sm font-bold">{fights.filter(f => f.entryName === walaEntry.entryName).length}</span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="flex justify-between mb-2">
                       <span className="text-xs">Wins:</span>
                       <span className="text-lg font-bold text-yellow-300">{fights.filter(f => f.entryName === walaEntry.entryName && f.result === 1).length}</span>
+                    </div>
+                    {/* Fight Sequence */}
+                    <div className="text-center">
+                      <div className="text-xs text-blue-200 mb-1">Sequence:</div>
+                      <div className="text-2xl font-bold tracking-wider">
+                        {fights.filter(f => f.entryName === walaEntry.entryName)
+                          .map(f => f.result === 1 ? '1' : f.result === 0.5 ? '½' : '0')
+                          .join('') || '-'}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1170,9 +1188,13 @@ export default function ChickenFight() {
             {/* Win Button */}
             <button
               onClick={handleWalaWin}
-              disabled={!selectedWalaEntry || !selectedWalaLegBand}
+              disabled={!selectedWalaEntry || !selectedWalaLegBand || 
+                usedLegBands.has(selectedWalaLegBand) || 
+                usedLegBands.has(selectedMeronLegBand)}
               className={`w-full py-3 font-bold rounded-lg text-lg transition ${
-                selectedWalaEntry && selectedWalaLegBand
+                selectedWalaEntry && selectedWalaLegBand && 
+                !usedLegBands.has(selectedWalaLegBand) && 
+                !usedLegBands.has(selectedMeronLegBand)
                   ? 'bg-blue-500 hover:bg-blue-600 text-white cursor-pointer'
                   : 'bg-blue-900 text-gray-400 cursor-not-allowed opacity-50'
               }`}
