@@ -401,23 +401,25 @@ export default function ChickenFightResults() {
                             </div>
                           );
                         })()}
-                        <div>
-                          <span className="font-medium">All Leg Bands:</span>
-                          <div className="ml-2 flex flex-wrap gap-2 mt-1">
-                            {fight.legBandNumbers.map((band, bandIdx) => (
-                              <span 
-                                key={bandIdx}
-                                className={`px-2 py-1 rounded font-mono text-xs ${
-                                  isDarkMode 
-                                    ? 'bg-blue-900/50 border border-blue-700' 
-                                    : 'bg-blue-100 border border-blue-300'
-                                }`}
-                              >
-                                #{band}
-                              </span>
-                            ))}
+                        {fight.legBandNumbers && fight.legBandNumbers.length > 0 && (
+                          <div>
+                            <span className="font-medium">All Leg Bands:</span>
+                            <div className="ml-2 flex flex-wrap gap-2 mt-1">
+                              {fight.legBandNumbers.map((band, bandIdx) => (
+                                <span 
+                                  key={bandIdx}
+                                  className={`px-2 py-1 rounded font-mono text-xs ${
+                                    isDarkMode 
+                                      ? 'bg-blue-900/50 border border-blue-700' 
+                                      : 'bg-blue-100 border border-blue-300'
+                                  }`}
+                                >
+                                  #{band}
+                                </span>
+                              ))}
+                            </div>
                           </div>
-                        </div>
+                        )}
                       </>
                     )}
                   </div>
