@@ -120,12 +120,12 @@ export default function ChickenFight() {
   // Get used fight numbers (leg numbers already used)
   const usedLegNumbers = new Set(fights.map(f => f.legNumber).filter(Boolean));
 
-  // Note: We don't restrict leg bands anymore since a leg band can fight multiple times
-  // Only restriction is that same leg band can't fight in same fight (logically impossible)
+  // Get all leg bands that have already fought
+  const usedLegBands = new Set(fights.map(f => f.legBandFought).filter(Boolean));
 
   // Filter out already-used leg bands
-  const availableMeronLegBands = meronLegBands;
-  const availableWalaLegBands = walaLegBands;
+  const availableMeronLegBands = meronLegBands.filter(band => !usedLegBands.has(band));
+  const availableWalaLegBands = walaLegBands.filter(band => !usedLegBands.has(band));
 
   // Get all entries that have leg bands
   const availableEntries = entries.filter(entry => {
@@ -181,16 +181,28 @@ export default function ChickenFight() {
       return;
     }
     
+    // Check if either leg band has already been used
+    if (usedLegBands.has(selectedMeronLegBand)) {
+      setError(`Leg band ${selectedMeronLegBand} (Meron) has already fought`);
+      return;
+    }
+    if (usedLegBands.has(selectedWalaLegBand)) {
+      setError(`Leg band ${selectedWalaLegBand} (Wala) has already fought`);
+      return;
+    }
+    
     const meronFight = {
       id: fightNumber + 1,
       entryName: meronEntry.entryName,
       legBand: selectedMeronLegBand,
+      legBandFought: selectedMeronLegBand,
       result: 1  // 1 for win
     };
     const walaFight = {
       id: fightNumber + 1,
       entryName: walaEntry.entryName,
       legBand: selectedWalaLegBand,
+      legBandFought: selectedWalaLegBand,
       result: 0  // 0 for loss
     };
     
@@ -247,16 +259,28 @@ export default function ChickenFight() {
       return;
     }
     
+    // Check if either leg band has already been used
+    if (usedLegBands.has(selectedMeronLegBand)) {
+      setError(`Leg band ${selectedMeronLegBand} (Meron) has already fought`);
+      return;
+    }
+    if (usedLegBands.has(selectedWalaLegBand)) {
+      setError(`Leg band ${selectedWalaLegBand} (Wala) has already fought`);
+      return;
+    }
+    
     const meronFight = {
       id: fightNumber + 1,
       entryName: meronEntry.entryName,
       legBand: selectedMeronLegBand,
+      legBandFought: selectedMeronLegBand,
       result: 0  // 0 for loss
     };
     const walaFight = {
       id: fightNumber + 1,
       entryName: walaEntry.entryName,
       legBand: selectedWalaLegBand,
+      legBandFought: selectedWalaLegBand,
       result: 1  // 1 for win
     };
     
@@ -1011,6 +1035,16 @@ export default function ChickenFight() {
             <button
               onClick={async () => {
                 if (selectedMeronEntry && selectedMeronLegBand && selectedWalaEntry && selectedWalaLegBand) {
+                  // Check if either leg band has already been used
+                  if (usedLegBands.has(selectedMeronLegBand)) {
+                    setError(`Leg band ${selectedMeronLegBand} (Meron) has already fought`);
+                    return;
+                  }
+                  if (usedLegBands.has(selectedWalaLegBand)) {
+                    setError(`Leg band ${selectedWalaLegBand} (Wala) has already fought`);
+                    return;
+                  }
+                  
                   // Build entry results for draw (both entries get 0.5)
                   const entryResults = [
                     {
@@ -1036,12 +1070,14 @@ export default function ChickenFight() {
                     id: fightNumber + 1,
                     entryName: meronEntry.entryName,
                     legBand: selectedMeronLegBand,
+                    legBandFought: selectedMeronLegBand,
                     result: 0.5  // 0.5 for draw
                   };
                   const walaFight = {
                     id: fightNumber + 1,
                     entryName: walaEntry.entryName,
                     legBand: selectedWalaLegBand,
+                    legBandFought: selectedWalaLegBand,
                     result: 0.5  // 0.5 for draw
                   };
                   
