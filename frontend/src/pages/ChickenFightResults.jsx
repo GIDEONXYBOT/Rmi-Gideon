@@ -372,30 +372,53 @@ export default function ChickenFightResults() {
                       <span className="font-medium">Game Type:</span>
                       <span className="ml-2">{fight.gameType}</span>
                     </div>
-                    {fight.legBandNumbers && fight.legBandNumbers.length > 0 && (
-                      <div>
-                        <span className="font-medium">Leg Bands:</span>
-                        <div className="ml-2 flex flex-wrap gap-2 mt-1">
-                          {fight.legBandNumbers.map((band, bandIdx) => (
-                            <span 
-                              key={bandIdx}
-                              className={`px-2 py-1 rounded font-mono text-xs ${
-                                isDarkMode 
-                                  ? 'bg-blue-900/50 border border-blue-700' 
-                                  : 'bg-blue-100 border border-blue-300'
-                              }`}
-                            >
-                              #{band}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
                     {fight.legResults && fight.legResults[0] && (
-                      <div>
-                        <span className="font-medium">Leg Number:</span>
-                        <span className="ml-2">#{fight.legResults[0].legNumber}</span>
-                      </div>
+                      <>
+                        {/* Show the specific leg band fighting in this fight */}
+                        {(() => {
+                          const legNum = fight.legResults[0].legNumber;
+                          const legBandIdx = legNum - 1; // Convert to 0-based index
+                          const legBandNumber = fight.legBandNumbers?.[legBandIdx];
+                          const legBandDetail = fight.legBandDetails?.[legBandIdx];
+                          
+                          return (
+                            <div>
+                              <span className="font-medium">Leg Band (Fight #{legNum}):</span>
+                              <div className="ml-2 mt-1 flex flex-wrap gap-2">
+                                <span 
+                                  className={`px-3 py-2 rounded font-mono ${
+                                    isDarkMode 
+                                      ? 'bg-purple-900/50 border border-purple-700' 
+                                      : 'bg-purple-100 border border-purple-300'
+                                  }`}
+                                >
+                                  <div className="font-bold">#{legBandNumber}</div>
+                                  {legBandDetail?.featherType && (
+                                    <div className="text-xs opacity-75">{legBandDetail.featherType}</div>
+                                  )}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                        <div>
+                          <span className="font-medium">All Leg Bands:</span>
+                          <div className="ml-2 flex flex-wrap gap-2 mt-1">
+                            {fight.legBandNumbers.map((band, bandIdx) => (
+                              <span 
+                                key={bandIdx}
+                                className={`px-2 py-1 rounded font-mono text-xs ${
+                                  isDarkMode 
+                                    ? 'bg-blue-900/50 border border-blue-700' 
+                                    : 'bg-blue-100 border border-blue-300'
+                                }`}
+                              >
+                                #{band}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </>
                     )}
                   </div>
                 </div>
