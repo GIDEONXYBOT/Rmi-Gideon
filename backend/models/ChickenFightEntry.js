@@ -29,8 +29,8 @@ const chickenFightEntrySchema = new mongoose.Schema(
         legBand: String,
         featherType: {
           type: String,
-          enum: ['Meron', 'Wala', 'Unknown'],
-          default: 'Unknown'
+          enum: ['Meron', 'Wala', 'Unknown', ''],
+          default: ''
         }
       }
     ],
