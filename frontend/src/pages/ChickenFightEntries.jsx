@@ -103,6 +103,32 @@ export default function ChickenFightEntries() {
         return;
       }
 
+      // Check for duplicate entry name (excluding current entry if editing)
+      const isDuplicateEntryName = entries.some(
+        entry => entry.entryName.toLowerCase() === entryName.trim().toLowerCase() && 
+        entry._id !== editingId
+      );
+      if (isDuplicateEntryName) {
+        setError(`Entry name "${entryName}" already exists`);
+        setSubmitting(false);
+        return;
+      }
+
+      // Check for duplicate leg bands (excluding current entry if editing)
+      const allExistingLegBands = entries
+        .filter(entry => entry._id !== editingId) // Exclude current entry if editing
+        .flatMap(entry => entry.legBandNumbers);
+      
+      const duplicateLegBands = legBands
+        .map(b => b.trim())
+        .filter(band => allExistingLegBands.includes(band));
+      
+      if (duplicateLegBands.length > 0) {
+        setError(`Leg band(s) ${duplicateLegBands.join(', ')} already exist in other entries`);
+        setSubmitting(false);
+        return;
+      }
+
       if (editingId) {
         // Update existing entry
         const response = await axios.put(`${getApiUrl()}/api/chicken-fight/entries/${editingId}`, {
