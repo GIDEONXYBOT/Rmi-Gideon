@@ -535,6 +535,44 @@ export default function ChickenFight() {
     }
   };
 
+  // Mark all entries as paid
+  const handleMarkAllPaid = async () => {
+    if (!window.confirm('Mark ALL unpaid registrations as paid?')) return;
+
+    setSubmittingReg(true);
+    try {
+      const unpaidRegs = registrations.filter(reg =>
+        reg.registrations.some(r => !r.isPaid)
+      );
+
+      let successCount = 0;
+      for (const reg of unpaidRegs) {
+        for (const gameReg of reg.registrations) {
+          if (!gameReg.isPaid) {
+            try {
+              await axios.put(
+                `${getApiUrl()}/api/chicken-fight-registration/registrations/${reg._id}/pay`,
+                { gameType: gameReg.gameType }
+              );
+              successCount++;
+            } catch (err) {
+              console.error(`Failed to mark ${reg.entryName} - ${gameReg.gameType} as paid`);
+            }
+          }
+        }
+      }
+
+      setSuccess(`Marked ${successCount} payments as paid!`);
+      fetchRegistrations();
+      fetchStats();
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError('Failed to mark all payments');
+    } finally {
+      setSubmittingReg(false);
+    }
+  };
+
   // Delete registration
   const handleDeleteRegistration = async (registrationId) => {
     if (!window.confirm('Delete this registration?')) return;
@@ -1492,14 +1530,27 @@ export default function ChickenFight() {
             <h2 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
               Registrations
             </h2>
-            <button
-              onClick={() => setShowRegForm(true)}
-              className={`px-4 py-2 rounded-lg font-medium text-white transition ${
-                isDarkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'
-              }`}
-            >
-              + Register Entry
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={handleMarkAllPaid}
+                disabled={submittingReg || registrations.length === 0 || !registrations.some(reg => reg.registrations.some(r => !r.isPaid))}
+                className={`px-4 py-2 rounded-lg font-medium text-white transition ${
+                  submittingReg || registrations.length === 0 || !registrations.some(reg => reg.registrations.some(r => !r.isPaid))
+                    ? isDarkMode ? 'bg-green-900 cursor-not-allowed opacity-50' : 'bg-green-300 cursor-not-allowed opacity-50'
+                    : isDarkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'
+                }`}
+              >
+                {submittingReg ? 'Processing...' : 'Mark All Paid'}
+              </button>
+              <button
+                onClick={() => setShowRegForm(true)}
+                className={`px-4 py-2 rounded-lg font-medium text-white transition ${
+                  isDarkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'
+                }`}
+              >
+                + Register Entry
+              </button>
+            </div>
           </div>
           {registrationsLoading ? (
             <div className="flex justify-center py-12">
