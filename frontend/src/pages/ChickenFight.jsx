@@ -976,20 +976,19 @@ export default function ChickenFight() {
               )}
             </div>
             
-            {/* Available Entries - Only those with remaining leg bands */}
-            <div className="mb-4 p-3 bg-red-600 rounded text-sm max-h-32 overflow-y-auto">
-              <div className="font-medium mb-2">Available:</div>
-              <div className="space-y-1">
-                {availableMeronEntries.map(entry => (
-                  <div key={entry._id} className="text-xs">
-                    {entry.entryName} ({entry.gameType})
+            {/* Show selected entry score */}
+            {selectedMeronEntry && meronEntry && (
+              <div className="mb-4 p-3 bg-red-600 rounded text-sm">
+                <div className="font-medium mb-2">Entry Score</div>
+                <div className="space-y-1">
+                  <div className="text-sm font-bold">{meronEntry.entryName}</div>
+                  <div className="text-xs text-red-100">Type: {meronEntry.gameType}</div>
+                  <div className="text-lg font-bold mt-2">
+                    Wins: {fights.filter(f => f.entryName === meronEntry.entryName && f.result === 1).length}
                   </div>
-                ))}
-                {availableMeronEntries.length === 0 && (
-                  <div className="text-xs text-red-200">No entries available</div>
-                )}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Win Button */}
             <button
@@ -1104,20 +1103,19 @@ export default function ChickenFight() {
               )}
             </div>
 
-            {/* Available Entries - Only those with remaining leg bands */}
-            <div className="mb-4 p-3 bg-blue-600 rounded text-sm max-h-32 overflow-y-auto">
-              <div className="font-medium mb-2">Available:</div>
-              <div className="space-y-1">
-                {availableWalaEntries.map(entry => (
-                  <div key={entry._id} className="text-xs">
-                    {entry.entryName} ({entry.gameType})
+            {/* Show selected entry score */}
+            {selectedWalaEntry && walaEntry && (
+              <div className="mb-4 p-3 bg-blue-600 rounded text-sm">
+                <div className="font-medium mb-2">Entry Score</div>
+                <div className="space-y-1">
+                  <div className="text-sm font-bold">{walaEntry.entryName}</div>
+                  <div className="text-xs text-blue-100">Type: {walaEntry.gameType}</div>
+                  <div className="text-lg font-bold mt-2">
+                    Wins: {fights.filter(f => f.entryName === walaEntry.entryName && f.result === 1).length}
                   </div>
-                ))}
-                {availableWalaEntries.length === 0 && (
-                  <div className="text-xs text-blue-200">No entries available</div>
-                )}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Win Button */}
             <button
