@@ -386,7 +386,7 @@ export default function ChickenFightResults() {
               {entryFights.map((item, idx) => {
                 const fights = fightsByLeg[item.legNumber];
                 return (
-                  <div key={idx} className={`p-6 rounded-lg border-2 ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-300'}`}>
+                  <div key={idx} className={`p-6 rounded-lg border-2 ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}`}>
                     <div className="flex items-center justify-between mb-4">
                       <h3 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                         Fight #{item.legNumber}
@@ -413,8 +413,8 @@ export default function ChickenFightResults() {
                             <div key={fIdx} className={`p-4 rounded ${
                               isDarkMode ? 'bg-gray-800' : 'bg-white'
                             }`}>
-                              <div className="font-medium mb-2">{fight.entryName}</div>
-                              <div className="text-sm space-y-1 mb-3">
+                              <div className={`font-medium mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{fight.entryName}</div>
+                              <div className={`text-sm space-y-1 mb-3 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                                 <div><span className="opacity-75">Game Type:</span> {fight.gameType}</div>
                                 {legBandNumber && (
                                   <div className="font-mono">
