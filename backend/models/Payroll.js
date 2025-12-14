@@ -41,9 +41,19 @@ const PayrollSchema = new mongoose.Schema(
 
     // 📅 Date field for easier daily payroll queries
     date: { type: String }, // YYYY-MM-DD format
+
+    // 🆔 Unique transaction ID to prevent merging of separate payroll entries
+    transactionId: { 
+      type: String, 
+      sparse: true, // Allows null for old records while enforcing uniqueness for non-null values
+      index: true 
+    },
   },
   { timestamps: true }
 );
+
+// Add unique index on transactionId (sparse allows null values for old records)
+PayrollSchema.index({ transactionId: 1 }, { unique: true, sparse: true });
 
 export default mongoose.models.Payroll ||
   mongoose.model("Payroll", PayrollSchema);
