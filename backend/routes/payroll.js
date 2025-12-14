@@ -372,11 +372,11 @@ router.post("/sync-teller-reports", async (req, res) => {
       return sum + (shortAmount / terms);
     }, 0);
 
-    // Find or create payroll for this user for this period
-    let payroll = await Payroll.findOne({
+    // Find ALL payroll entries for this user in this period (to handle duplicates)
+    const existingPayrolls = await Payroll.find({
       user: userId,
       createdAt: { $gte: start, $lte: end }
-    });
+    }).sort({ createdAt: 1 });
 
     // Always read current user to keep baseSalary in sync
     const user = await User.findById(userId);
@@ -391,7 +391,10 @@ router.post("/sync-teller-reports", async (req, res) => {
     // Ensure we have a consistent date field on payrolls (yyyy-mm-dd) for UI filtering
     const dateKey = startDay.toISOString().split('T')[0];
 
-    if (!payroll) {
+    let payroll;
+    let deletedCount = 0;
+
+    if (existingPayrolls.length === 0) {
       // Create new payroll entry
       payroll = new Payroll({
         user: userId,
@@ -404,15 +407,32 @@ router.post("/sync-teller-reports", async (req, res) => {
         daysPresent: daysWorked,
         date: dateKey,
       });
-    } else {
-      // Update existing payroll (keep baseSalary up-to-date)
+    } else if (existingPayrolls.length === 1) {
+      // Single entry - just update it
+      payroll = existingPayrolls[0];
       payroll.over = totalOver;
       payroll.short = totalShort;
       payroll.baseSalary = accumulatedBase;
       payroll.daysPresent = daysWorked;
-      // keep payroll.date in sync to the requested start date
       payroll.date = dateKey;
       if (!payroll.role && user.role) payroll.role = user.role;
+    } else {
+      // Multiple entries found - consolidate into the oldest one
+      console.warn(`⚠️  Found ${existingPayrolls.length} payroll entries for user ${user.username} (${dateKey}). Consolidating...`);
+      
+      payroll = existingPayrolls[0]; // Keep the oldest
+      payroll.over = totalOver;
+      payroll.short = totalShort;
+      payroll.baseSalary = accumulatedBase;
+      payroll.daysPresent = daysWorked;
+      payroll.date = dateKey;
+      if (!payroll.role && user.role) payroll.role = user.role;
+
+      // Delete all other duplicates
+      for (let i = 1; i < existingPayrolls.length; i++) {
+        await Payroll.deleteOne({ _id: existingPayrolls[i]._id });
+        deletedCount++;
+      }
     }
 
     // Calculate total salary using weekly semantics (totalShort here is already a weekly installment sum)
@@ -434,11 +454,12 @@ router.post("/sync-teller-reports", async (req, res) => {
 
     res.json({
       success: true,
-      message: "✅ Payroll synced with teller reports",
+      message: `✅ Payroll synced with teller reports${deletedCount > 0 ? ` (removed ${deletedCount} duplicate entries)` : ''}`,
       payroll,
       reportsProcessed: reports.length,
       totalOver,
-      totalShort
+      totalShort,
+      duplicatesRemoved: deletedCount
     });
 
   } catch (err) {
@@ -488,8 +509,16 @@ router.post("/sync-month-all", async (req, res) => {
         }
         const accumulatedBase = daysWorked * dailyBase;
 
-        let payroll = await Payroll.findOne({ user: u._id, createdAt: { $gte: start, $lte: end } });
-        if (!payroll) {
+        // Find ALL payroll entries for this user in this month (to handle duplicates)
+        const existingPayrolls = await Payroll.find({ 
+          user: u._id, 
+          createdAt: { $gte: start, $lte: end } 
+        }).sort({ createdAt: 1 });
+
+        let payroll;
+        let deletedCount = 0;
+
+        if (existingPayrolls.length === 0) {
           payroll = new Payroll({
             user: u._id,
             role: u.role,
@@ -500,12 +529,30 @@ router.post("/sync-month-all", async (req, res) => {
             withdrawal: 0,
             daysPresent: daysWorked,
           });
-        } else {
+        } else if (existingPayrolls.length === 1) {
+          // Single entry - just update it
+          payroll = existingPayrolls[0];
           payroll.over = totalOver;
           payroll.short = totalShort;
           payroll.baseSalary = accumulatedBase;
           payroll.daysPresent = daysWorked;
           if (!payroll.role && u.role) payroll.role = u.role;
+        } else {
+          // Multiple entries found - consolidate into the oldest one
+          console.warn(`⚠️  Found ${existingPayrolls.length} payroll entries for user ${u.username} (${u._id}). Consolidating...`);
+          
+          payroll = existingPayrolls[0]; // Keep the oldest
+          payroll.over = totalOver;
+          payroll.short = totalShort;
+          payroll.baseSalary = accumulatedBase;
+          payroll.daysPresent = daysWorked;
+          if (!payroll.role && u.role) payroll.role = u.role;
+
+          // Delete all other duplicates
+          for (let i = 1; i < existingPayrolls.length; i++) {
+            await Payroll.deleteOne({ _id: existingPayrolls[i]._id });
+            deletedCount++;
+          }
         }
 
         // Calculate total salary for month-level payrolls using monthly semantics
