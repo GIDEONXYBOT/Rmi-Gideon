@@ -5,6 +5,7 @@ import Capital from "../models/Capital.js";
 import Payroll from "../models/Payroll.js";
 import AuditLog from "../models/AuditLog.js";
 import SystemSettings from "../models/SystemSettings.js";
+import { generateTransactionId } from "../utils/transactionId.js";
 
 const router = express.Router();
 
@@ -695,6 +696,9 @@ async function syncPayrollFromReports(tellerId) {
 
     if (existingPayrolls.length === 0) {
       // Create new payroll entry ONLY if none exist
+      const dateKey = monday.toISOString().split('T')[0]; // YYYY-MM-DD format
+      const transactionId = generateTransactionId(tellerId.toString(), dateKey);
+      
       const payroll = new Payroll({
         user: tellerId,
         role: user.role,
@@ -703,10 +707,12 @@ async function syncPayrollFromReports(tellerId) {
         short: totalShort,
         deduction: 0,
         withdrawal: 0,
+        date: dateKey,
+        transactionId: transactionId,
         createdAt: monday, // Set to Monday of the week
       });
       await payroll.save();
-      console.log(`✅ Creating new payroll for ${tellerId} for week ${monday.toISOString()}`);
+      console.log(`✅ Creating new payroll for ${tellerId} for week ${monday.toISOString()} with transactionId: ${transactionId}`);
     } else {
       // Update ALL existing payrolls in the week with current week's totals
       for (const payroll of existingPayrolls) {
@@ -720,6 +726,18 @@ async function syncPayrollFromReports(tellerId) {
           payroll.baseSalary = user.baseSalary || 0;
         }
         if (!payroll.role && user.role) payroll.role = user.role;
+        
+        // Ensure transactionId exists (for backwards compatibility)
+        if (!payroll.transactionId) {
+          const dateKey = payroll.date || monday.toISOString().split('T')[0];
+          payroll.transactionId = generateTransactionId(tellerId.toString(), dateKey);
+          console.log(`✅ Added transactionId to existing payroll: ${payroll.transactionId}`);
+        }
+        
+        // Ensure date field is set (for backwards compatibility)
+        if (!payroll.date) {
+          payroll.date = monday.toISOString().split('T')[0];
+        }
       }
 
       // Calculate total salary for each payroll: baseSalary + over - weeklyShortDeduction - deduction - withdrawal
