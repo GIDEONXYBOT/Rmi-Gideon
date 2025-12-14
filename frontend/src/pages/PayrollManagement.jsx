@@ -1922,17 +1922,40 @@ export default function PayrollManagement() {
                       <span className="font-bold">₱{(dailyDetailModal.payroll.baseSalary || 0).toFixed(2)}</span>
                     </div>
 
+                    {dailyDetailModal.payroll.daysPresent && dailyDetailModal.payroll.daysPresent > 0 && (
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-600 dark:text-gray-400">Days Present:</span>
+                        <span className="font-semibold">{dailyDetailModal.payroll.daysPresent}</span>
+                      </div>
+                    )}
+
                     {dailyDetailModal.payroll.over > 0 && (
-                      <div className="flex justify-between items-center text-green-600 dark:text-green-400">
-                        <span>Over:</span>
-                        <span className="font-bold">+₱{dailyDetailModal.payroll.over.toFixed(2)}</span>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center text-green-600 dark:text-green-400">
+                          <span>Over:</span>
+                          <span className="font-bold">+₱{dailyDetailModal.payroll.over.toFixed(2)}</span>
+                        </div>
+                        {dailyDetailModal.payroll.daysPresent && dailyDetailModal.payroll.daysPresent > 0 && (
+                          <div className="flex justify-between items-center text-green-500 dark:text-green-500 text-xs">
+                            <span className="italic">Over Per Day:</span>
+                            <span className="font-semibold">₱{(dailyDetailModal.payroll.over / dailyDetailModal.payroll.daysPresent).toFixed(2)}</span>
+                          </div>
+                        )}
                       </div>
                     )}
 
                     {dailyDetailModal.payroll.short > 0 && (
-                      <div className="flex justify-between items-center text-red-600 dark:text-red-400">
-                        <span>Short:</span>
-                        <span className="font-bold">-₱{dailyDetailModal.payroll.short.toFixed(2)}</span>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center text-red-600 dark:text-red-400">
+                          <span>Short:</span>
+                          <span className="font-bold">-₱{dailyDetailModal.payroll.short.toFixed(2)}</span>
+                        </div>
+                        {dailyDetailModal.payroll.daysPresent && dailyDetailModal.payroll.daysPresent > 0 && (
+                          <div className="flex justify-between items-center text-red-500 dark:text-red-500 text-xs">
+                            <span className="italic">Short Per Day:</span>
+                            <span className="font-semibold">₱{(dailyDetailModal.payroll.short / dailyDetailModal.payroll.daysPresent).toFixed(2)}</span>
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -2001,6 +2024,7 @@ export default function PayrollManagement() {
                 <th className="p-3 text-right">Base</th>
                 <th className="p-3 text-right">Total</th>
                 <th className="p-3 text-right">Over</th>
+                <th className="p-3 text-right">Over/Day</th>
                 <th className="p-3 text-right">Short</th>
                 <th className="p-3 text-right">Deduction</th>
                 <th className="p-3 text-center">Status</th>
@@ -2010,11 +2034,11 @@ export default function PayrollManagement() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="p-6 text-center text-gray-400">Loading...</td>
+                  <td colSpan={10} className="p-6 text-center text-gray-400">Loading...</td>
                 </tr>
               ) : filteredList.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="p-6 text-center text-gray-400">No payroll records found.</td>
+                  <td colSpan={10} className="p-6 text-center text-gray-400">No payroll records found.</td>
                 </tr>
               ) : (
                 filteredList.map((p) => {
@@ -2052,6 +2076,9 @@ export default function PayrollManagement() {
                       <td className="p-3 text-right">₱{((p.baseSalary ?? p.base) || 0).toLocaleString()}</td>
                       <td className="p-3 text-right font-semibold">₱{(p.totalSalary ?? 0).toLocaleString()}</td>
                       <td className="p-3 text-right">₱{(p.over ?? 0).toLocaleString()}</td>
+                      <td className="p-3 text-right text-green-600 dark:text-green-400 font-semibold">
+                        {p.daysPresent && p.daysPresent > 0 ? `₱${((p.over ?? 0) / p.daysPresent).toFixed(2)}` : '-'}
+                      </td>
                       <td className="p-3 text-right">₱{(p.short ?? 0).toLocaleString()}</td>
                       <td className="p-3 text-right">₱{((p.deduction ?? p.totalDeductions) ?? 0).toLocaleString()}</td>
                       <td className="p-3 text-center">
@@ -2579,10 +2606,24 @@ export default function PayrollManagement() {
                 <div className="text-sm text-gray-400">Total Salary</div>
                 <div className="font-semibold">₱{(viewPayroll.totalSalary ?? 0).toLocaleString()}</div>
               </div>
+              {viewPayroll.daysPresent && viewPayroll.daysPresent > 0 && (
+                <div>
+                  <div className="text-sm text-gray-400">Days Present</div>
+                  <div className="font-semibold">{viewPayroll.daysPresent} day{viewPayroll.daysPresent !== 1 ? 's' : ''}</div>
+                </div>
+              )}
               <div>
                 <div className="text-sm text-gray-400">Over</div>
                 <div>₱{(viewPayroll.over ?? 0).toLocaleString()}</div>
               </div>
+              {viewPayroll.over > 0 && viewPayroll.daysPresent && viewPayroll.daysPresent > 0 && (
+                <div>
+                  <div className="text-sm text-gray-400">Over Per Day</div>
+                  <div className="text-green-600 dark:text-green-400 font-semibold">
+                    ₱{((viewPayroll.over ?? 0) / viewPayroll.daysPresent).toFixed(2)}
+                  </div>
+                </div>
+              )}
               <div>
                 <div className="text-sm text-gray-400">Short</div>
                 <div>₱{(viewPayroll.short ?? 0).toLocaleString()}</div>
