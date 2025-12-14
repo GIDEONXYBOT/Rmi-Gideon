@@ -833,27 +833,17 @@ router.put("/:id/adjust", async (req, res) => {
       const newBaseSalary = Number(baseSalary);
       payroll.baseSalary = newBaseSalary;
       
-      // Recalculate totalSalary with shortPaymentTerms consideration
-      const over = payroll.over || 0;
-      const short = payroll.short || 0;
-      const deduction = payroll.deduction || 0;
-      const terms = payroll.shortPaymentTerms || 1;
-      const weeklyShortDeduction = short / terms;
-      // For adjustment with payment terms: include over and weekly short deduction
-      payroll.totalSalary = computeTotalSalary({
-        baseSalary: newBaseSalary,
-        over,
-        short,
-        deduction,
-        withdrawal: payroll.withdrawal || 0,
-        shortPaymentTerms: terms,
-        shortIsInstallment: false
-      }, { period: 'weekly' });
+      // ⚠️ IMPORTANT: When updating base salary, DO NOT re-add over/short
+      // Over and short are already factored into the current totalSalary
+      // Only calculate the difference in base salary and apply it to totalSalary
+      const oldTotal = payroll.totalSalary || 0;
+      const baseSalaryDifference = newBaseSalary - oldBaseSalary;
+      payroll.totalSalary = oldTotal + baseSalaryDifference;
       
       // Add adjustment note about base salary change
       if (oldBaseSalary !== newBaseSalary) {
         payroll.adjustments.push({
-          delta: newBaseSalary - oldBaseSalary,
+          delta: baseSalaryDifference,
           reason: `Base salary changed from ₱${oldBaseSalary} to ₱${newBaseSalary}. ${reason}`,
           adminId,
         });
