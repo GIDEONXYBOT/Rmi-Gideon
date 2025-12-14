@@ -16,6 +16,7 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import Payroll from './models/Payroll.js';
 import TellerReport from './models/TellerReport.js';
+import User from './models/User.js';
 
 dotenv.config();
 
