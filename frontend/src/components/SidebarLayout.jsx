@@ -27,6 +27,8 @@ import {
   Camera,
   TrendingUp,
   Edit2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 import FloatingChat from "../pages/ChatRoom.jsx"; // ✅ floating chat import
@@ -42,7 +44,7 @@ export default function SidebarLayout({ role, children }) {
   const location = useLocation();
   const dark = settings?.theme?.mode === "dark";
 
-  const [collapsed, setCollapsed] = useState(false);
+
   const [payrollTotal, setPayrollTotal] = useState(0);
   const [availableBalance, setAvailableBalance] = useState(0); // sum of unwithdrawn payrolls
   const [payrollLoading, setPayrollLoading] = useState(false);
@@ -58,6 +60,9 @@ export default function SidebarLayout({ role, children }) {
   // ✅ Mobile sidebar + gestures + overlay
   const [showSidebar, setShowSidebar] = useState(true);
   const [showArrow, setShowArrow] = useState(true);
+  
+  // ✅ Sidebar collapse/expand state (desktop)
+  const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
 
@@ -431,13 +436,13 @@ export default function SidebarLayout({ role, children }) {
         ></div>
       )}
 
-      {/* Sidebar */}
+      {/* Mobile Sidebar */}
       <aside
         ref={sidebarRef}
-        className={`fixed md:sticky md:top-0 sidebar-fixed z-40 h-screen transition-transform duration-300 transform 
+        className={`fixed md:hidden sidebar-mobile z-40 h-screen transition-transform duration-300 transform 
         ${showSidebar ? "translate-x-0" : "-translate-x-64"} 
         w-64 
-        bg-white dark:bg-gray-900 border-r dark:border-gray-700 flex flex-col shadow-lg md:shadow-none overflow-y-auto`}
+        bg-white dark:bg-gray-900 border-r dark:border-gray-700 flex flex-col shadow-lg overflow-y-auto`}
       >
         <div className="px-4 pt-4 pb-3 border-b dark:border-gray-700 flex-shrink-0">
           <div 
@@ -525,6 +530,192 @@ export default function SidebarLayout({ role, children }) {
             </div>
           </div>
 
+        {/* ==================== NAVIGATION (Mobile) ==================== */}
+        <nav className="mt-4 space-y-1 text-sm flex-1 overflow-y-auto px-2 pb-4 scrollbar-thin scrollbar-thumb-gray-400 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
+          {!permissionsLoaded && (
+            <div className="text-xs px-3 py-1 text-gray-500 dark:text-gray-400">Loading menu…</div>
+          )}
+          {permissionsLoaded && (
+            (() => {
+              const isSuperAdminUsername = (user?.username === 'admin');
+              const isAlfonsoUsername = (user?.username || '').toLowerCase().includes('alfonso');
+              const roleKey = user?.role;
+              const menuRole = (isSuperAdminUsername && (
+                (rolePermissions['super_admin'] && rolePermissions['super_admin'].length) ||
+                (FALLBACK_ROLE_ITEMS['super_admin'] && FALLBACK_ROLE_ITEMS['super_admin'].length)
+              )) ? 'super_admin' : roleKey;
+
+              let list = (rolePermissions[menuRole] && rolePermissions[menuRole].length
+                ? rolePermissions[menuRole]
+                : FALLBACK_ROLE_ITEMS[menuRole] || []);
+              const superAdminStrict = localStorage.getItem('superAdminStrict') === 'true';
+              if (menuRole === 'super_admin' && !superAdminStrict) {
+                const allIds = Object.keys(MENU_ITEM_DEFS);
+                const set = new Set(list);
+                for (const id of allIds) {
+                  if (!set.has(id)) {
+                    list.push(id);
+                    set.add(id);
+                  }
+                }
+              }
+              const normalized = list.map(id => LEGACY_SYNONYMS[id] || id);
+              const seen = new Set();
+              const unique = normalized.filter(id => {
+                if (seen.has(id)) return false;
+                seen.add(id);
+                return true;
+              });
+              const showExperimental = localStorage.getItem('showExperimentalMenus') === 'true';
+              return unique
+              .filter(id => MENU_ITEM_DEFS[id])
+              .filter(id => showExperimental || menuRole === 'super_admin' || MENU_ITEM_DEFS[id].enabled !== false)
+              .filter(id => {
+                const roles = MENU_ITEM_DEFS[id].roles;
+                if (isAlfonsoUsername && (id === 'suggested-schedule' || id === 'attendance-scheduler')) return true;
+                return !roles || roles.includes(menuRole);
+              })
+              .map(id => {
+                const def = MENU_ITEM_DEFS[id];
+                const to = typeof def.to === 'function' ? def.to(user?.role) : def.to;
+                const badge = def.dynamicBadge ? (pendingCount || 0) : undefined;
+                return (
+                  <SidebarItem
+                    key={id}
+                    to={to}
+                    icon={def.icon}
+                    text={def.text}
+                    active={isActive(to.replace(/\/.*/, ''))}
+                    badge={badge}
+                    expanded={true}
+                  />
+                );
+              });
+            })()
+          )}
+        </nav>
+
+        {/* Logout button - stays at bottom */}
+        <div className="border-t dark:border-gray-700 mt-auto flex-shrink-0">
+          <button
+            onClick={logout}
+            className="w-full py-3 text-center text-sm text-gray-500 dark:text-gray-300 hover:bg-red-100 dark:hover:bg-red-800 hover:text-red-600 transition"
+          >
+            Logout
+          </button>
+        </div>
+      </aside>
+      <aside
+        ref={sidebarRef}
+        className={`hidden md:flex fixed md:sticky md:top-0 sidebar-fixed z-40 h-screen flex-col shadow-lg md:shadow-none overflow-y-auto bg-white dark:bg-gray-900 border-r dark:border-gray-700 transition-all duration-300 ${
+          sidebarExpanded ? "w-64" : "w-20"
+        }`}
+      >
+        <div className="px-4 pt-4 pb-3 border-b dark:border-gray-700 flex-shrink-0">
+          {/* Collapse/Expand Button */}
+          <div className="flex justify-end mb-2">
+            <button
+              onClick={() => setSidebarExpanded(!sidebarExpanded)}
+              className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-gray-600 dark:text-gray-300"
+              title={sidebarExpanded ? "Collapse sidebar" : "Expand sidebar"}
+            >
+              {sidebarExpanded ? (
+                <ChevronLeft size={20} />
+              ) : (
+                <ChevronRight size={20} />
+              )}
+            </button>
+          </div>
+
+          <div 
+            className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition"
+            onClick={() => navigate(`/${resolvedRole}/dashboard`)}
+            title="Go to Dashboard"
+          >
+              <div className="relative">
+                {user?.avatarUrl ? (
+                  <img
+                    src={`${getApiUrl()}${user.avatarUrl}?t=${Date.now()}`}
+                    alt="avatar"
+                    onClick={(e) => { handleAvatarClick(e); }}
+                    className="h-12 w-12 rounded-full object-cover cursor-pointer border-2 border-white dark:border-gray-900"
+                    onError={(e) => {
+                      e.target.src = `data:image/svg+xml;base64,${btoa('<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48"><circle cx="24" cy="24" r="24" fill="#e5e7eb"/><circle cx="24" cy="18" r="8" fill="#9ca3af"/><path d="M8 40c0-8.8 7.2-16 16-16s16 7.2 16 16" fill="#9ca3af"/></svg>')}`;
+                    }}
+                  />
+                ) : (
+                  <UserCircle onClick={(e) => handleAvatarClick(e)} className="h-12 w-12 text-indigo-500 flex-shrink-0 cursor-pointer" />
+                )}
+                {showAvatarEditor && (
+                  <AvatarEditor
+                    initialImage={selectedImage}
+                    onClose={() => { setShowAvatarEditor(false); setSelectedImage(null); }}
+                    onSaved={(resp) => { handleAvatarSaved(resp); setShowAvatarEditor(false); setSelectedImage(null); }}
+                  />
+                )}
+
+                {/* Hidden inputs: gallery (default) and camera (capture) */}
+                <input 
+                  ref={fileInputRef} 
+                  onChange={handleAvatarSelected} 
+                  accept="image/*" 
+                  type="file" 
+                  className="hidden" 
+                />
+                <input 
+                  ref={cameraInputRef} 
+                  onChange={handleAvatarSelected} 
+                  accept="image/*" 
+                  capture="environment" 
+                  type="file" 
+                  className="hidden" 
+                />
+
+              </div>
+            {sidebarExpanded && (
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-gray-800 dark:text-gray-200 text-base leading-tight truncate">
+                  {user?.name || user?.username || "User"}
+                </p>
+                <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  {user?.role}
+                </p>
+              </div>
+            )}
+          </div>
+          <div
+            onClick={() => {
+              const target = resolvedRole === 'admin' ? '/admin/salary' : `/${resolvedRole}/payroll`;
+              navigate(target);
+            }}
+            className="mt-4 cursor-pointer group"
+            >
+              {sidebarExpanded && (
+                <div className="rounded-xl p-4 bg-gradient-to-r from-indigo-600 via-purple-600 to-fuchsia-600 text-white shadow hover:shadow-md transition relative overflow-hidden">
+                  <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_30%_30%,#ffffff,transparent)]" />
+                  <div className="flex items-center justify-between relative z-10">
+                    <div>
+                      <div className="text-[11px] font-semibold tracking-wider text-indigo-100">
+                        TOTAL BALANCE
+                      </div>
+                      <div className="mt-1 text-2xl font-bold">
+                        {payrollLoading ? (
+                          <span className="animate-pulse">…</span>
+                        ) : (
+                          `₱${availableBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-xs text-indigo-100 text-right">
+                      <div className="opacity-80">Unwithdrawn</div>
+                      <div className="group-hover:underline">View Details →</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
         {/* ==================== NAVIGATION ==================== */}
         <nav className="mt-4 space-y-1 text-sm flex-1 overflow-y-auto px-2 pb-4 scrollbar-thin scrollbar-thumb-gray-400 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
           {!permissionsLoaded && (
@@ -588,6 +779,7 @@ export default function SidebarLayout({ role, children }) {
                     text={def.text}
                     active={isActive(to.replace(/\/.*/, ''))}
                     badge={badge}
+                    expanded={sidebarExpanded}
                   />
                 );
               });
@@ -641,12 +833,12 @@ export default function SidebarLayout({ role, children }) {
   );
 }
 
-function SidebarItem({ to, icon, text, active, badge }) {
+function SidebarItem({ to, icon, text, active, badge, expanded }) {
   const navigate = useNavigate();
   return (
     <div
       onClick={() => navigate(to)}
-      className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer rounded-lg transition-all ${
+      className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer rounded-lg transition-all relative group ${
         active
           ? "bg-indigo-100 dark:bg-indigo-700 text-indigo-700 dark:text-white font-medium shadow-sm"
           : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:translate-x-1"
@@ -654,11 +846,22 @@ function SidebarItem({ to, icon, text, active, badge }) {
       title={text}
     >
       <span className="flex-shrink-0">{icon}</span>
-      <span className="truncate flex-1">{text}</span>
-      {badge > 0 && (
-        <span className="flex-shrink-0 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
-          {badge}
-        </span>
+      {expanded && (
+        <>
+          <span className="truncate flex-1">{text}</span>
+          {badge > 0 && (
+            <span className="flex-shrink-0 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+              {badge}
+            </span>
+          )}
+        </>
+      )}
+      
+      {/* Tooltip for collapsed state */}
+      {!expanded && (
+        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-50">
+          {text}
+        </div>
       )}
     </div>
   );
