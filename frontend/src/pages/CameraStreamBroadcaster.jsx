@@ -69,9 +69,22 @@ export default function CameraStreamBroadcaster() {
       
       console.log(`🔌 Connecting to WebSocket: ${wsUrl}`);
       
+      // Set timeout to fail fast if WebSocket doesn't connect
+      const connectionTimeout = setTimeout(() => {
+        console.log('⏱️ WebSocket connection timeout - using local mode');
+        wsRef.current = null;
+        setIsConnected(true); // Mark as connected for local mode
+        if (isbroadcaster) {
+          showToast({ type: 'warning', message: '📡 Broadcasting in local mode (no backend)' });
+        } else {
+          showToast({ type: 'warning', message: '⚠️ Backend unavailable - manual code entry needed' });
+        }
+      }, 3000); // 3 second timeout
+      
       wsRef.current = new WebSocket(wsUrl);
       
       wsRef.current.onopen = () => {
+        clearTimeout(connectionTimeout);
         console.log('✅ WebSocket connected');
         setIsConnected(true);
         
@@ -101,17 +114,20 @@ export default function CameraStreamBroadcaster() {
       };
       
       wsRef.current.onerror = (err) => {
+        clearTimeout(connectionTimeout);
         console.error('❌ WebSocket error:', err);
         setIsConnected(false);
-        // Use fallback - local broadcast mode (don't stop streaming on error)
+        // Use fallback - local broadcast mode
         if (isbroadcaster) {
-          console.log('⚠️ WebSocket unavailable, using local broadcast mode');
+          console.log('📡 Switching to local broadcast mode');
+          wsRef.current = null;
           setIsConnected(true);
-          showToast({ type: 'warning', message: '⚠️ Broadcasting locally (backend not available)' });
+          showToast({ type: 'warning', message: '📡 Broadcasting locally (backend unavailable)' });
         }
       };
       
       wsRef.current.onclose = () => {
+        clearTimeout(connectionTimeout);
         console.log('❌ WebSocket disconnected');
         setIsConnected(false);
         // Don't stop streaming on close - allow user to continue
@@ -201,12 +217,23 @@ export default function CameraStreamBroadcaster() {
         const reader = new FileReader();
         reader.onload = () => {
           const base64 = reader.result.split(',')[1];
+          const frameData = {
+            type: 'frame',
+            data: base64,
+            timestamp: Date.now()
+          };
+          
+          // Send via WebSocket if connected
           if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-            wsRef.current.send(JSON.stringify({
-              type: 'frame',
-              data: base64,
-              timestamp: Date.now()
-            }));
+            wsRef.current.send(JSON.stringify(frameData));
+          } else {
+            // Store locally for fallback display in other tabs
+            if (typeof window !== 'undefined' && window.sessionStorage) {
+              sessionStorage.setItem(
+                `broadcast_${broadcastIdRef.current}`,
+                JSON.stringify(frameData)
+              );
+            }
           }
         };
         reader.readAsDataURL(blob);
@@ -228,14 +255,43 @@ export default function CameraStreamBroadcaster() {
     }
 
     try {
-      // Setup WebSocket
+      // Setup WebSocket - if fails, will use fallback polling
       setupWebSocket(broadcastId.toUpperCase(), false);
+      
+      // Start fallback polling for local mode
+      startViewerPolling(broadcastId.toUpperCase());
+      
       setMode('viewer');
       showToast({ type: 'info', message: `📡 Connecting to broadcast...` });
     } catch (err) {
       console.error('Error joining broadcast:', err);
       showToast({ type: 'error', message: 'Failed to join broadcast' });
     }
+  };
+
+  // Fallback polling for viewer when WebSocket isn't available
+  const startViewerPolling = (broadcastId) => {
+    const pollInterval = setInterval(() => {
+      if (typeof window !== 'undefined' && window.sessionStorage) {
+        const frameData = sessionStorage.getItem(`broadcast_${broadcastId}`);
+        if (frameData) {
+          try {
+            const frame = JSON.parse(frameData);
+            if (frame.data) {
+              setViewerImage(`data:image/jpeg;base64,${frame.data}`);
+            }
+          } catch (err) {
+            console.error('Error parsing frame:', err);
+          }
+        }
+      }
+    }, 100);
+
+    // Store interval ID for cleanup
+    if (frameIntervalRef.current) {
+      clearInterval(frameIntervalRef.current);
+    }
+    frameIntervalRef.current = pollInterval;
   };
 
   // Stop streaming
@@ -618,6 +674,14 @@ export default function CameraStreamBroadcaster() {
                     </span>
                   </div>
                 </div>
+
+                {!wsRef.current && isConnected && (
+                  <div className={`p-3 rounded-lg text-sm ${dark ? 'bg-yellow-900/30 border border-yellow-700' : 'bg-yellow-50 border border-yellow-200'}`}>
+                    <p className={dark ? 'text-yellow-200' : 'text-yellow-800'}>
+                      ⚠️ Using local fallback mode. Make sure broadcaster is on same network.
+                    </p>
+                  </div>
+                )}
               </div>
 
               <button
