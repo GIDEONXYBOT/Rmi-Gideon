@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext, useRef } from 'react';
 import { SettingsContext } from '../context/SettingsContext';
 import { useToast } from '../context/ToastContext';
 import { getApiUrl } from '../utils/apiConfig';
-import { Camera, Maximize2, Minimize2, Settings, Circle, Square } from 'lucide-react';
+import { Camera, Maximize2, Minimize2, Settings, Circle, Square, ZoomIn, ZoomOut } from 'lucide-react';
 import axios from 'axios';
 
 export default function LiveCockFightCamera() {
@@ -34,6 +34,7 @@ export default function LiveCockFightCamera() {
     broadcast: false
   });
   const [showSettings, setShowSettings] = useState(false);
+  const [zoom, setZoom] = useState(1);
 
   // Get available cameras
   useEffect(() => {
@@ -143,6 +144,19 @@ export default function LiveCockFightCamera() {
     setIsRecording(false);
     setRecordingTime(0);
     showToast({ type: 'info', message: '📷 Camera stopped' });
+  };
+
+  // Zoom controls
+  const handleZoomIn = () => {
+    const newZoom = Math.min(zoom + 0.2, 3);
+    setZoom(newZoom);
+    showToast({ type: 'info', message: `🔍 Zoom: ${(newZoom * 100).toFixed(0)}%` });
+  };
+
+  const handleZoomOut = () => {
+    const newZoom = Math.max(zoom - 0.2, 1);
+    setZoom(newZoom);
+    showToast({ type: 'info', message: `🔍 Zoom: ${(newZoom * 100).toFixed(0)}%` });
   };
 
   // Start recording
@@ -324,7 +338,10 @@ export default function LiveCockFightCamera() {
                     width: '100%', 
                     height: '100%',
                     objectFit: 'cover',
-                    backgroundColor: '#000'
+                    backgroundColor: '#000',
+                    transform: `scale(${zoom})`,
+                    transformOrigin: 'center',
+                    transition: 'transform 0.2s ease-out'
                   }}
                 />
                 
@@ -343,6 +360,29 @@ export default function LiveCockFightCamera() {
                 >
                   {isFullscreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
                 </button>
+
+                {/* Zoom controls */}
+                <div className="absolute bottom-4 right-4 flex gap-2 bg-black/50 p-2 rounded-lg">
+                  <button
+                    onClick={handleZoomOut}
+                    disabled={zoom <= 1}
+                    className="p-2 bg-white/20 hover:bg-white/30 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition text-white"
+                    title="Zoom Out"
+                  >
+                    <ZoomOut size={20} />
+                  </button>
+                  <div className="flex items-center px-3 text-white text-sm font-semibold min-w-12">
+                    {(zoom * 100).toFixed(0)}%
+                  </div>
+                  <button
+                    onClick={handleZoomIn}
+                    disabled={zoom >= 3}
+                    className="p-2 bg-white/20 hover:bg-white/30 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition text-white"
+                    title="Zoom In"
+                  >
+                    <ZoomIn size={20} />
+                  </button>
+                </div>
               </>
             )}
           </div>
