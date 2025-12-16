@@ -3,6 +3,7 @@ import { SettingsContext } from '../context/SettingsContext';
 import { useToast } from '../context/ToastContext';
 import { getApiUrl } from '../utils/apiConfig';
 import { Camera, Share2, Copy, QrCode, Eye, Send, Wifi, WifiOff, Play, Square } from 'lucide-react';
+import * as QRCode from 'qrcode.react';
 import axios from 'axios';
 
 export default function CameraStreamBroadcaster() {
@@ -30,6 +31,18 @@ export default function CameraStreamBroadcaster() {
   
   // Get available cameras
   useEffect(() => {
+    // Check URL parameters for auto-detection
+    const params = new URLSearchParams(window.location.search);
+    const broadcastCode = params.get('broadcast');
+    
+    if (broadcastCode) {
+      // Auto-join broadcast if code is in URL
+      console.log(`🔗 Auto-detecting broadcast code: ${broadcastCode}`);
+      setBroadcastId(broadcastCode);
+      setMode('viewer');
+      showToast({ type: 'info', message: `📡 Auto-joining broadcast...` });
+    }
+
     const getCameras = async () => {
       try {
         const devices = await navigator.mediaDevices.enumerateDevices();
@@ -160,9 +173,11 @@ export default function CameraStreamBroadcaster() {
     }
   };
 
-  // Send video frames to WebSocket
+  // Send video frames to WebSocket - Optimized for speed
   const sendFrames = () => {
     if (!videoRef.current || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+      // Reschedule even if not connected to try again
+      frameIntervalRef.current = setTimeout(sendFrames, streamQuality === 'high' ? 200 : streamQuality === 'medium' ? 300 : 500);
       return;
     }
 
@@ -170,16 +185,19 @@ export default function CameraStreamBroadcaster() {
     const video = videoRef.current;
     const ctx = canvas.getContext('2d');
 
-    // Set canvas size
-    canvas.width = video.videoWidth || 1280;
-    canvas.height = video.videoHeight || 720;
+    // Set canvas size to lower res for faster processing
+    const scale = streamQuality === 'high' ? 1 : streamQuality === 'medium' ? 0.75 : 0.5;
+    canvas.width = (video.videoWidth || 1280) * scale;
+    canvas.height = (video.videoHeight || 720) * scale;
 
     // Draw frame
-    ctx.drawImage(video, 0, 0);
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    // Convert to JPEG and send
+    // Convert to JPEG with optimized settings and send
+    const quality = streamQuality === 'high' ? 0.8 : streamQuality === 'medium' ? 0.6 : 0.4;
     canvas.toBlob(
       (blob) => {
+        if (!blob) return;
         const reader = new FileReader();
         reader.onload = () => {
           const base64 = reader.result.split(',')[1];
@@ -194,10 +212,12 @@ export default function CameraStreamBroadcaster() {
         reader.readAsDataURL(blob);
       },
       'image/jpeg',
-      streamQuality === 'high' ? 0.9 : streamQuality === 'medium' ? 0.7 : 0.5
+      quality
     );
 
-    frameIntervalRef.current = setTimeout(sendFrames, streamQuality === 'high' ? 100 : 200);
+    // Schedule next frame - faster intervals for better performance
+    const frameInterval = streamQuality === 'high' ? 100 : streamQuality === 'medium' ? 150 : 300;
+    frameIntervalRef.current = setTimeout(sendFrames, frameInterval);
   };
 
   // Join broadcast as viewer
@@ -437,6 +457,21 @@ export default function CameraStreamBroadcaster() {
                 </div>
               </div>
 
+              {/* QR Code for easy sharing */}
+              {broadcastId && (
+                <div className="mb-4 p-4 rounded-lg bg-white flex flex-col items-center">
+                  <p className={`text-sm font-medium mb-2 ${dark ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Scan to join broadcast:
+                  </p>
+                  <QRCode 
+                    value={`${window.location.origin}${window.location.pathname}?broadcast=${broadcastId}`}
+                    size={200}
+                    level="H"
+                    includeMargin={true}
+                  />
+                </div>
+              )}
+
               <button
                 onClick={copyBroadcastId}
                 className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition flex items-center justify-center gap-2 mb-4"
@@ -447,14 +482,13 @@ export default function CameraStreamBroadcaster() {
 
               <div className={`p-4 rounded-lg mb-4 ${dark ? 'bg-gray-700' : 'bg-gray-100'}`}>
                 <p className={`text-sm font-medium mb-2 ${dark ? 'text-gray-300' : 'text-gray-700'}`}>
-                  Share Instructions:
+                  Share Options:
                 </p>
-                <ol className={`text-sm space-y-1 ${dark ? 'text-gray-400' : 'text-gray-600'}`}>
-                  <li>1. Copy the broadcast ID above</li>
-                  <li>2. Tell other users this ID</li>
-                  <li>3. They open "Watch Stream"</li>
-                  <li>4. Paste ID to connect</li>
-                </ol>
+                <ul className={`text-sm space-y-1 ${dark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  <li>✓ Show QR code to viewers to scan</li>
+                  <li>✓ Copy & share broadcast ID</li>
+                  <li>✓ Viewers enter ID in "Watch Stream"</li>
+                </ul>
               </div>
 
               <button
