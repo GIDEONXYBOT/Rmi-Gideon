@@ -442,6 +442,8 @@ function App() {
                       <Route path="deployments" element={<TellerDeployments />} />
                       <Route path="live-map" element={<AdminMapEditor />} />
                       <Route path="betting-event-report" element={<BettingEventReport />} />
+                      <Route path="betting-capture-screen" element={<BettingCaptureScreen />} />
+                      <Route path="stream-broadcaster" element={<CameraStreamBroadcaster />} />
                       
                       {/* ✅ Added: Suggested Schedule (real-time) */}
                       <Route path="suggested-schedule" element={<ScheduleRotation />} />
