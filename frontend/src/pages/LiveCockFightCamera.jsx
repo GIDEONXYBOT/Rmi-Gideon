@@ -56,16 +56,29 @@ export default function LiveCockFightCamera() {
 
   // ✅ Ensure video plays when stream is set
   useEffect(() => {
-    if (videoRef.current && stream) {
-      videoRef.current.srcObject = stream;
-      // Force play on mobile
-      videoRef.current.play().catch(err => {
-        console.warn('⚠️ Video play failed:', err);
-        // Retry after a brief delay
-        setTimeout(() => {
-          videoRef.current?.play().catch(e => console.error('Play retry failed:', e));
-        }, 500);
-      });
+    if (!videoRef.current || !stream) return;
+
+    console.log('🎬 Setting stream to video element...');
+    videoRef.current.srcObject = stream;
+    
+    // Attempt to play
+    const playPromise = videoRef.current.play();
+    if (playPromise !== undefined) {
+      playPromise
+        .then(() => {
+          console.log('✅ Video playing successfully');
+        })
+        .catch(err => {
+          console.error('❌ Auto-play failed:', err);
+          // Retry
+          setTimeout(() => {
+            if (videoRef.current?.srcObject === stream) {
+              videoRef.current.play().catch(e => {
+                console.error('❌ Retry failed:', e);
+              });
+            }
+          }, 500);
+        });
     }
   }, [stream]);
 
@@ -73,6 +86,7 @@ export default function LiveCockFightCamera() {
   const startCamera = async () => {
     try {
       setCameraError(null);
+      console.log('📷 Starting camera with device:', selectedCamera);
       
       const constraints = {
         video: {
@@ -84,10 +98,20 @@ export default function LiveCockFightCamera() {
       };
 
       const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+      console.log('✅ Media stream acquired:', mediaStream.getTracks());
+      
       streamRef.current = mediaStream;
       
+      // Set on video element immediately
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
+        console.log('📺 Stream assigned to video element');
+        
+        // Try to play immediately
+        const playPromise = videoRef.current.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(err => console.error('Play error:', err));
+        }
       }
 
       setStream(mediaStream);
@@ -294,9 +318,14 @@ export default function LiveCockFightCamera() {
                   autoPlay
                   muted
                   playsInline
-                  controls={false}
-                  style={{ display: 'block', width: '100%', height: '100%' }}
-                  className="w-full h-full object-cover"
+                  disablePictureInPicture
+                  style={{ 
+                    display: 'block', 
+                    width: '100%', 
+                    height: '100%',
+                    objectFit: 'cover',
+                    backgroundColor: '#000'
+                  }}
                 />
                 
                 {/* Recording indicator */}
