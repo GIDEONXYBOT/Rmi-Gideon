@@ -146,21 +146,35 @@ export default function BettingEventReport() {
   }
 
   if (error) {
+    // Special message for tellers without mapping
+    const isNoMappingError = error.includes('no betting API mapping') || (reportData?.isTellerData && (!reportData?.data?.staffReports || reportData.data.staffReports.length === 0));
+    
     return (
       <div className="p-6">
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+        <div className={`${isNoMappingError ? 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800' : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'} rounded-lg p-4`}>
           <div className="flex">
             <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+              <svg className={`h-5 w-5 ${isNoMappingError ? 'text-yellow-400' : 'text-red-400'}`} viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
               </svg>
             </div>
             <div className="ml-3">
-              <h3 className="text-sm font-medium text-red-800 dark:text-red-200">Error Loading Report</h3>
-              <div className="mt-2 text-sm text-red-700 dark:text-red-300">{error}</div>
+              <h3 className={`text-sm font-medium ${isNoMappingError ? 'text-yellow-800 dark:text-yellow-200' : 'text-red-800 dark:text-red-200'}`}>
+                {isNoMappingError ? 'Not Mapped to Betting System' : 'Error Loading Report'}
+              </h3>
+              <div className={`mt-2 text-sm ${isNoMappingError ? 'text-yellow-700 dark:text-yellow-300' : 'text-red-700 dark:text-red-300'}`}>
+                {isNoMappingError ? (
+                  <>
+                    <p>Your account is not yet mapped to the betting system.</p>
+                    <p className="mt-1">Please contact your supervisor or administrator to set up your betting account mapping.</p>
+                  </>
+                ) : (
+                  error
+                )}
+              </div>
               <button
                 onClick={fetchBettingEventData}
-                className="mt-3 bg-red-100 dark:bg-red-800 px-3 py-1 rounded text-sm text-red-800 dark:text-red-200 hover:bg-red-200 dark:hover:bg-red-700"
+                className={`mt-3 ${isNoMappingError ? 'bg-yellow-100 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200 hover:bg-yellow-200 dark:hover:bg-yellow-700' : 'bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-200 hover:bg-red-200 dark:hover:bg-red-700'} px-3 py-1 rounded text-sm`}
               >
                 Retry
               </button>
@@ -180,6 +194,28 @@ export default function BettingEventReport() {
   }
 
   const { data } = reportData;
+
+  // Check if teller has no data (not mapped)
+  if (isTeller && (!data?.staffReports || data.staffReports.length === 0)) {
+    return (
+      <div className="p-6">
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6">
+          <div className="text-center">
+            <svg className="h-12 w-12 text-yellow-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <h3 className="text-lg font-medium text-yellow-800 dark:text-yellow-200 mb-2">Not Mapped to Betting System</h3>
+            <p className="text-yellow-700 dark:text-yellow-300">
+              Your account hasn't been set up in the betting system yet.
+            </p>
+            <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-2">
+              Please contact your supervisor or administrator to set up your betting account mapping.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">

@@ -679,6 +679,7 @@ router.put("/unlock/:id", async (req, res) => {
 router.get("/betting-event", requireAuth, requireRole(['super_admin', 'admin', 'supervisor', 'teller']), async (req, res) => {
   try {
     console.log("🎯 Fetching betting event report data...");
+    console.log(`👤 User Role: ${req.user?.role}, User ID: ${req.user?._id}`);
 
     const { fromDate, toDate, showAll } = req.query;
 
@@ -715,6 +716,42 @@ router.get("/betting-event", requireAuth, requireRole(['super_admin', 'admin', '
       }
     }
 
+    // ✅ TELLER-SPECIFIC FILTERING: If teller requests data, filter to their data only
+    if (req.user?.role === 'teller') {
+      try {
+        const TellerMapping = (await import('../models/TellerMapping.js')).default;
+        
+        // Find this teller's mapping to get their betting username
+        const mapping = await TellerMapping.findOne({ tellerId: req.user._id, isActive: true });
+        
+        if (mapping) {
+          console.log(`🔍 Teller ${req.user.username} mapped as betting user: ${mapping.bettingUsername}`);
+          
+          // Filter staffReports to only show this teller's data
+          if (filteredData?.staffReports && Array.isArray(filteredData.staffReports)) {
+            const tellerData = filteredData.staffReports.find(r => 
+              (r.username || r.tellerUsername || '').toLowerCase() === mapping.bettingUsername.toLowerCase() ||
+              (r.name || r.tellerName || '').toLowerCase() === mapping.bettingName.toLowerCase()
+            );
+            
+            if (tellerData) {
+              console.log(`✅ Found betting data for teller: ${tellerData.name || tellerData.username}`);
+              filteredData.staffReports = [tellerData];
+            } else {
+              console.log(`⚠️ Teller ${mapping.bettingUsername} not found in current betting event data`);
+              filteredData.staffReports = [];
+            }
+          }
+        } else {
+          console.log(`⚠️ Teller ${req.user.username} (ID: ${req.user._id}) has no betting API mapping - showing empty data`);
+          filteredData.staffReports = [];
+        }
+      } catch (mappingErr) {
+        console.warn('⚠️ Error filtering teller data:', mappingErr?.message);
+        // Don't fail, just show full data if mapping lookup fails
+      }
+    }
+
     console.log("✅ Successfully fetched betting event data");
 
     // Attach per-teller ranks to staffReports (1st, 2nd, 3rd...) before returning
@@ -746,7 +783,9 @@ router.get("/betting-event", requireAuth, requireRole(['super_admin', 'admin', '
       success: true,
       data: filteredData,
       filtered: !showAll && fromDate && toDate,
-      dateRange: !showAll && fromDate && toDate ? { fromDate, toDate } : null
+      dateRange: !showAll && fromDate && toDate ? { fromDate, toDate } : null,
+      userRole: req.user?.role,
+      isTellerData: req.user?.role === 'teller'
     });
 
   } catch (error) {
