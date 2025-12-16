@@ -655,6 +655,12 @@ export default function ScheduleRotation() {
   // 🆕 Get current assignment
   const currentAssignment = filteredAssignments[currentAssignmentIndex] || null;
 
+  // 🆕 Filter suggestions to exclude tellers already assigned to tomorrow
+  const assignedTellerIds = new Set(tomorrowAssignments.map(a => a.tellerId.toString()));
+  const filteredSuggestions = suggestions.filter(
+    teller => !assignedTellerIds.has(teller._id.toString())
+  );
+
   return (
     <div
       className={`p-6 min-h-screen ${
@@ -1379,13 +1385,13 @@ export default function ScheduleRotation() {
 
             {suggestLoading ? (
               <div className="text-center py-4 text-gray-400">Loading...</div>
-            ) : suggestions.length === 0 ? (
+            ) : filteredSuggestions.length === 0 ? (
               <div className="text-center py-4 text-gray-400">
                 No available tellers to suggest.
               </div>
             ) : (
               <ul className="divide-y divide-gray-200 max-h-96 overflow-y-auto">
-                {suggestions.map((teller) => (
+                {filteredSuggestions.map((teller) => (
                   <li
                     key={teller._id}
                     className={`py-4 ${dark ? "hover:bg-gray-700" : "hover:bg-gray-50"}`}
