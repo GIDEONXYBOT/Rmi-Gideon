@@ -534,6 +534,7 @@ function App() {
                       <Route path="chicken-fight-results" element={<ChickenFightResults />} />
                       <Route path="live-cockfight-camera" element={<LiveCockFightCamera />} />
                       <Route path="betting-capture-screen" element={<BettingCaptureScreen />} />
+                      <Route path="stream-broadcaster" element={<CameraStreamBroadcaster />} />
                       
                       <Route path="key-performance-indicator" element={<KeyPerformanceIndicator />} />
                       <Route path="teller-mappings" element={<TellerMappings />} />
