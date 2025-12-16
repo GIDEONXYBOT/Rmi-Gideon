@@ -181,6 +181,7 @@ import AttendanceScheduler from "./pages/AttendanceScheduler.jsx";
 import ChickenFight from "./pages/ChickenFight.jsx";
 import ChickenFightEntries from "./pages/ChickenFightEntries.jsx";
 import ChickenFightResults from "./pages/ChickenFightResults.jsx";
+import LiveCockFightCamera from "./pages/LiveCockFightCamera.jsx";
 
 // Declarator Pages
 import DeclaratorDashboard from "./pages/DeclaratorDashboardFixed.jsx";
@@ -361,6 +362,7 @@ function App() {
                       <Route path="chicken-fight" element={<ChickenFight />} />
                       <Route path="chicken-fight-entries" element={<ChickenFightEntries />} />
                       <Route path="chicken-fight-results" element={<ChickenFightResults />} />
+                      <Route path="live-cockfight-camera" element={<LiveCockFightCamera />} />
                       
                       <Route path="*" element={<NotFound />} />
                     </Routes>
@@ -406,6 +408,7 @@ function App() {
                       <Route path="chicken-fight" element={<ChickenFight />} />
                       <Route path="chicken-fight-entries" element={<ChickenFightEntries />} />
                       <Route path="chicken-fight-results" element={<ChickenFightResults />} />
+                      <Route path="live-cockfight-camera" element={<LiveCockFightCamera />} />
                       
                       <Route path="*" element={<NotFound />} />
                     </Routes>
@@ -460,6 +463,7 @@ function App() {
                       <Route path="chicken-fight" element={<ChickenFight />} />
                       <Route path="chicken-fight-entries" element={<ChickenFightEntries />} />
                       <Route path="chicken-fight-results" element={<ChickenFightResults />} />
+                      <Route path="live-cockfight-camera" element={<LiveCockFightCamera />} />
                       <Route path="settings" element={<AdminSettings />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
@@ -518,6 +522,7 @@ function App() {
                       <Route path="chicken-fight" element={<ChickenFight />} />
                       <Route path="chicken-fight-entries" element={<ChickenFightEntries />} />
                       <Route path="chicken-fight-results" element={<ChickenFightResults />} />
+                      <Route path="live-cockfight-camera" element={<LiveCockFightCamera />} />
                       
                       <Route path="key-performance-indicator" element={<KeyPerformanceIndicator />} />
                       <Route path="teller-mappings" element={<TellerMappings />} />
