@@ -183,6 +183,7 @@ import ChickenFightEntries from "./pages/ChickenFightEntries.jsx";
 import ChickenFightResults from "./pages/ChickenFightResults.jsx";
 import LiveCockFightCamera from "./pages/LiveCockFightCamera.jsx";
 import BettingCaptureScreen from "./pages/BettingCaptureScreen.jsx";
+import CameraStreamBroadcaster from "./pages/CameraStreamBroadcaster.jsx";
 
 // Declarator Pages
 import DeclaratorDashboard from "./pages/DeclaratorDashboardFixed.jsx";
@@ -365,6 +366,7 @@ function App() {
                       <Route path="chicken-fight-results" element={<ChickenFightResults />} />
                       <Route path="live-cockfight-camera" element={<LiveCockFightCamera />} />
                       <Route path="betting-capture-screen" element={<BettingCaptureScreen />} />
+                      <Route path="stream-broadcaster" element={<CameraStreamBroadcaster />} />
                       
                       <Route path="*" element={<NotFound />} />
                     </Routes>
@@ -412,6 +414,7 @@ function App() {
                       <Route path="chicken-fight-results" element={<ChickenFightResults />} />
                       <Route path="live-cockfight-camera" element={<LiveCockFightCamera />} />
                       <Route path="betting-capture-screen" element={<BettingCaptureScreen />} />
+                      <Route path="stream-broadcaster" element={<CameraStreamBroadcaster />} />
                       
                       <Route path="*" element={<NotFound />} />
                     </Routes>
@@ -468,6 +471,7 @@ function App() {
                       <Route path="chicken-fight-results" element={<ChickenFightResults />} />
                       <Route path="live-cockfight-camera" element={<LiveCockFightCamera />} />
                       <Route path="betting-capture-screen" element={<BettingCaptureScreen />} />
+                      <Route path="stream-broadcaster" element={<CameraStreamBroadcaster />} />
                       <Route path="settings" element={<AdminSettings />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>

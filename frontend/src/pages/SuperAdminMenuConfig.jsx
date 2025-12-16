@@ -26,6 +26,7 @@ import {
   MapPin,
   Map,
   Link,
+  Wifi,
 } from "lucide-react";
 
 
@@ -65,6 +66,7 @@ const AVAILABLE_MENU_ITEMS = [
   { id: "chicken-fight-entries", label: "Chicken Fight Entries", icon: <SettingsIcon size={16} />, allowedRoles: ["super_admin", "admin", "supervisor", "declarator"] },
   { id: "live-cockfight-camera", label: "Live Cockfight Camera", icon: <Camera size={16} />, allowedRoles: ["super_admin", "admin", "supervisor", "declarator"] },
   { id: "betting-capture-screen", label: "Betting Capture Screen", icon: <Camera size={16} />, allowedRoles: ["super_admin", "admin", "supervisor", "teller", "declarator"] },
+  { id: "stream-broadcaster", label: "Stream Broadcaster", icon: <Wifi size={16} />, allowedRoles: ["super_admin", "admin", "supervisor", "teller", "declarator"] },
   { id: "staff-performance", label: "Staff Performance", icon: <BarChart3 size={16} />, allowedRoles: ["super_admin","admin","supervisor"] },
   { id: "menu-config", label: "Menu Permissions", icon: <Shield size={16} />, allowedRoles: ["super_admin", "admin"] },
   { id: "manage-sidebars", label: "Sidebar Control", icon: <SettingsIcon size={16} />, allowedRoles: ["super_admin", "admin"] },
