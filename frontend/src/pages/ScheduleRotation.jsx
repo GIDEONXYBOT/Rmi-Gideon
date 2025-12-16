@@ -22,6 +22,7 @@ import {
   Award,
   Bot,
   Sparkles,
+  Trash2,
 } from "lucide-react";
 import { getSocket } from "../socket";
 import { getApiUrl } from "../utils/apiConfig";
@@ -606,6 +607,26 @@ export default function ScheduleRotation() {
     }
   };
 
+  const removeAssignment = async (assignmentId) => {
+    if (!window.confirm("Are you sure you want to remove this assignment?")) return;
+
+    try {
+      const token = localStorage.getItem("token");
+      await axios.delete(`${API}/api/schedule/assignment/${assignmentId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      showToast({
+        type: "success",
+        message: "Assignment removed successfully.",
+      });
+      fetchData();
+      fetchSuggestedTellers();
+    } catch (err) {
+      console.error("❌ Error removing assignment:", err);
+      showToast({ type: "error", message: "Failed to remove assignment." });
+    }
+  };
+
   // 🆕 No filter - show all assignments
   const filteredAssignments = tomorrowAssignments;
 
@@ -851,6 +872,12 @@ export default function ScheduleRotation() {
                         >
                           <X className="w-4 h-4" /> Absent
                         </button>
+                        <button
+                          onClick={() => removeAssignment(currentAssignment?._id)}
+                          className="flex items-center gap-1 px-3 py-2 text-xs rounded-lg bg-orange-600 text-white hover:opacity-90"
+                        >
+                          <Trash2 className="w-4 h-4" /> Remove
+                        </button>
                       </>
                     )}
                   </div>
@@ -951,6 +978,15 @@ export default function ScheduleRotation() {
                                   className="flex items-center gap-1 px-3 py-1 text-xs rounded-lg bg-red-600 text-white hover:opacity-90"
                                 >
                                   <X className="w-3 h-3" /> Absent
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    removeAssignment(a._id);
+                                  }}
+                                  className="flex items-center gap-1 px-3 py-1 text-xs rounded-lg bg-orange-600 text-white hover:opacity-90"
+                                >
+                                  <Trash2 className="w-3 h-3" /> Remove
                                 </button>
                               </>
                             )}

@@ -907,6 +907,49 @@ router.put("/mark-absent/:assignmentId", requireAuth, async (req, res) => {
 });
 
 /**
+ * ✅ DELETE /api/schedule/assignment/:assignmentId
+ * Remove an assignment for a specific teller on a specific day
+ */
+router.delete("/assignment/:assignmentId", requireAuth, async (req, res) => {
+  if (!isAllowedScheduleUser(req.user, ['supervisor', 'admin', 'super_admin'])) {
+    return res.status(403).json({ message: 'Forbidden - insufficient role' });
+  }
+  
+  try {
+    const { assignmentId } = req.params;
+    const assignment = await DailyTellerAssignment.findById(assignmentId);
+    
+    if (!assignment) {
+      return res.status(404).json({ message: "Assignment not found" });
+    }
+
+    // Supervisors may only delete today's assignments
+    if (req.user?.role === 'supervisor') {
+      const todayKey = formatDate(0);
+      if (assignment.dayKey !== todayKey) {
+        return res.status(403).json({ message: 'Forbidden - supervisors may only delete today assignments' });
+      }
+    }
+
+    const deletedAssignment = await DailyTellerAssignment.findByIdAndDelete(assignmentId);
+
+    if (global.io) {
+      global.io.emit("scheduleUpdated", {
+        tellerId: deletedAssignment.tellerId,
+        tellerName: deletedAssignment.tellerName,
+        status: "removed",
+        dayKey: deletedAssignment.dayKey,
+      });
+    }
+
+    res.json({ success: true, message: "Assignment removed successfully", assignment: deletedAssignment });
+  } catch (err) {
+    console.error("❌ Delete Assignment error:", err);
+    res.status(500).json({ message: "Failed to delete assignment" });
+  }
+});
+
+/**
  * ✅ SUGGESTED TELLERS (with work history based on weekly reports)
  * GET /api/schedule/suggest/:dayKey
  * Fetches or generates and caches suggested tellers for a specific day
