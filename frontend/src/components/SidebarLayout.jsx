@@ -29,6 +29,7 @@ import {
   Edit2,
   ChevronLeft,
   ChevronRight,
+  Wifi,
 } from "lucide-react";
 
 import FloatingChat from "../pages/ChatRoom.jsx"; // ✅ floating chat import
@@ -360,6 +361,8 @@ export default function SidebarLayout({ role, children }) {
     'chicken-fight-entries': { to: r => `/${r}/chicken-fight-entries`, icon: <Settings size={18} />, text: 'Manage Entries', roles: ['admin','super_admin','supervisor','declarator'] },
     'chicken-fight-results': { to: r => `/${r}/chicken-fight-results`, icon: <Edit2 size={18} />, text: 'Edit/Delete Results', roles: ['admin','super_admin','supervisor','declarator'] },
     'live-cockfight-camera': { to: r => `/${r}/live-cockfight-camera`, icon: <Camera size={18} />, text: 'Live Camera', roles: ['admin','super_admin','supervisor','declarator'] },
+    'betting-capture-screen': { to: r => `/${r}/betting-capture-screen`, icon: <Camera size={18} />, text: 'Betting Capture', roles: ['admin','super_admin','supervisor','teller','declarator'] },
+    'stream-broadcaster': { to: r => `/${r}/stream-broadcaster`, icon: <Wifi size={18} />, text: 'Stream Broadcaster', roles: ['admin','super_admin','supervisor','teller','declarator'] },
     'financial-summary': { to: r => `/${r}/financial-summary`, icon: <TrendingUp size={18} />, text: 'Financial Summary', roles: ['admin','super_admin'] },
     upload: { to: r => `/upload`, icon: <Camera size={18} />, text: 'Upload', roles: ['admin','super_admin','supervisor','teller','declarator','supervisor_teller'] },
     feed: { to: r => `/feed`, icon: <FileText size={18} />, text: 'Feed', roles: ['admin','super_admin','supervisor','teller','declarator','supervisor_teller'] },
@@ -384,13 +387,13 @@ export default function SidebarLayout({ role, children }) {
   // Fallback default item IDs per role (used if DB not yet initialized)
   const FALLBACK_ROLE_ITEMS = {
     super_admin: [
-      'dashboard','upload','feed','users','supervisor-report','teller-reports','teller-reports-viewer','teller-management','teller-overview','report','cashflow','user-approval','withdrawals','employees','salary','payroll','history','teller-month','suggested-schedule','attendance-scheduler','deployments','assistant','menu-config','manage-sidebars','live-map','map-editor','teller-betting','manage-betting','betting-analytics','betting-event-report','chicken-fight','chicken-fight-entries','live-cockfight-camera','key-performance-indicator','financial-summary','settings'
+      'dashboard','upload','feed','users','supervisor-report','teller-reports','teller-reports-viewer','teller-management','teller-overview','report','cashflow','user-approval','withdrawals','employees','salary','payroll','history','teller-month','suggested-schedule','attendance-scheduler','deployments','assistant','menu-config','manage-sidebars','live-map','map-editor','teller-betting','manage-betting','betting-analytics','betting-event-report','chicken-fight','chicken-fight-entries','live-cockfight-camera','betting-capture-screen','stream-broadcaster','key-performance-indicator','financial-summary','settings'
     ],
-    admin: ['dashboard','upload','feed','users','supervisor-report','teller-reports','teller-reports-viewer','teller-management','teller-overview','report','cashflow','payroll','withdrawals','employees','user-approval','salary','history','teller-month','suggested-schedule','attendance-scheduler','deployments','assistant','map-editor','teller-betting','manage-betting','menu-config','manage-sidebars','betting-event-report','chicken-fight','chicken-fight-entries','live-cockfight-camera','key-performance-indicator','financial-summary','settings'],
-    supervisor: ['dashboard','upload','feed','users','supervisor-report','teller-reports','teller-reports-viewer','teller-management','staff-performance','teller-month','history','payroll','suggested-schedule','key-performance-indicator','deployments','live-map','betting-event-report','chicken-fight','chicken-fight-entries','live-cockfight-camera'],
-    supervisor_teller: ['dashboard','upload','feed','users','supervisor-report','teller-reports','teller-reports-viewer','teller-management','staff-performance','teller-month','history','payroll','suggested-schedule','deployments','live-map','betting-event-report','chicken-fight','chicken-fight-entries','live-cockfight-camera'],
-    teller: ['dashboard','upload','feed','users','teller-reports','history','payroll','teller-month','suggested-schedule','deployments','live-map','betting-event-report'],
-    declarator: ['dashboard','upload','feed','users','deployments','suggested-schedule','live-map','map-editor','settings','chicken-fight','chicken-fight-entries','live-cockfight-camera'],
+    admin: ['dashboard','upload','feed','users','supervisor-report','teller-reports','teller-reports-viewer','teller-management','teller-overview','report','cashflow','payroll','withdrawals','employees','user-approval','salary','history','teller-month','suggested-schedule','attendance-scheduler','deployments','assistant','map-editor','teller-betting','manage-betting','menu-config','manage-sidebars','betting-event-report','chicken-fight','chicken-fight-entries','live-cockfight-camera','betting-capture-screen','stream-broadcaster','key-performance-indicator','financial-summary','settings'],
+    supervisor: ['dashboard','upload','feed','users','supervisor-report','teller-reports','teller-reports-viewer','teller-management','staff-performance','teller-month','history','payroll','suggested-schedule','key-performance-indicator','deployments','live-map','betting-event-report','chicken-fight','chicken-fight-entries','live-cockfight-camera','betting-capture-screen','stream-broadcaster'],
+    supervisor_teller: ['dashboard','upload','feed','users','supervisor-report','teller-reports','teller-reports-viewer','teller-management','staff-performance','teller-month','history','payroll','suggested-schedule','deployments','live-map','betting-event-report','chicken-fight','chicken-fight-entries','live-cockfight-camera','betting-capture-screen','stream-broadcaster'],
+    teller: ['dashboard','upload','feed','users','teller-reports','history','payroll','teller-month','suggested-schedule','deployments','live-map','betting-event-report','betting-capture-screen','stream-broadcaster'],
+    declarator: ['dashboard','upload','feed','users','deployments','suggested-schedule','live-map','map-editor','settings','chicken-fight','chicken-fight-entries','live-cockfight-camera','betting-capture-screen','stream-broadcaster'],
   };
 
   const [permissionsLoaded, setPermissionsLoaded] = useState(false);
