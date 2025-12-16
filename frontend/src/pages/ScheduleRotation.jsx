@@ -863,30 +863,34 @@ export default function ScheduleRotation() {
           <div className="text-center text-gray-400 py-6">
             No teller assignments found.
           </div>
+        ) : !currentAssignment ? (
+          <div className="text-center text-gray-400 py-6">
+            No assignment to display.
+          </div>
         ) : (
           <div className={`p-4 rounded-lg ${dark ? "bg-gray-800" : "bg-white"}`}>
             {/* Current Assignment Details */}
             <div className="mb-6 p-4 rounded-lg border-2 border-indigo-500">
               <div className="flex items-start justify-between">
                 <div>
-                  <h3 className="text-xl font-bold">{currentAssignment?.tellerName}</h3>
+                  <h3 className="text-xl font-bold">{currentAssignment.tellerName || 'Unknown'}</h3>
                   <p className={`text-sm mt-2 ${
-                    currentAssignment?.status === 'present'
+                    currentAssignment.status === 'present'
                       ? 'text-green-500'
-                      : currentAssignment?.status === 'absent'
+                      : currentAssignment.status === 'absent'
                       ? 'text-red-500'
                       : 'text-yellow-500'
                   }`}>
-                    Status: <span className="font-semibold">{(currentAssignment?.status || 'pending').toUpperCase()}</span>
+                    Status: <span className="font-semibold">{(currentAssignment.status || 'pending').toUpperCase()}</span>
                   </p>
                   <p className="text-sm mt-1 text-gray-400">
-                    Days Worked: <span className="font-semibold">{currentAssignment?.rangeWorkDays || 0} days</span>
+                    Days Worked: <span className="font-semibold">{currentAssignment.rangeWorkDays || 0} days</span>
                   </p>
                 </div>
                 {!isDeclaratorViewOnly && (
                   <div className="flex gap-2">
                     <button
-                      onClick={() => markPresent(currentAssignment?._id)}
+                      onClick={() => markPresent(currentAssignment._id)}
                       className="flex items-center gap-1 px-3 py-2 text-xs rounded-lg bg-green-600 text-white hover:opacity-90"
                     >
                       <CheckCircle className="w-4 h-4" /> Present
@@ -900,13 +904,13 @@ export default function ScheduleRotation() {
                           <Check className="w-4 h-4" /> Replace
                         </button>
                         <button
-                          onClick={() => markAbsent(currentAssignment?._id)}
+                          onClick={() => markAbsent(currentAssignment._id)}
                           className="flex items-center gap-1 px-3 py-2 text-xs rounded-lg bg-red-600 text-white hover:opacity-90"
                         >
                           <X className="w-4 h-4" /> Absent
                         </button>
                         <button
-                          onClick={() => removeAssignment(currentAssignment?._id)}
+                          onClick={() => removeAssignment(currentAssignment._id)}
                           className="flex items-center gap-1 px-3 py-2 text-xs rounded-lg bg-orange-600 text-white hover:opacity-90"
                         >
                           <Trash2 className="w-4 h-4" /> Remove
