@@ -1434,6 +1434,59 @@ router.delete('/full-week/:weekKey', requireAuth, async (req, res) => {
 });
 
 /**
+ * ✅ DELETE /api/schedule/full-week/teller/:tellerId/:dayKey
+ * Remove a specific teller from full-week assignments for a day
+ */
+router.delete('/full-week/teller/:tellerId/:dayKey', requireAuth, async (req, res) => {
+  if (!isAllowedScheduleUser(req.user, ['supervisor', 'admin', 'super_admin'])) {
+    return res.status(403).json({ message: 'Forbidden - insufficient role' });
+  }
+  
+  try {
+    const { tellerId, dayKey } = req.params;
+    
+    // Supervisors can only modify today's assignments
+    if (req.user?.role === 'supervisor') {
+      const todayKey = formatDate(0);
+      if (dayKey !== todayKey) {
+        return res.status(403).json({ message: 'Forbidden - supervisors can only modify today' });
+      }
+    }
+
+    // Remove the teller from full-week assignments
+    const result = await DailyTellerAssignment.deleteMany({
+      tellerId,
+      isFullWeek: true,
+      dayKey: { $gte: dayKey }  // Remove from this day onwards for the week
+    });
+
+    // Also remove from FullWeekSelection if exists
+    const weekKey = weekStartISO(dayKey);
+    await FullWeekSelection.updateOne(
+      { weekKey },
+      { $pull: { tellerIds: tellerId } }
+    );
+
+    if (global.io) {
+      global.io.emit("scheduleUpdated", {
+        tellerId,
+        status: "full_week_removed",
+        dayKey,
+      });
+    }
+
+    res.json({ 
+      success: true, 
+      message: "Teller removed from full-week assignments",
+      removed: result.deletedCount 
+    });
+  } catch (err) {
+    console.error("❌ Remove teller from full-week error:", err);
+    res.status(500).json({ message: "Failed to remove teller from full-week" });
+  }
+});
+
+/**
  * GET /api/schedule/full-week/audits
  * List audits (admin/super_admin)
  */

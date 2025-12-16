@@ -482,6 +482,28 @@ export default function ScheduleRotation() {
     }
   };
 
+  const removeFullWeekTeller = async (assignment) => {
+    if (!assignment || !assignment.tellerId || !assignment.dayKey) return;
+    if (!window.confirm(`Remove ${assignment.tellerName} from full-week assignments?`)) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(
+        `${API}/api/schedule/full-week/teller/${assignment.tellerId}/${assignment.dayKey}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      showToast({
+        type: 'success',
+        message: `${assignment.tellerName} removed from full-week`,
+      });
+      fetchData();
+      fetchSuggestedTellers();
+    } catch (err) {
+      console.error('❌ Error removing full-week teller:', err);
+      showToast({ type: 'error', message: 'Failed to remove from full-week.' });
+    }
+  };
+
   const handleReplaceTeller = async (assignment) => {
     setSelectedAssignment(assignment);
     setSuggestLoading(true);
@@ -925,9 +947,23 @@ export default function ScheduleRotation() {
                         <div className="flex items-center gap-2">
                           <span className="font-semibold">{a.tellerName}</span>
                           {a.isFullWeek && (
-                            <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                              Full-week
-                            </span>
+                            <div className="flex items-center gap-1 ml-2">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                                Full-week
+                              </span>
+                              {isSuperAdminOnly && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    removeFullWeekTeller(a);
+                                  }}
+                                  className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-200 hover:bg-indigo-300 text-indigo-700 transition"
+                                  title="Remove from full-week"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              )}
+                            </div>
                           )}
                         </div>
                       </td>
