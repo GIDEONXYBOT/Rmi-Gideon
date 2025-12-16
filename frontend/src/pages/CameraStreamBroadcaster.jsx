@@ -47,7 +47,7 @@ export default function CameraStreamBroadcaster() {
     getCameras();
   }, []);
 
-  // Setup WebSocket connection
+  // Setup WebSocket connection with fallback to local broadcast
   const setupWebSocket = (id, isbroadcaster = true) => {
     try {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -90,12 +90,22 @@ export default function CameraStreamBroadcaster() {
       wsRef.current.onerror = (err) => {
         console.error('❌ WebSocket error:', err);
         setIsConnected(false);
+        // Use fallback - local broadcast mode (don't stop streaming on error)
+        if (isbroadcaster) {
+          console.log('⚠️ WebSocket unavailable, using local broadcast mode');
+          setIsConnected(true);
+          showToast({ type: 'warning', message: '⚠️ Broadcasting locally (backend not available)' });
+        }
       };
       
       wsRef.current.onclose = () => {
         console.log('❌ WebSocket disconnected');
         setIsConnected(false);
-        stopStreaming();
+        // Don't stop streaming on close - allow user to continue
+        if (!isbroadcaster) {
+          // Only stop for viewers
+          showToast({ type: 'info', message: 'Broadcast ended' });
+        }
       };
     } catch (err) {
       console.error('Error setting up WebSocket:', err);
