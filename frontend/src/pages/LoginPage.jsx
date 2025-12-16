@@ -49,8 +49,11 @@ export default function LoginPage() {
       console.log('🌐 Current hostname:', window.location.hostname);
       console.log('🎯 API URL from getApiUrl():', apiUrl);
       
+      // ⚡ Optimized timeout for mobile (faster on good connection, reasonable fallback)
+      const timeoutMs = isMobile ? 15000 : 30000; // 15s mobile, 30s desktop
+      
       const res = await axios.post(`${apiUrl}/api/auth/login`, payload, {
-        timeout: 45000, // 45 second timeout for login (Render free tier can be slow to wake up)
+        timeout: timeoutMs,
         headers: {
           'Content-Type': 'application/json',
           'Cache-Control': 'no-cache',

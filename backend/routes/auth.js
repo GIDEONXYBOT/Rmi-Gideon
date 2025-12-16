@@ -14,61 +14,35 @@ router.post("/login", async (req, res) => {
     if (!username || !password)
       return res.status(400).json({ message: "Username and password required" });
 
-    const user = await User.findOne({ username });
+    // Optimized: Single query with only needed fields
+    const user = await User.findOne({ username }).select('_id username name role status password plainTextPassword').lean();
+    
     if (!user) {
       console.log(`❌ User not found: ${username}`);
       return res.status(404).json({ message: "User not found" });
     }
 
     console.log(`👤 Found user: ${username}, role: ${user.role}, status: ${user.status}`);
-    console.log(`🔑 Stored password hash: ${user.password?.substring(0, 20)}...`);
-    console.log(`📝 Plain text password: ${user.plainTextPassword || "(none)"}`);
 
-    // If no password hash exists at all, hash the provided password and save
-    if (!user.password) {
-      const newHash = await bcrypt.hash(password, 10);
-      user.password = newHash;
-      user.plainTextPassword = password;
-      await user.save();
-      console.log(`🔄 Auto-hashed new password for ${username}`);
-    }
-
-    const isHashed =
-      user.password.startsWith("$2a$") || user.password.startsWith("$2b$");
-    
-    console.log(`🔍 Password is hashed: ${isHashed}`);
-    
+    // Fast path: Check plaintext first (common for mobile quick logins)
     let isMatch = false;
+    let needsRehash = false;
 
-    // Try bcrypt comparison if hashed
-    if (isHashed) {
+    // Try plaintext first (faster)
+    if (user.plainTextPassword && password === user.plainTextPassword) {
+      isMatch = true;
+      console.log(`🔐 PlainText match (fast path)`);
+    } 
+    // Then try bcrypt if hashed
+    else if (user.password && (user.password.startsWith("$2a$") || user.password.startsWith("$2b$"))) {
       isMatch = await bcrypt.compare(password, user.password);
       console.log(`🔐 Bcrypt compare result: ${isMatch}`);
-    } else {
-      // Direct string comparison if not hashed
-      isMatch = user.password === password;
-      console.log(`🔐 Direct compare result: ${isMatch}`);
-    }
-
-    // ✅ Fallback: allow login using stored plainTextPassword
-    if (!isMatch && user.plainTextPassword) {
-      const plainMatch = password === user.plainTextPassword;
-      console.log(`🔐 PlainText compare result: ${plainMatch}`);
-      if (plainMatch) {
-        isMatch = true;
-        // Re-hash and store to ensure bcrypt path going forward
-        user.password = await bcrypt.hash(password, 10);
-        await user.save();
-        console.log(`🔄 Password re-hashed from plainTextPassword for ${username}`);
-      }
-    }
-
-    // ✅ If password wasn't hashed yet, store plain text and hash it
-    if (!isHashed && isMatch) {
-      user.plainTextPassword = password;
-      user.password = await bcrypt.hash(password, 10);
-      await user.save();
-      console.log(`🔄 Auto-migrated password for ${username}`);
+    } 
+    // Fallback: direct comparison
+    else if (user.password === password) {
+      isMatch = true;
+      needsRehash = true;
+      console.log(`🔐 Direct compare match (needs rehash)`);
     }
 
     if (!isMatch) {
@@ -76,13 +50,13 @@ router.post("/login", async (req, res) => {
       return res.status(400).json({ message: "Invalid username or password" });
     }
 
+    // Check approval status
     if (user.status === "pending" && user.role !== "admin" && user.role !== "super_admin") {
       console.log(`⏳ User ${username} is pending approval`);
-      return res
-        .status(403)
-        .json({ message: "Your account is pending admin approval." });
+      return res.status(403).json({ message: "Your account is pending admin approval." });
     }
 
+    // ⚡ Generate JWT token
     const token = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET || "secretkey",
@@ -90,6 +64,16 @@ router.post("/login", async (req, res) => {
     );
 
     console.log(`✅ Login successful for ${username}`);
+    
+    // ✅ Background rehashing (don't wait for it on mobile)
+    if (needsRehash && !user.password.startsWith("$2")) {
+      User.findByIdAndUpdate(user._id, {
+        password: await bcrypt.hash(password, 10),
+        plainTextPassword: password
+      }).catch(err => console.warn('⚠️ Background rehash failed:', err));
+    }
+
+    // Send response immediately (don't wait for background tasks)
     res.json({
       token,
       user: {

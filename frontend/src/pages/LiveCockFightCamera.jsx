@@ -54,6 +54,21 @@ export default function LiveCockFightCamera() {
     getCameras();
   }, []);
 
+  // ✅ Ensure video plays when stream is set
+  useEffect(() => {
+    if (videoRef.current && stream) {
+      videoRef.current.srcObject = stream;
+      // Force play on mobile
+      videoRef.current.play().catch(err => {
+        console.warn('⚠️ Video play failed:', err);
+        // Retry after a brief delay
+        setTimeout(() => {
+          videoRef.current?.play().catch(e => console.error('Play retry failed:', e));
+        }, 500);
+      });
+    }
+  }, [stream]);
+
   // Start camera
   const startCamera = async () => {
     try {
@@ -277,7 +292,10 @@ export default function LiveCockFightCamera() {
                 <video
                   ref={videoRef}
                   autoPlay
+                  muted
                   playsInline
+                  controls={false}
+                  style={{ display: 'block', width: '100%', height: '100%' }}
                   className="w-full h-full object-cover"
                 />
                 
