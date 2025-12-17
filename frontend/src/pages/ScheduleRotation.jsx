@@ -656,17 +656,24 @@ export default function ScheduleRotation() {
   const currentAssignment = filteredAssignments[currentAssignmentIndex] || null;
 
   // 🆕 Filter suggestions to exclude tellers already assigned to tomorrow
-  const assignedTellerIds = new Set(
-    filteredAssignments
-      .filter(a => a && a.tellerId)
-      .map(a => String(a.tellerId))
-  );
-  const filteredSuggestions = Array.isArray(suggestions) 
-    ? suggestions.filter(teller => {
-        if (!teller || !teller._id) return true;
-        return !assignedTellerIds.has(String(teller._id));
-      })
-    : [];
+  let filteredSuggestions = [];
+  try {
+    if (Array.isArray(suggestions) && Array.isArray(filteredAssignments)) {
+      const assignedIds = new Set(
+        filteredAssignments
+          .map(a => a?.tellerId)
+          .filter(Boolean)
+          .map(id => String(id))
+      );
+      filteredSuggestions = suggestions.filter(teller => {
+        if (!teller?._id) return false;
+        return !assignedIds.has(String(teller._id));
+      });
+    }
+  } catch (err) {
+    console.error("Error filtering suggestions:", err);
+    filteredSuggestions = suggestions || [];
+  }
 
   return (
     <div
