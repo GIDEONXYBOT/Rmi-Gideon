@@ -650,21 +650,23 @@ export default function ScheduleRotation() {
   };
 
   // 🆕 No filter - show all assignments
-  const filteredAssignments = tomorrowAssignments;
+  const filteredAssignments = Array.isArray(tomorrowAssignments) ? tomorrowAssignments : [];
 
   // 🆕 Get current assignment
   const currentAssignment = filteredAssignments[currentAssignmentIndex] || null;
 
   // 🆕 Filter suggestions to exclude tellers already assigned to tomorrow
   const assignedTellerIds = new Set(
-    tomorrowAssignments
+    filteredAssignments
       .filter(a => a && a.tellerId)
       .map(a => String(a.tellerId))
   );
-  const filteredSuggestions = suggestions.filter(teller => {
-    if (!teller || !teller._id) return true;
-    return !assignedTellerIds.has(String(teller._id));
-  });
+  const filteredSuggestions = Array.isArray(suggestions) 
+    ? suggestions.filter(teller => {
+        if (!teller || !teller._id) return true;
+        return !assignedTellerIds.has(String(teller._id));
+      })
+    : [];
 
   return (
     <div
