@@ -29,7 +29,7 @@ const chickenFightGameSchema = new mongoose.Schema(
             legNumber: Number,
             result: {
               type: String,
-              enum: ['win', 'loss', 'noRecord', 'draw']
+              enum: ['win', 'loss', 'noRecord', 'draw', 'cancelled']
             }
           }
         ],
