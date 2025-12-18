@@ -156,10 +156,10 @@ export default function ChickenFightResults() {
     setError(`No fight found for: "${jumpToFight}"`);
   };
   
-  const handleEditClick = (fights) => {
-    setEditingFightIndex(currentFightNum);
+  const handleEditClick = (fights, legNum = currentFightNum) => {
+    setEditingFightIndex(legNum);
     setEditData({
-      legNumber: currentFightNum,
+      legNumber: legNum,
       meron: fights[0],
       wala: fights[1]
     });
@@ -181,7 +181,7 @@ export default function ChickenFightResults() {
         
         if (editData.meron?.entryId === entry._id) {
           updated.legResults = updated.legResults.map(leg => 
-            leg.legNumber === currentFightNum 
+            leg.legNumber === editData.legNumber 
               ? { ...leg, result: editData.meron.legResult.result }
               : leg
           );
@@ -189,7 +189,7 @@ export default function ChickenFightResults() {
         
         if (editData.wala?.entryId === entry._id) {
           updated.legResults = updated.legResults.map(leg => 
-            leg.legNumber === currentFightNum 
+            leg.legNumber === editData.legNumber 
               ? { ...leg, result: editData.wala.legResult.result }
               : leg
           );
@@ -220,8 +220,8 @@ export default function ChickenFightResults() {
     }
   };
   
-  const handleDeleteFight = async () => {
-    if (!window.confirm(`Delete fight #${currentFightNum}? This cannot be undone.`)) return;
+  const handleDeleteFight = async (fightNum = currentFightNum) => {
+    if (!window.confirm(`Delete fight #${fightNum}? This cannot be undone.`)) return;
     
     setError('');
     setSuccess('');
@@ -232,7 +232,7 @@ export default function ChickenFightResults() {
       // Remove fights with this leg number
       const updatedEntryResults = gameData.entryResults.map(entry => {
         const updated = { ...entry };
-        updated.legResults = updated.legResults.filter(leg => leg.legNumber !== currentFightNum);
+        updated.legResults = updated.legResults.filter(leg => leg.legNumber !== fightNum);
         return updated;
       }).filter(entry => entry.legResults.length > 0); // Remove entries with no fights
       
@@ -252,8 +252,8 @@ export default function ChickenFightResults() {
         setSuccess('Fight deleted successfully!');
         setTimeout(() => setSuccess(''), 2000);
         
-        // Navigate to previous fight
-        if (currentFightNum > 1) {
+        // Navigate to previous fight if current fight was deleted
+        if (fightNum === currentFightNum && currentFightNum > 1) {
           setCurrentFightNum(currentFightNum - 1);
         }
         loadGameData();
@@ -438,16 +438,44 @@ export default function ChickenFightResults() {
                         </span>
                       </div>
                       
-                      <button
-                        onClick={() => setCurrentFightNum(legNum)}
-                        className={`px-3 py-1 rounded text-sm transition ${
-                          isDarkMode
-                            ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                            : 'bg-blue-500 hover:bg-blue-600 text-white'
-                        }`}
-                      >
-                        View Details
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setCurrentFightNum(legNum)}
+                          className={`px-3 py-1 rounded text-sm transition ${
+                            isDarkMode
+                              ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                              : 'bg-blue-500 hover:bg-blue-600 text-white'
+                          }`}
+                        >
+                          View Details
+                        </button>
+                        
+                        <button
+                          onClick={() => handleEditClick(fights, legNum)}
+                          className={`px-3 py-1 rounded text-sm transition flex items-center gap-1 ${
+                            isDarkMode
+                              ? 'bg-green-600 hover:bg-green-700 text-white'
+                              : 'bg-green-500 hover:bg-green-600 text-white'
+                          }`}
+                          title="Edit fight results"
+                        >
+                          <Edit2 size={14} />
+                          Edit
+                        </button>
+                        
+                        <button
+                          onClick={() => handleDeleteFight(legNum)}
+                          className={`px-3 py-1 rounded text-sm transition flex items-center gap-1 ${
+                            isDarkMode
+                              ? 'bg-red-600 hover:bg-red-700 text-white'
+                              : 'bg-red-500 hover:bg-red-600 text-white'
+                          }`}
+                          title="Delete this fight"
+                        >
+                          <Trash2 size={14} />
+                          Delete
+                        </button>
+                      </div>
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
