@@ -129,10 +129,10 @@ export default function ChickenFight() {
   const availableMeronLegBands = meronLegBands.filter(band => !usedLegBands.has(band));
   const availableWalaLegBands = walaLegBands.filter(band => !usedLegBands.has(band));
 
-  // Get all entries that have leg bands
+  // Get all entries (including those without leg bands - "unknown" entries)
   const availableEntries = entries.filter(entry => {
-    const entryLegBands = entry.legBandNumbers || [];
-    return entryLegBands.length > 0;
+    // Include all entries, but we'll handle leg band logic separately
+    return true;
   });
 
   // Filter Meron entries - exclude if already selected in Wala
@@ -156,6 +156,9 @@ export default function ChickenFight() {
     if (foundEntry) {
       setSelectedMeronEntry(foundEntry._id);
       setSelectedMeronLegBand(value.trim());
+    } else {
+      // If no entry found with this leg band, allow "unknown" entry selection
+      // This will be handled in the entry selection dropdown
     }
   };
 
@@ -174,21 +177,28 @@ export default function ChickenFight() {
     if (foundEntry) {
       setSelectedWalaEntry(foundEntry._id);
       setSelectedWalaLegBand(value.trim());
+    } else {
+      // If no entry found with this leg band, allow "unknown" entry selection
+      // This will be handled in the entry selection dropdown
     }
   };
 
   const handleMeronWin = async () => {
-    if (!selectedMeronEntry || !selectedMeronLegBand || !selectedWalaEntry || !selectedWalaLegBand) {
-      setError('Please select both Meron and Wala entries with leg bands');
+    // Allow fights where at least one entry has a leg band (the other can be "unknown")
+    const hasMeronLegBand = selectedMeronEntry && selectedMeronLegBand;
+    const hasWalaLegBand = selectedWalaEntry && selectedWalaLegBand;
+    
+    if (!selectedMeronEntry || !selectedWalaEntry || (!hasMeronLegBand && !hasWalaLegBand)) {
+      setError('Please select both Meron and Wala entries, with at least one having a leg band');
       return;
     }
     
-    // Check if either leg band has already been used
-    if (usedLegBands.has(selectedMeronLegBand)) {
+    // Check if leg bands have already been used (only for entries that have leg bands)
+    if (hasMeronLegBand && usedLegBands.has(selectedMeronLegBand)) {
       setError(`Leg band ${selectedMeronLegBand} (Meron) has already fought`);
       return;
     }
-    if (usedLegBands.has(selectedWalaLegBand)) {
+    if (hasWalaLegBand && usedLegBands.has(selectedWalaLegBand)) {
       setError(`Leg band ${selectedWalaLegBand} (Wala) has already fought`);
       return;
     }
@@ -196,15 +206,15 @@ export default function ChickenFight() {
     const meronFight = {
       id: fightNumber + 1,
       entryName: meronEntry.entryName,
-      legBand: selectedMeronLegBand,
-      legBandFought: selectedMeronLegBand,
+      legBand: hasMeronLegBand ? selectedMeronLegBand : 'unknown',
+      legBandFought: hasMeronLegBand ? selectedMeronLegBand : 'unknown',
       result: 1  // 1 for win
     };
     const walaFight = {
       id: fightNumber + 1,
       entryName: walaEntry.entryName,
-      legBand: selectedWalaLegBand,
-      legBandFought: selectedWalaLegBand,
+      legBand: hasWalaLegBand ? selectedWalaLegBand : 'unknown',
+      legBandFought: hasWalaLegBand ? selectedWalaLegBand : 'unknown',
       result: 0  // 0 for loss
     };
     
@@ -256,17 +266,21 @@ export default function ChickenFight() {
   };
 
   const handleWalaWin = async () => {
-    if (!selectedMeronEntry || !selectedMeronLegBand || !selectedWalaEntry || !selectedWalaLegBand) {
-      setError('Please select both Meron and Wala entries with leg bands');
+    // Allow fights where at least one entry has a leg band (the other can be "unknown")
+    const hasMeronLegBand = selectedMeronEntry && selectedMeronLegBand;
+    const hasWalaLegBand = selectedWalaEntry && selectedWalaLegBand;
+    
+    if (!selectedMeronEntry || !selectedWalaEntry || (!hasMeronLegBand && !hasWalaLegBand)) {
+      setError('Please select both Meron and Wala entries, with at least one having a leg band');
       return;
     }
     
-    // Check if either leg band has already been used
-    if (usedLegBands.has(selectedMeronLegBand)) {
+    // Check if leg bands have already been used (only for entries that have leg bands)
+    if (hasMeronLegBand && usedLegBands.has(selectedMeronLegBand)) {
       setError(`Leg band ${selectedMeronLegBand} (Meron) has already fought`);
       return;
     }
-    if (usedLegBands.has(selectedWalaLegBand)) {
+    if (hasWalaLegBand && usedLegBands.has(selectedWalaLegBand)) {
       setError(`Leg band ${selectedWalaLegBand} (Wala) has already fought`);
       return;
     }
@@ -274,15 +288,15 @@ export default function ChickenFight() {
     const meronFight = {
       id: fightNumber + 1,
       entryName: meronEntry.entryName,
-      legBand: selectedMeronLegBand,
-      legBandFought: selectedMeronLegBand,
+      legBand: hasMeronLegBand ? selectedMeronLegBand : 'unknown',
+      legBandFought: hasMeronLegBand ? selectedMeronLegBand : 'unknown',
       result: 0  // 0 for loss
     };
     const walaFight = {
       id: fightNumber + 1,
       entryName: walaEntry.entryName,
-      legBand: selectedWalaLegBand,
-      legBandFought: selectedWalaLegBand,
+      legBand: hasWalaLegBand ? selectedWalaLegBand : 'unknown',
+      legBandFought: hasWalaLegBand ? selectedWalaLegBand : 'unknown',
       result: 1  // 1 for win
     };
     
@@ -1056,6 +1070,37 @@ export default function ChickenFight() {
               )}
             </div>
             
+            {/* Entry Selection Dropdown */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">Or Select Entry</label>
+              <select
+                value={selectedMeronEntry}
+                onChange={(e) => {
+                  setSelectedMeronEntry(e.target.value);
+                  setSelectedMeronLegBand(''); // Clear leg band when manually selecting entry
+                  setMeronLegBandSearch('');
+                  if (e.target.value) {
+                    const entry = entries.find(ent => ent._id === e.target.value);
+                    if (entry && entry.legBandNumbers && entry.legBandNumbers.length > 0) {
+                      // If entry has leg bands, auto-select the first available one
+                      const availableBands = entry.legBandNumbers.filter(band => !usedLegBands.has(band));
+                      if (availableBands.length > 0) {
+                        setSelectedMeronLegBand(availableBands[0]);
+                      }
+                    }
+                  }
+                }}
+                className="w-full px-4 py-2 rounded-lg bg-red-600 text-white border border-red-500"
+              >
+                <option value="">Choose an entry...</option>
+                {availableMeronEntries.map(entry => (
+                  <option key={entry._id} value={entry._id}>
+                    {entry.entryName} ({entry.legBandNumbers && entry.legBandNumbers.length > 0 ? `${entry.legBandNumbers.length} leg band(s)` : 'Unknown'})
+                  </option>
+                ))}
+              </select>
+            </div>
+            
             {/* Show selected entry score */}
             {selectedMeronEntry && meronEntry && (
               <div className="mb-4 p-3 bg-red-600 rounded text-sm">
@@ -1089,9 +1134,9 @@ export default function ChickenFight() {
             {/* Win Button */}
             <button
               onClick={handleMeronWin}
-              disabled={!selectedMeronEntry || !selectedMeronLegBand || usedLegBands.has(selectedMeronLegBand) || usedLegBands.has(selectedWalaLegBand)}
+              disabled={!selectedMeronEntry || !selectedWalaEntry || (!selectedMeronLegBand && !selectedWalaLegBand) || (selectedMeronLegBand && usedLegBands.has(selectedMeronLegBand)) || (selectedWalaLegBand && usedLegBands.has(selectedWalaLegBand))}
               className={`w-full py-3 font-bold rounded-lg text-lg transition ${
-                selectedMeronEntry && selectedMeronLegBand && !usedLegBands.has(selectedMeronLegBand) && !usedLegBands.has(selectedWalaLegBand)
+                selectedMeronEntry && selectedWalaEntry && (selectedMeronLegBand || selectedWalaLegBand) && (!selectedMeronLegBand || !usedLegBands.has(selectedMeronLegBand)) && (!selectedWalaLegBand || !usedLegBands.has(selectedWalaLegBand))
                   ? 'bg-red-500 hover:bg-red-600 text-white cursor-pointer'
                   : 'bg-red-900 text-gray-400 cursor-not-allowed opacity-50'
               }`}
@@ -1141,15 +1186,15 @@ export default function ChickenFight() {
                   const meronFight = {
                     id: fightNumber + 1,
                     entryName: meronEntry.entryName,
-                    legBand: selectedMeronLegBand,
-                    legBandFought: selectedMeronLegBand,
+                    legBand: selectedMeronLegBand || 'unknown',
+                    legBandFought: selectedMeronLegBand || 'unknown',
                     result: 0.5  // 0.5 for draw
                   };
                   const walaFight = {
                     id: fightNumber + 1,
                     entryName: walaEntry.entryName,
-                    legBand: selectedWalaLegBand,
-                    legBandFought: selectedWalaLegBand,
+                    legBand: selectedWalaLegBand || 'unknown',
+                    legBandFought: selectedWalaLegBand || 'unknown',
                     result: 0.5  // 0.5 for draw
                   };
                   
@@ -1178,9 +1223,9 @@ export default function ChickenFight() {
                   await loadGameData();
                 }
               }}
-              disabled={!selectedMeronEntry || !selectedMeronLegBand || !selectedWalaEntry || !selectedWalaLegBand}
+              disabled={!selectedMeronEntry || !selectedWalaEntry || (!selectedMeronLegBand && !selectedWalaLegBand) || (selectedMeronLegBand && usedLegBands.has(selectedMeronLegBand)) || (selectedWalaLegBand && usedLegBands.has(selectedWalaLegBand))}
               className={`w-full py-3 font-bold rounded-lg text-lg transition ${
-                selectedMeronEntry && selectedMeronLegBand && selectedWalaEntry && selectedWalaLegBand
+                selectedMeronEntry && selectedWalaEntry && (selectedMeronLegBand || selectedWalaLegBand) && (!selectedMeronLegBand || !usedLegBands.has(selectedMeronLegBand)) && (!selectedWalaLegBand || !usedLegBands.has(selectedWalaLegBand))
                   ? 'bg-green-500 hover:bg-green-600 text-white cursor-pointer'
                   : 'bg-green-900 text-gray-400 cursor-not-allowed opacity-50'
               }`}
@@ -1209,6 +1254,37 @@ export default function ChickenFight() {
                   <div className="text-xs">Leg Band: {selectedWalaLegBand}</div>
                 </div>
               )}
+            </div>
+            
+            {/* Entry Selection Dropdown */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">Or Select Entry</label>
+              <select
+                value={selectedWalaEntry}
+                onChange={(e) => {
+                  setSelectedWalaEntry(e.target.value);
+                  setSelectedWalaLegBand(''); // Clear leg band when manually selecting entry
+                  setWalaLegBandSearch('');
+                  if (e.target.value) {
+                    const entry = entries.find(ent => ent._id === e.target.value);
+                    if (entry && entry.legBandNumbers && entry.legBandNumbers.length > 0) {
+                      // If entry has leg bands, auto-select the first available one
+                      const availableBands = entry.legBandNumbers.filter(band => !usedLegBands.has(band));
+                      if (availableBands.length > 0) {
+                        setSelectedWalaLegBand(availableBands[0]);
+                      }
+                    }
+                  }
+                }}
+                className="w-full px-4 py-2 rounded-lg bg-blue-600 text-white border border-blue-500"
+              >
+                <option value="">Choose an entry...</option>
+                {availableWalaEntries.map(entry => (
+                  <option key={entry._id} value={entry._id}>
+                    {entry.entryName} ({entry.legBandNumbers && entry.legBandNumbers.length > 0 ? `${entry.legBandNumbers.length} leg band(s)` : 'Unknown'})
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* Show selected entry score */}
@@ -1244,13 +1320,9 @@ export default function ChickenFight() {
             {/* Win Button */}
             <button
               onClick={handleWalaWin}
-              disabled={!selectedWalaEntry || !selectedWalaLegBand || 
-                usedLegBands.has(selectedWalaLegBand) || 
-                usedLegBands.has(selectedMeronLegBand)}
+              disabled={!selectedMeronEntry || !selectedWalaEntry || (!selectedMeronLegBand && !selectedWalaLegBand) || (selectedMeronLegBand && usedLegBands.has(selectedMeronLegBand)) || (selectedWalaLegBand && usedLegBands.has(selectedWalaLegBand))}
               className={`w-full py-3 font-bold rounded-lg text-lg transition ${
-                selectedWalaEntry && selectedWalaLegBand && 
-                !usedLegBands.has(selectedWalaLegBand) && 
-                !usedLegBands.has(selectedMeronLegBand)
+                selectedMeronEntry && selectedWalaEntry && (selectedMeronLegBand || selectedWalaLegBand) && (!selectedMeronLegBand || !usedLegBands.has(selectedMeronLegBand)) && (!selectedWalaLegBand || !usedLegBands.has(selectedWalaLegBand))
                   ? 'bg-blue-500 hover:bg-blue-600 text-white cursor-pointer'
                   : 'bg-blue-900 text-gray-400 cursor-not-allowed opacity-50'
               }`}
