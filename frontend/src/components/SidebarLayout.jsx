@@ -443,10 +443,10 @@ export default function SidebarLayout({ role, children }) {
       {/* Mobile Sidebar */}
       <aside
         ref={sidebarRef}
-        className={`fixed md:hidden sidebar-mobile z-40 h-screen transition-transform duration-300 transform 
-        ${showSidebar ? "translate-x-0" : "-translate-x-full"} 
-        w-64 
-        bg-white dark:bg-gray-900 border-r dark:border-gray-700 flex flex-col shadow-lg overflow-y-auto`}
+        className={`fixed md:hidden sidebar-mobile z-40 h-screen w-64 
+        bg-white dark:bg-gray-900 border-r dark:border-gray-700 flex flex-col shadow-lg overflow-y-auto ${
+          showSidebar ? '' : 'hidden'
+        }`}
       >
         <div className="px-4 pt-4 pb-3 border-b dark:border-gray-700 flex-shrink-0">
           <div 
