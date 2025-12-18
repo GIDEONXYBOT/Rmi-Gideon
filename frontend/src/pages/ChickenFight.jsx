@@ -149,16 +149,39 @@ export default function ChickenFight() {
       setSelectedMeronLegBand('');
       return;
     }
+    
+    const trimmedValue = value.trim();
+    
+    // Special case: "000" for unknown entries
+    if (trimmedValue === '000') {
+      // Find entries without leg bands (unknown entries)
+      const unknownEntries = availableMeronEntries.filter(entry => 
+        !entry.legBandNumbers || entry.legBandNumbers.length === 0
+      );
+      
+      if (unknownEntries.length > 0) {
+        // Auto-select the first unknown entry
+        setSelectedMeronEntry(unknownEntries[0]._id);
+        setSelectedMeronLegBand('unknown');
+      } else {
+        // No unknown entries available
+        setSelectedMeronEntry('');
+        setSelectedMeronLegBand('');
+      }
+      return;
+    }
+    
     // Search for entry with this leg band
     const foundEntry = availableMeronEntries.find(entry => 
-      entry.legBandNumbers?.includes(value.trim())
+      entry.legBandNumbers?.includes(trimmedValue)
     );
     if (foundEntry) {
       setSelectedMeronEntry(foundEntry._id);
-      setSelectedMeronLegBand(value.trim());
+      setSelectedMeronLegBand(trimmedValue);
     } else {
-      // If no entry found with this leg band, allow "unknown" entry selection
-      // This will be handled in the entry selection dropdown
+      // If no entry found with this leg band, clear selection
+      setSelectedMeronEntry('');
+      setSelectedMeronLegBand('');
     }
   };
 
@@ -170,16 +193,39 @@ export default function ChickenFight() {
       setSelectedWalaLegBand('');
       return;
     }
+    
+    const trimmedValue = value.trim();
+    
+    // Special case: "000" for unknown entries
+    if (trimmedValue === '000') {
+      // Find entries without leg bands (unknown entries)
+      const unknownEntries = availableWalaEntries.filter(entry => 
+        !entry.legBandNumbers || entry.legBandNumbers.length === 0
+      );
+      
+      if (unknownEntries.length > 0) {
+        // Auto-select the first unknown entry
+        setSelectedWalaEntry(unknownEntries[0]._id);
+        setSelectedWalaLegBand('unknown');
+      } else {
+        // No unknown entries available
+        setSelectedWalaEntry('');
+        setSelectedWalaLegBand('');
+      }
+      return;
+    }
+    
     // Search for entry with this leg band
     const foundEntry = availableWalaEntries.find(entry => 
-      entry.legBandNumbers?.includes(value.trim())
+      entry.legBandNumbers?.includes(trimmedValue)
     );
     if (foundEntry) {
       setSelectedWalaEntry(foundEntry._id);
-      setSelectedWalaLegBand(value.trim());
+      setSelectedWalaLegBand(trimmedValue);
     } else {
-      // If no entry found with this leg band, allow "unknown" entry selection
-      // This will be handled in the entry selection dropdown
+      // If no entry found with this leg band, clear selection
+      setSelectedWalaEntry('');
+      setSelectedWalaLegBand('');
     }
   };
 
@@ -1059,13 +1105,15 @@ export default function ChickenFight() {
                 type="text"
                 value={meronLegBandSearch}
                 onChange={(e) => handleMeronLegBandSearch(e.target.value)}
-                placeholder="Enter leg band number..."
+                placeholder="Enter leg band number or '000' for unknown..."
                 className="w-full px-4 py-2 rounded-lg bg-red-600 text-white border border-red-500 placeholder-red-300"
               />
               {meronLegBandSearch && selectedMeronEntry && (
                 <div className="mt-2 p-2 bg-red-600 rounded text-sm">
                   <div className="font-medium">{meronEntry?.entryName}</div>
-                  <div className="text-xs">Leg Band: {selectedMeronLegBand}</div>
+                  <div className="text-xs">
+                    Leg Band: {meronLegBandSearch === '000' ? 'Unknown (000)' : selectedMeronLegBand}
+                  </div>
                 </div>
               )}
             </div>
@@ -1245,13 +1293,15 @@ export default function ChickenFight() {
                 type="text"
                 value={walaLegBandSearch}
                 onChange={(e) => handleWalaLegBandSearch(e.target.value)}
-                placeholder="Enter leg band number..."
+                placeholder="Enter leg band number or '000' for unknown..."
                 className="w-full px-4 py-2 rounded-lg bg-blue-600 text-white border border-blue-500 placeholder-blue-300"
               />
               {walaLegBandSearch && selectedWalaEntry && (
                 <div className="mt-2 p-2 bg-blue-600 rounded text-sm">
                   <div className="font-medium">{walaEntry?.entryName}</div>
-                  <div className="text-xs">Leg Band: {selectedWalaLegBand}</div>
+                  <div className="text-xs">
+                    Leg Band: {walaLegBandSearch === '000' ? 'Unknown (000)' : selectedWalaLegBand}
+                  </div>
                 </div>
               )}
             </div>
