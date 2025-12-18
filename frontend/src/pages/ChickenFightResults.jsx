@@ -298,85 +298,352 @@ export default function ChickenFightResults() {
           </div>
         )}
         
-        {success && (
-          <div className={`p-4 rounded-lg flex items-center gap-3 border mb-4 ${isDarkMode ? 'bg-green-900/30 text-green-300 border-green-600' : 'bg-green-50 text-green-800 border-green-300'}`}>
-            <span>{success}</span>
+        {/* Summary Overview */}
+        {gameData && (
+          <div className={`rounded-lg shadow p-6 mb-8 ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+            <h2 className={`text-2xl font-bold mb-6 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+              📊 Fight Summary
+            </h2>
+            
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div className={`p-4 rounded-lg text-center ${isDarkMode ? 'bg-blue-900/30 border border-blue-700' : 'bg-blue-50 border border-blue-200'}`}>
+                <div className={`text-2xl font-bold ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>{maxFightNum}</div>
+                <div className={`text-sm ${isDarkMode ? 'text-blue-300' : 'text-blue-600'}`}>Total Fights</div>
+              </div>
+              
+              <div className={`p-4 rounded-lg text-center ${isDarkMode ? 'bg-green-900/30 border border-green-700' : 'bg-green-50 border border-green-200'}`}>
+                <div className={`text-2xl font-bold ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>
+                  {gameData.entryResults?.filter(entry => 
+                    entry.legResults?.some(leg => leg.result === 'win')
+                  ).length || 0}
+                </div>
+                <div className={`text-sm ${isDarkMode ? 'text-green-300' : 'text-green-600'}`}>Active Entries</div>
+              </div>
+              
+              <div className={`p-4 rounded-lg text-center ${isDarkMode ? 'bg-purple-900/30 border border-purple-700' : 'bg-purple-50 border border-purple-200'}`}>
+                <div className={`text-2xl font-bold ${isDarkMode ? 'text-purple-400' : 'text-purple-600'}`}>
+                  {Object.values(fightsByLeg).flat().filter(f => f.legResult?.result === 'win').length}
+                </div>
+                <div className={`text-sm ${isDarkMode ? 'text-purple-300' : 'text-purple-600'}`}>Total Wins</div>
+              </div>
+              
+              <div className={`p-4 rounded-lg text-center ${isDarkMode ? 'bg-orange-900/30 border border-orange-700' : 'bg-orange-50 border border-orange-200'}`}>
+                <div className={`text-2xl font-bold ${isDarkMode ? 'text-orange-400' : 'text-orange-600'}`}>
+                  {Object.values(fightsByLeg).flat().filter(f => f.legResult?.result === 'cancelled').length}
+                </div>
+                <div className={`text-sm ${isDarkMode ? 'text-orange-300' : 'text-orange-600'}`}>Cancelled</div>
+              </div>
+            </div>
+            
+            {/* Champions Section */}
+            {(() => {
+              const entryWins = {};
+              Object.values(fightsByLeg).flat().forEach(fight => {
+                if (fight.legResult?.result === 'win') {
+                  entryWins[fight.entryName] = (entryWins[fight.entryName] || 0) + 1;
+                }
+              });
+              
+              const champions2Wins = Object.entries(entryWins)
+                .filter(([name, wins]) => {
+                  const entry = gameData.entryResults?.find(e => e.entryName === name);
+                  return entry?.gameType === '2wins' && wins >= 2;
+                })
+                .sort(([,a], [,b]) => b - a);
+                
+              const champions3Wins = Object.entries(entryWins)
+                .filter(([name, wins]) => {
+                  const entry = gameData.entryResults?.find(e => e.entryName === name);
+                  return entry?.gameType === '3wins' && wins >= 3;
+                })
+                .sort(([,a], [,b]) => b - a);
+              
+              return (champions2Wins.length > 0 || champions3Wins.length > 0) && (
+                <div className="border-t pt-6">
+                  <h3 className={`text-lg font-semibold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                    🏆 Champions
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {champions2Wins.length > 0 && (
+                      <div>
+                        <h4 className={`font-medium mb-2 ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>2-Wins Champions</h4>
+                        <div className="space-y-1">
+                          {champions2Wins.slice(0, 3).map(([name, wins], idx) => (
+                            <div key={name} className={`flex justify-between items-center p-2 rounded ${isDarkMode ? 'bg-red-900/20' : 'bg-red-50'}`}>
+                              <span className={`font-medium ${isDarkMode ? 'text-red-300' : 'text-red-700'}`}>
+                                {idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉'} {name}
+                              </span>
+                              <span className={`text-sm ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>{wins} wins</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {champions3Wins.length > 0 && (
+                      <div>
+                        <h4 className={`font-medium mb-2 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>3-Wins Champions</h4>
+                        <div className="space-y-1">
+                          {champions3Wins.slice(0, 3).map(([name, wins], idx) => (
+                            <div key={name} className={`flex justify-between items-center p-2 rounded ${isDarkMode ? 'bg-blue-900/20' : 'bg-blue-50'}`}>
+                              <span className={`font-medium ${isDarkMode ? 'text-blue-300' : 'text-blue-700'}`}>
+                                {idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉'} {name}
+                              </span>
+                              <span className={`text-sm ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>{wins} wins</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         )}
         
-        {/* Navigation Section - Hide when showing entry search results */}
+        {/* Timeline View */}
+        {gameData && legNumbers.length > 0 && (
+          <div className={`rounded-lg shadow p-6 mb-8 ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+            <h2 className={`text-2xl font-bold mb-6 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+              📅 Fight Timeline
+            </h2>
+            
+            <div className="space-y-4">
+              {legNumbers.map(legNum => {
+                const fights = fightsByLeg[legNum];
+                if (!fights || fights.length < 2) return null;
+                
+                const [meron, wala] = fights;
+                const meronResult = meron.legResult?.result;
+                const walaResult = wala.legResult?.result;
+                
+                return (
+                  <div key={legNum} className={`p-4 rounded-lg border-2 transition-all hover:shadow-md ${
+                    meronResult === 'cancelled' || walaResult === 'cancelled'
+                      ? isDarkMode ? 'border-gray-600 bg-gray-900/50' : 'border-gray-300 bg-gray-50'
+                      : isDarkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'
+                  }`}>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
+                          meronResult === 'cancelled' || walaResult === 'cancelled'
+                            ? isDarkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-300 text-gray-600'
+                            : isDarkMode ? 'bg-blue-600 text-white' : 'bg-blue-500 text-white'
+                        }`}>
+                          {legNum}
+                        </div>
+                        <span className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                          Fight #{legNum}
+                        </span>
+                      </div>
+                      
+                      <button
+                        onClick={() => setCurrentFightNum(legNum)}
+                        className={`px-3 py-1 rounded text-sm transition ${
+                          isDarkMode
+                            ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                            : 'bg-blue-500 hover:bg-blue-600 text-white'
+                        }`}
+                      >
+                        View Details
+                      </button>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Meron */}
+                      <div className={`p-3 rounded border ${
+                        meronResult === 'win'
+                          ? isDarkMode ? 'bg-green-900/30 border-green-700' : 'bg-green-50 border-green-300'
+                          : meronResult === 'loss'
+                          ? isDarkMode ? 'bg-red-900/30 border-red-700' : 'bg-red-50 border-red-300'
+                          : meronResult === 'cancelled'
+                          ? isDarkMode ? 'bg-gray-900/30 border-gray-700' : 'bg-gray-50 border-gray-300'
+                          : isDarkMode ? 'bg-yellow-900/30 border-yellow-700' : 'bg-yellow-50 border-yellow-300'
+                      }`}>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className={`font-medium ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>MERON</span>
+                          <span className={`text-sm font-bold ${
+                            meronResult === 'win'
+                              ? isDarkMode ? 'text-green-400' : 'text-green-600'
+                              : meronResult === 'loss'
+                              ? isDarkMode ? 'text-red-400' : 'text-red-600'
+                              : meronResult === 'cancelled'
+                              ? isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                              : isDarkMode ? 'text-yellow-400' : 'text-yellow-600'
+                          }`}>
+                            {meronResult === 'win' ? '✓ WIN' : meronResult === 'loss' ? '✗ LOSS' : meronResult === 'draw' ? '◐ DRAW' : meronResult === 'cancelled' ? '🚫 CANCELLED' : 'UNKNOWN'}
+                          </span>
+                        </div>
+                        <div className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                          <div className="font-medium">{meron.entryName}</div>
+                          <div className="text-xs opacity-75">{meron.gameType}</div>
+                          {meron.legBandNumbers?.[legNum - 1] && (
+                            <div className="text-xs font-mono mt-1">
+                              Leg Band: #{meron.legBandNumbers[legNum - 1]}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Wala */}
+                      <div className={`p-3 rounded border ${
+                        walaResult === 'win'
+                          ? isDarkMode ? 'bg-green-900/30 border-green-700' : 'bg-green-50 border-green-300'
+                          : walaResult === 'loss'
+                          ? isDarkMode ? 'bg-red-900/30 border-red-700' : 'bg-red-50 border-red-300'
+                          : walaResult === 'cancelled'
+                          ? isDarkMode ? 'bg-gray-900/30 border-gray-700' : 'bg-gray-50 border-gray-300'
+                          : isDarkMode ? 'bg-yellow-900/30 border-yellow-700' : 'bg-yellow-50 border-yellow-300'
+                      }`}>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className={`font-medium ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>WALA</span>
+                          <span className={`text-sm font-bold ${
+                            walaResult === 'win'
+                              ? isDarkMode ? 'text-green-400' : 'text-green-600'
+                              : walaResult === 'loss'
+                              ? isDarkMode ? 'text-red-400' : 'text-red-600'
+                              : walaResult === 'cancelled'
+                              ? isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                              : isDarkMode ? 'text-yellow-400' : 'text-yellow-600'
+                          }`}>
+                            {walaResult === 'win' ? '✓ WIN' : walaResult === 'loss' ? '✗ LOSS' : walaResult === 'draw' ? '◐ DRAW' : walaResult === 'cancelled' ? '🚫 CANCELLED' : 'UNKNOWN'}
+                          </span>
+                        </div>
+                        <div className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                          <div className="font-medium">{wala.entryName}</div>
+                          <div className="text-xs opacity-75">{wala.gameType}</div>
+                          {wala.legBandNumbers?.[legNum - 1] && (
+                            <div className="text-xs font-mono mt-1">
+                              Leg Band: #{wala.legBandNumbers[legNum - 1]}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+        {/* Enhanced Navigation Section */}
         {!searchedEntryName && (
         <div className={`rounded-lg shadow p-6 mb-8 ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
           <h2 className={`text-2xl font-bold mb-6 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-            Navigate Fights
+            🎯 Navigate & Search
           </h2>
           
-          <div className="flex flex-col md:flex-row gap-4 items-center mb-6">
-            {/* Navigation Buttons */}
-            <div className="flex gap-2 items-center">
-              <button
-                onClick={() => setCurrentFightNum(Math.max(1, currentFightNum - 1))}
-                disabled={currentFightNum <= 1}
-                className={`p-2 rounded-lg ${
-                  currentFightNum <= 1
-                    ? isDarkMode ? 'bg-gray-700 text-gray-500 cursor-not-allowed' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                    : isDarkMode ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'
-                }`}
-              >
-                <ChevronLeft size={20} />
-              </button>
+          {/* Quick Navigation */}
+          <div className="flex flex-col lg:flex-row gap-6 mb-6">
+            {/* Fight Navigation */}
+            <div className="flex-1">
+              <h3 className={`text-lg font-semibold mb-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Fight Navigation</h3>
+              <div className="flex items-center gap-4 mb-4">
+                <button
+                  onClick={() => setCurrentFightNum(Math.max(1, currentFightNum - 1))}
+                  disabled={currentFightNum <= 1}
+                  className={`p-3 rounded-lg transition ${
+                    currentFightNum <= 1
+                      ? isDarkMode ? 'bg-gray-700 text-gray-500 cursor-not-allowed' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      : isDarkMode ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'
+                  }`}
+                  title="Previous Fight"
+                >
+                  <ChevronLeft size={24} />
+                </button>
+                
+                <div className={`text-center px-6 py-3 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                  <div className={`text-sm opacity-75 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Current Fight</div>
+                  <div className={`text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{currentFightNum}</div>
+                  <div className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>of {maxFightNum}</div>
+                </div>
+                
+                <button
+                  onClick={() => setCurrentFightNum(Math.min(maxFightNum, currentFightNum + 1))}
+                  disabled={currentFightNum >= maxFightNum}
+                  className={`p-3 rounded-lg transition ${
+                    currentFightNum >= maxFightNum
+                      ? isDarkMode ? 'bg-gray-700 text-gray-500 cursor-not-allowed' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      : isDarkMode ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'
+                  }`}
+                  title="Next Fight"
+                >
+                  <ChevronRight size={24} />
+                </button>
+              </div>
               
-              <span className={`text-2xl font-bold w-16 text-center ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                {currentFightNum}
-              </span>
-              
-              <button
-                onClick={() => setCurrentFightNum(Math.min(maxFightNum, currentFightNum + 1))}
-                disabled={currentFightNum >= maxFightNum}
-                className={`p-2 rounded-lg ${
-                  currentFightNum >= maxFightNum
-                    ? isDarkMode ? 'bg-gray-700 text-gray-500 cursor-not-allowed' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                    : isDarkMode ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'
-                }`}
-              >
-                <ChevronRight size={20} />
-              </button>
+              {/* Progress Bar */}
+              <div className={`w-full bg-gray-200 rounded-full h-2 ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
+                <div 
+                  className={`h-2 rounded-full transition-all duration-300 ${isDarkMode ? 'bg-blue-600' : 'bg-blue-500'}`}
+                  style={{ width: `${maxFightNum > 0 ? (currentFightNum / maxFightNum) * 100 : 0}%` }}
+                ></div>
+              </div>
             </div>
             
-            {/* Jump to Fight */}
-            <div className="flex gap-2 items-center flex-1 max-w-md">
-              <div className="relative flex-1">
-                <Search size={18} className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`} />
-                <input
-                  type="text"
-                  value={jumpToFight}
-                  onChange={(e) => setJumpToFight(e.target.value)}
-                  placeholder="Search: #fight, entry name, or leg band"
-                  onKeyPress={(e) => e.key === 'Enter' && handleJumpToFight()}
-                  className={`w-full pl-10 pr-4 py-2 rounded-lg border ${
+            {/* Search */}
+            <div className="flex-1">
+              <h3 className={`text-lg font-semibold mb-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Search Fights</h3>
+              <div className="space-y-3">
+                <div className="relative">
+                  <Search size={18} className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`} />
+                  <input
+                    type="text"
+                    value={jumpToFight}
+                    onChange={(e) => setJumpToFight(e.target.value)}
+                    placeholder="Search by fight #, entry name, or leg band"
+                    onKeyPress={(e) => e.key === 'Enter' && handleJumpToFight()}
+                    className={`w-full pl-10 pr-4 py-3 rounded-lg border transition ${
+                      isDarkMode
+                        ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500 focus:border-blue-500'
+                        : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-blue-500'
+                    }`}
+                  />
+                </div>
+                <button
+                  onClick={handleJumpToFight}
+                  className={`w-full py-2 rounded-lg font-medium transition ${
                     isDarkMode
-                      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
-                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+                      ? 'bg-green-600 hover:bg-green-700 text-white'
+                      : 'bg-green-500 hover:bg-green-600 text-white'
                   }`}
-                />
+                >
+                  🔍 Search
+                </button>
               </div>
-              <button
-                onClick={handleJumpToFight}
-                className={`px-4 py-2 rounded-lg font-medium transition ${
-                  isDarkMode
-                    ? 'bg-green-600 hover:bg-green-700 text-white'
-                    : 'bg-green-500 hover:bg-green-600 text-white'
-                }`}
-              >
-                Go
-              </button>
             </div>
           </div>
           
-          <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-            Total fights: <strong>{maxFightNum}</strong> | Current: <strong>Fight #{currentFightNum}</strong>
-          </p>
+          {/* Quick Stats */}
+          <div className={`border-t pt-4 ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+              <div>
+                <div className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{maxFightNum}</div>
+                <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Total Fights</div>
+              </div>
+              <div>
+                <div className={`text-lg font-bold ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>
+                  {Object.values(fightsByLeg).flat().filter(f => f.legResult?.result === 'win').length}
+                </div>
+                <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Wins Recorded</div>
+              </div>
+              <div>
+                <div className={`text-lg font-bold ${isDarkMode ? 'text-yellow-400' : 'text-yellow-600'}`}>
+                  {Object.values(fightsByLeg).flat().filter(f => f.legResult?.result === 'draw').length}
+                </div>
+                <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Draws</div>
+              </div>
+              <div>
+                <div className={`text-lg font-bold ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>
+                  {Object.values(fightsByLeg).flat().filter(f => f.legResult?.result === 'cancelled').length}
+                </div>
+                <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Cancelled</div>
+              </div>
+            </div>
+          </div>
         </div>
+        )}
         )}
         
         {/* All Fights for Searched Entry */}
