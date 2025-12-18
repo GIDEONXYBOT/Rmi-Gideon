@@ -37,6 +37,9 @@ router.get('/registrations', async (req, res) => {
     }).sort({ createdAt: -1 });
 
     console.log(`✅ Found ${registrations.length} registrations`);
+    registrations.forEach((reg, i) => {
+      console.log(`Registration ${i}: ${reg.entryName}, registrations:`, reg.registrations);
+    });
 
     res.json({
       success: true,
@@ -54,6 +57,14 @@ router.post('/registrations', async (req, res) => {
   try {
     const { entryId, entryName, gameTypes, registrations, gameDate } = req.body;
     const username = req.user.username;
+
+    console.log('Backend received registration request:', {
+      entryId,
+      entryName,
+      gameTypes,
+      registrations,
+      gameDate
+    });
 
     if (!entryId || !entryName || !gameTypes || !Array.isArray(gameTypes) || !registrations || !Array.isArray(registrations)) {
       return res.status(400).json({ success: false, message: 'Missing required fields' });
@@ -101,6 +112,7 @@ router.post('/registrations', async (req, res) => {
       createdBy: username
     });
 
+    console.log('Saving registration with data:', registration);
     await registration.save();
 
     res.json({

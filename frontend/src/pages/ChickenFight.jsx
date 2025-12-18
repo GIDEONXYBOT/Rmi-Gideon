@@ -573,6 +573,13 @@ export default function ChickenFight() {
 
     setSubmittingReg(true);
     try {
+      console.log('Sending registration request:', {
+        entryId: selectedEntry,
+        entryName: entry.entryName,
+        gameTypes,
+        registrations,
+        gameDate: today
+      });
       await axios.post(`${getApiUrl()}/api/chicken-fight-registration/registrations`, {
         entryId: selectedEntry,
         entryName: entry.entryName,
