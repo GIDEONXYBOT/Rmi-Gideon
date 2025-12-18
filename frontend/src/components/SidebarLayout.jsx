@@ -59,7 +59,7 @@ export default function SidebarLayout({ role, children }) {
   const sidebarRef = useRef(null);
 
   // ✅ Mobile sidebar + gestures + overlay
-  const [showSidebar, setShowSidebar] = useState(true);
+  const [showSidebar, setShowSidebar] = useState(false);
   const [showArrow, setShowArrow] = useState(true);
   
   // ✅ Sidebar collapse/expand state (desktop)
