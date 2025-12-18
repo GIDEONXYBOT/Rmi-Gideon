@@ -44,7 +44,7 @@ export default function ChickenFight() {
   const [selectedEntry, setSelectedEntry] = useState('');
   const [selected2Wins, setSelected2Wins] = useState(false);
   const [selected2WinsFee, setSelected2WinsFee] = useState(300); // 300 or 500
-  const [global2WinsFee, setGlobal2WinsFee] = useState(300); // Global default for all 2-Wins
+  const [global2WinsFee, setGlobal2WinsFee] = useState(300); // Day-based default: Thursday=300, Saturday=500, adjustable
   const [selected3Wins, setSelected3Wins] = useState(false);
   const [submittingReg, setSubmittingReg] = useState(false);
   const [selectedMeronEntry, setSelectedMeronEntry] = useState('');
@@ -68,15 +68,25 @@ export default function ChickenFight() {
     loadHistoryDates();
   }, []);
 
-  // Load global2WinsFee from localStorage on mount
+  // Load global2WinsFee from localStorage on mount, with day-based default
   useEffect(() => {
+    const today = new Date();
+    const dayOfWeek = today.getDay(); // 0=Sunday, 4=Thursday, 6=Saturday
+    const defaultFee = dayOfWeek === 4 ? 300 : dayOfWeek === 6 ? 500 : 300; // Thursday=300, Saturday=500, others=300
+
     const savedFee = localStorage.getItem('chicken-fight-global-2wins-fee');
     if (savedFee) {
       const fee = parseInt(savedFee, 10);
-      console.log('Loaded global2WinsFee from localStorage:', fee);
-      setGlobal2WinsFee(fee);
+      if (!isNaN(fee)) {
+        console.log('Loaded global2WinsFee from localStorage:', fee);
+        setGlobal2WinsFee(fee);
+      } else {
+        console.log(`No valid saved fee, using day-based default: ${defaultFee} (day ${dayOfWeek})`);
+        setGlobal2WinsFee(defaultFee);
+      }
     } else {
-      console.log('No saved global2WinsFee, using default: 300');
+      console.log(`No saved global2WinsFee, using day-based default: ${defaultFee} (day ${dayOfWeek})`);
+      setGlobal2WinsFee(defaultFee);
     }
   }, []);
 
