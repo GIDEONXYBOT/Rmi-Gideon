@@ -1406,39 +1406,37 @@ export default function ChickenFight() {
                   const entryResults = [];
                   
                   // Always add entries to entryResults for cancelled fights, even if unknown
-                  if (meronEntry) {
-                    entryResults.push({
-                      entryId: meronEntry._id,
-                      entryName: meronEntry.entryName,
-                      gameType: meronEntry.gameType,
-                      legResults: [
-                        { legNumber: fightNumber + 1, result: 'cancelled' }
-                      ]
-                    });
-                  }
+                  // Meron entry
+                  entryResults.push({
+                    entryId: meronEntry?._id || `unknown-meron-${Date.now()}`,
+                    entryName: meronEntry?.entryName || 'Unknown Entry (Meron)',
+                    gameType: meronEntry?.gameType || 'unknown',
+                    legResults: [
+                      { legNumber: fightNumber + 1, result: 'cancelled' }
+                    ]
+                  });
                   
-                  if (walaEntry) {
-                    entryResults.push({
-                      entryId: walaEntry._id,
-                      entryName: walaEntry.entryName,
-                      gameType: walaEntry.gameType,
-                      legResults: [
-                        { legNumber: fightNumber + 1, result: 'cancelled' }
-                      ]
-                    });
-                  }
+                  // Wala entry
+                  entryResults.push({
+                    entryId: walaEntry?._id || `unknown-wala-${Date.now()}`,
+                    entryName: walaEntry?.entryName || 'Unknown Entry (Wala)',
+                    gameType: walaEntry?.gameType || 'unknown',
+                    legResults: [
+                      { legNumber: fightNumber + 1, result: 'cancelled' }
+                    ]
+                  });
                   
                   // Add cancelled fights to local fights array (but don't mark leg bands as used)
                   const meronFight = {
                     id: fightNumber + 1,
-                    entryName: meronEntry.entryName,
+                    entryName: meronEntry?.entryName || 'Unknown Entry (Meron)',
                     legBand: selectedMeronLegBand || 'unknown',
                     legBandFought: selectedMeronLegBand || 'unknown',
                     result: 'cancelled'  // Special cancelled result
                   };
                   const walaFight = {
                     id: fightNumber + 1,
-                    entryName: walaEntry.entryName,
+                    entryName: walaEntry?.entryName || 'Unknown Entry (Wala)',
                     legBand: selectedWalaLegBand || 'unknown',
                     legBandFought: selectedWalaLegBand || 'unknown',
                     result: 'cancelled'  // Special cancelled result
@@ -1447,11 +1445,8 @@ export default function ChickenFight() {
                   const newFights = [...fights, meronFight, walaFight];
                   setFights(newFights);
                   
-                  // Record results to backend (only if there are known entries)
-                  let recordSuccess = true;
-                  if (entryResults.length > 0) {
-                    recordSuccess = await recordEntryResults(entryResults);
-                  }
+                  // Record results to backend (now always records since entryResults is always populated)
+                  const recordSuccess = await recordEntryResults(entryResults);
                   
                   if (!recordSuccess) {
                     setError('Failed to record cancellation. Please try again.');
