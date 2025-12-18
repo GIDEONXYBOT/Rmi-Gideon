@@ -3,8 +3,7 @@ import mongoose from 'mongoose';
 const chickenFightRegistrationSchema = new mongoose.Schema(
   {
     entryId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'ChickenFightEntry',
+      type: mongoose.Schema.Types.Mixed, // Allow string or ObjectId
       required: true
     },
     entryName: {
