@@ -72,12 +72,17 @@ export default function ChickenFight() {
   useEffect(() => {
     const savedFee = localStorage.getItem('chicken-fight-global-2wins-fee');
     if (savedFee) {
-      setGlobal2WinsFee(parseInt(savedFee, 10));
+      const fee = parseInt(savedFee, 10);
+      console.log('Loaded global2WinsFee from localStorage:', fee);
+      setGlobal2WinsFee(fee);
+    } else {
+      console.log('No saved global2WinsFee, using default: 500');
     }
   }, []);
 
   // Save global2WinsFee to localStorage when it changes
   useEffect(() => {
+    console.log('Saving global2WinsFee to localStorage:', global2WinsFee);
     localStorage.setItem('chicken-fight-global-2wins-fee', global2WinsFee.toString());
   }, [global2WinsFee]);
 
@@ -556,6 +561,7 @@ export default function ChickenFight() {
         gameType: '2wins',
         registrationFee: global2WinsFee
       });
+      console.log('Adding 2wins registration with fee:', global2WinsFee);
     }
     if (selected3Wins) {
       gameTypes.push('3wins');
@@ -1594,8 +1600,11 @@ export default function ChickenFight() {
                     const total = registrations.reduce((sum, reg) => {
                       const entry = entries.find(e => e.entryName === reg.entryName);
                       const reg2wins = reg.registrations.find(r => r.gameType === '2wins' && r.isPaid);
-                      return entry?.gameType === '2wins' && reg2wins ? sum + (reg2wins.registrationFee || 500) : sum;
+                      const fee = reg2wins?.registrationFee;
+                      console.log(`Registration fee for ${reg.entryName}:`, fee, typeof fee);
+                      return entry?.gameType === '2wins' && reg2wins ? sum + (Number(fee) || 500) : sum;
                     }, 0);
+                    console.log('Total 2-wins revenue:', total);
                     return total;
                   })()}
                 </div>
