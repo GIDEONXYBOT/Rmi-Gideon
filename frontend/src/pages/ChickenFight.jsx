@@ -126,8 +126,8 @@ export default function ChickenFight() {
   // Get used fight numbers (leg numbers already used)
   const usedLegNumbers = new Set(fights.map(f => f.legNumber).filter(Boolean));
 
-  // Get all leg bands that have already fought
-  const usedLegBands = new Set(fights.map(f => f.legBandFought).filter(Boolean));
+  // Get all leg bands that have already fought (excluding cancelled fights)
+  const usedLegBands = new Set(fights.filter(f => f.result !== 'cancelled').map(f => f.legBandFought).filter(Boolean));
 
   // Filter out already-used leg bands
   const availableMeronLegBands = meronLegBands.filter(band => !usedLegBands.has(band));
