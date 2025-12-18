@@ -1398,7 +1398,8 @@ export default function ChickenFight() {
                   // Build entry results for cancellation (both entries get 'cancelled' result)
                   const entryResults = [];
                   
-                  if (meronEntry._id !== 'unknown') {
+                  // Always add entries to entryResults for cancelled fights, even if unknown
+                  if (meronEntry) {
                     entryResults.push({
                       entryId: meronEntry._id,
                       entryName: meronEntry.entryName,
@@ -1409,7 +1410,7 @@ export default function ChickenFight() {
                     });
                   }
                   
-                  if (walaEntry._id !== 'unknown') {
+                  if (walaEntry) {
                     entryResults.push({
                       entryId: walaEntry._id,
                       entryName: walaEntry.entryName,
