@@ -58,15 +58,16 @@ router.post('/registrations', async (req, res) => {
     const { entryId, entryName, gameTypes, registrations, gameDate } = req.body;
     const username = req.user.username;
 
-    console.log('Backend received registration request:', {
+    console.log('Backend received registration request:', JSON.stringify({
       entryId,
       entryName,
       gameTypes,
       registrations,
       gameDate
-    });
+    }, null, 2));
 
     if (!entryId || !entryName || !gameTypes || !Array.isArray(gameTypes) || !registrations || !Array.isArray(registrations)) {
+      console.log('Validation failed:', { entryId, entryName, gameTypes, registrations });
       return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
 

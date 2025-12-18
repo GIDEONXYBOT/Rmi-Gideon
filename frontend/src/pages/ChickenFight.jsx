@@ -551,7 +551,13 @@ export default function ChickenFight() {
       return;
     }
 
-    const entry = entries.find(e => e._id === selectedEntry);
+    const entry = entries.find(e => e._id === selectedEntry) || 
+      (selectedEntry === 'unknown' ? { _id: 'unknown', entryName: 'Unknown', gameType: selected2Wins ? '2wins' : '3wins' } : null);
+    
+    if (!entry) {
+      setError('Selected entry not found');
+      return;
+    }
     const gameTypes = [];
     const registrations = [];
     
@@ -598,7 +604,8 @@ export default function ChickenFight() {
       fetchStats();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to register entry');
+      console.error('Registration error:', err.response?.data, err.response?.status, err.message);
+      setError(err.response?.data?.message || `Failed to register entry (${err.response?.status})`);
     } finally {
       setSubmittingReg(false);
     }
