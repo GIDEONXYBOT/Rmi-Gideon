@@ -368,10 +368,10 @@ export default function ChickenFightResults() {
                       <div>
                         <h4 className={`font-medium mb-2 ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>2-Wins Champions</h4>
                         <div className="space-y-1">
-                          {champions2Wins.slice(0, 3).map(([name, wins], idx) => (
+                          {champions2Wins.map(([name, wins], idx) => (
                             <div key={name} className={`flex justify-between items-center p-2 rounded ${isDarkMode ? 'bg-red-900/20' : 'bg-red-50'}`}>
                               <span className={`font-medium ${isDarkMode ? 'text-red-300' : 'text-red-700'}`}>
-                                {idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉'} {name}
+                                {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '🏅'} {name}
                               </span>
                               <span className={`text-sm ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>{wins} wins</span>
                             </div>
@@ -384,10 +384,10 @@ export default function ChickenFightResults() {
                       <div>
                         <h4 className={`font-medium mb-2 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>3-Wins Champions</h4>
                         <div className="space-y-1">
-                          {champions3Wins.slice(0, 3).map(([name, wins], idx) => (
+                          {champions3Wins.map(([name, wins], idx) => (
                             <div key={name} className={`flex justify-between items-center p-2 rounded ${isDarkMode ? 'bg-blue-900/20' : 'bg-blue-50'}`}>
                               <span className={`font-medium ${isDarkMode ? 'text-blue-300' : 'text-blue-700'}`}>
-                                {idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉'} {name}
+                                {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '🏅'} {name}
                               </span>
                               <span className={`text-sm ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>{wins} wins</span>
                             </div>
