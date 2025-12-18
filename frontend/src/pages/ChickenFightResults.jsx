@@ -69,8 +69,15 @@ export default function ChickenFightResults() {
   };
   
   const fightsByLeg = getFightsByLegNumber();
-  const legNumbers = Object.keys(fightsByLeg).map(Number).sort((a, b) => a - b);
-  const maxFightNum = legNumbers.length > 0 ? Math.max(...legNumbers) : 0;
+  
+  // Calculate max fight number from all leg results
+  const maxFightNum = gameData?.entryResults ? 
+    Math.max(...gameData.entryResults.flatMap(entry => 
+      entry.legResults?.map(leg => leg.legNumber) || []
+    ), 0) : 0;
+  
+  // Generate all fight numbers from 1 to maxFightNum
+  const legNumbers = Array.from({ length: maxFightNum }, (_, i) => i + 1);
   
   const getCurrentFight = () => {
     const fights = fightsByLeg[currentFightNum];
@@ -410,9 +417,43 @@ export default function ChickenFightResults() {
             </h2>
             
             <div className="space-y-4">
-              {legNumbers.map(legNum => {
+              {Array.from({ length: maxFightNum }, (_, i) => i + 1).map(legNum => {
                 const fights = fightsByLeg[legNum];
-                if (!fights || fights.length < 2) return null;
+                const hasData = fights && fights.length >= 2;
+                
+                if (!hasData) {
+                  // Show placeholder for missing fight data
+                  return (
+                    <div key={legNum} className={`p-4 rounded-lg border-2 transition-all ${
+                      isDarkMode ? 'border-gray-600 bg-gray-900/30' : 'border-gray-300 bg-gray-50'
+                    }`}>
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
+                            isDarkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-300 text-gray-600'
+                          }`}>
+                            {legNum}
+                          </div>
+                          <span className={`font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                            Fight #{legNum}
+                          </span>
+                          <span className={`text-xs px-2 py-1 rounded ${isDarkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-600'}`}>
+                            No Data
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="text-center py-8">
+                        <div className={`text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                          This fight has no recorded data
+                        </div>
+                        <div className={`text-xs mt-2 ${isDarkMode ? 'text-gray-600' : 'text-gray-500'}`}>
+                          Fight may have been cancelled or not recorded properly
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
                 
                 const [meron, wala] = fights;
                 const meronResult = meron.legResult?.result;
@@ -671,7 +712,6 @@ export default function ChickenFightResults() {
             </div>
           </div>
         </div>
-        )}
         )}
         
         {/* All Fights for Searched Entry */}
