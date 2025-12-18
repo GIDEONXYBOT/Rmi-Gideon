@@ -474,6 +474,7 @@ export default function ChickenFight() {
                 legNumber: leg.legNumber,
                 entryId: entry.entryId,
                 entryName: entry.entryName,
+                gameType: entry.gameType,
                 result: resultValue
               });
             });
@@ -871,43 +872,31 @@ export default function ChickenFight() {
                 }
               });
 
-              // Find champions (2 wins for Meron, 3 wins for Wala)
+              // Find champions (2 wins for 2wins entries, 3 wins for 3wins entries)
               const meronChampions = Object.entries(entryWins)
                 .filter(([name, wins]) => {
-                  const entry = entries.find(e => e.entryName === name);
+                  const fight = fights.find(f => f.entryName === name);
                   const registration = registrations.find(r => r.entryName === name);
-                  return entry?.gameType === '2wins' && wins >= 2 && registration?.isValidChampion !== false;
+                  return fight?.gameType === '2wins' && wins >= 2 && registration?.isValidChampion !== false;
                 })
                 .map(([name]) => name);
 
               const walaChampions = Object.entries(entryWins)
                 .filter(([name, wins]) => {
-                  const entry = entries.find(e => e.entryName === name);
+                  const fight = fights.find(f => f.entryName === name);
                   const registration = registrations.find(r => r.entryName === name);
-                  return entry?.gameType === '3wins' && wins >= 3 && registration?.isValidChampion !== false;
+                  return fight?.gameType === '3wins' && wins >= 3 && registration?.isValidChampion !== false;
                 })
                 .map(([name]) => name);
 
-                const meronScore = fights.filter(f => {
-                const entry = entries.find(e => e.entryName === f.entryName);
-                return entry?.gameType === '2wins' && f.result === 1;
-              }).length;
-              const walaScore = fights.filter(f => {
-                const entry = entries.find(e => e.entryName === f.entryName);
-                return entry?.gameType === '3wins' && f.result === 1;
-              }).length;
+                const meronScore = fights.filter(f => f.gameType === '2wins' && f.result === 1).length;
+              const walaScore = fights.filter(f => f.gameType === '3wins' && f.result === 1).length;
 
               // Get all Meron fights (2wins) with their results
-              const meronFights = fights.filter(f => {
-                const entry = entries.find(e => e.entryName === f.entryName);
-                return entry?.gameType === '2wins';
-              });
+              const meronFights = fights.filter(f => f.gameType === '2wins');
 
               // Get all Wala fights (3wins) with their results
-              const walaFights = fights.filter(f => {
-                const entry = entries.find(e => e.entryName === f.entryName);
-                return entry?.gameType === '3wins';
-              });
+              const walaFights = fights.filter(f => f.gameType === '3wins');
 
               return (
                 <>
@@ -1440,6 +1429,7 @@ export default function ChickenFight() {
                   const meronFight = {
                     id: fightNumber + 1,
                     entryName: meronEntry?.entryName || 'Unknown Entry (Meron)',
+                    gameType: meronEntry?.gameType || 'unknown',
                     legBand: selectedMeronLegBand || 'unknown',
                     legBandFought: selectedMeronLegBand || 'unknown',
                     result: 'cancelled'  // Special cancelled result
@@ -1447,6 +1437,7 @@ export default function ChickenFight() {
                   const walaFight = {
                     id: fightNumber + 1,
                     entryName: walaEntry?.entryName || 'Unknown Entry (Wala)',
+                    gameType: walaEntry?.gameType || 'unknown',
                     legBand: selectedWalaLegBand || 'unknown',
                     legBandFought: selectedWalaLegBand || 'unknown',
                     result: 'cancelled'  // Special cancelled result
