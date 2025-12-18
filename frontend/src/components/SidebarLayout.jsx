@@ -444,7 +444,7 @@ export default function SidebarLayout({ role, children }) {
       <aside
         ref={sidebarRef}
         className={`fixed md:hidden sidebar-mobile z-40 h-screen transition-transform duration-300 transform 
-        ${showSidebar ? "translate-x-0" : "-translate-x-64"} 
+        ${showSidebar ? "translate-x-0" : "-translate-x-full"} 
         w-64 
         bg-white dark:bg-gray-900 border-r dark:border-gray-700 flex flex-col shadow-lg overflow-y-auto`}
       >
