@@ -43,8 +43,8 @@ export default function ChickenFight() {
   const [showRegForm, setShowRegForm] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState('');
   const [selected2Wins, setSelected2Wins] = useState(false);
-  const [selected2WinsFee, setSelected2WinsFee] = useState(500); // 300 or 500
-  const [global2WinsFee, setGlobal2WinsFee] = useState(500); // Global default for all 2-Wins
+  const [selected2WinsFee, setSelected2WinsFee] = useState(300); // 300 or 500
+  const [global2WinsFee, setGlobal2WinsFee] = useState(300); // Global default for all 2-Wins
   const [selected3Wins, setSelected3Wins] = useState(false);
   const [submittingReg, setSubmittingReg] = useState(false);
   const [selectedMeronEntry, setSelectedMeronEntry] = useState('');
@@ -76,7 +76,7 @@ export default function ChickenFight() {
       console.log('Loaded global2WinsFee from localStorage:', fee);
       setGlobal2WinsFee(fee);
     } else {
-      console.log('No saved global2WinsFee, using default: 500');
+      console.log('No saved global2WinsFee, using default: 300');
     }
   }, []);
 
@@ -1612,7 +1612,7 @@ export default function ChickenFight() {
                       const reg2wins = reg.registrations.find(r => r.gameType === '2wins' && r.isPaid);
                       const fee = reg2wins?.registrationFee;
                       console.log(`Registration fee for ${reg.entryName}:`, fee, typeof fee);
-                      return entry?.gameType === '2wins' && reg2wins ? sum + (Number(fee) || 500) : sum;
+                      return entry?.gameType === '2wins' && reg2wins ? sum + (Number(fee) || 300) : sum;
                     }, 0);
                     console.log('Total 2-wins revenue:', total);
                     return total;

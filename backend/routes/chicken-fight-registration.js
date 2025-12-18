@@ -276,7 +276,7 @@ router.get('/registrations-stats', async (req, res) => {
           stats.by2wins++;
           if (gameReg.isPaid) {
             stats.paid2wins++;
-            stats.totalRevenue += gameReg.registrationFee || 500;
+            stats.totalRevenue += gameReg.registrationFee || 300;
           } else {
             stats.unpaid2wins++;
           }

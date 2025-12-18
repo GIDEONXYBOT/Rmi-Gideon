@@ -25,7 +25,7 @@ const chickenFightRegistrationSchema = new mongoose.Schema(
         },
         registrationFee: {
           type: Number,
-          default: 0 // Will be set per game type (e.g., 500 for 2wins, 1000 for 3wins)
+          default: 0 // Will be set per game type (e.g., 300 for 2wins, 1000 for 3wins)
         },
         isPaid: {
           type: Boolean,
