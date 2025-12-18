@@ -464,7 +464,11 @@ function App() {
                     <Routes>
                       <Route index element={<Navigate to="deployments" />} />
                       <Route path="dashboard" element={<Navigate to="deployments" />} />
+                      <Route path="upload" element={<UploadPage />} />
+                      <Route path="feed" element={<FeedPage />} />
+                      <Route path="users" element={<UsersList />} />
                       <Route path="deployments" element={<DeclaratorDashboard />} />
+                      <Route path="suggested-schedule" element={<ScheduleRotation />} />
                       <Route path="payroll" element={<Payroll />} />
                       <Route path="live-map" element={<AdminMapEditor />} />
                       <Route path="map-editor" element={<AdminMapEditor />} />
