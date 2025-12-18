@@ -633,6 +633,43 @@ export default function ChickenFight() {
     }
   };
 
+  const handleWithdrawAllPaid = async () => {
+    if (!window.confirm('Withdraw ALL paid registrations?')) return;
+
+    setSubmittingReg(true);
+    try {
+      const paidRegs = registrations.filter(reg =>
+        reg.registrations.some(r => r.isPaid)
+      );
+
+      let successCount = 0;
+      for (const reg of paidRegs) {
+        for (const gameReg of reg.registrations) {
+          if (gameReg.isPaid) {
+            try {
+              await axios.put(
+                `${getApiUrl()}/api/chicken-fight-registration/registrations/${reg._id}/withdraw`,
+                { gameType: gameReg.gameType }
+              );
+              successCount++;
+            } catch (err) {
+              console.error(`Failed to withdraw ${reg.entryName} - ${gameReg.gameType} payment`);
+            }
+          }
+        }
+      }
+
+      setSuccess(`Withdrew ${successCount} payments!`);
+      fetchRegistrations();
+      fetchStats();
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError('Failed to withdraw all payments');
+    } finally {
+      setSubmittingReg(false);
+    }
+  };
+
   // Delete registration
   const handleDeleteRegistration = async (registrationId) => {
     if (!window.confirm('Delete this registration?')) return;
@@ -739,6 +776,28 @@ export default function ChickenFight() {
     }
   };
 
+  // Toggle valid champion status
+  const toggleValidChampion = async (registrationId, currentStatus) => {
+    const newStatus = !currentStatus;
+    const action = newStatus ? 'valid' : 'invalid';
+    
+    if (!window.confirm(`Mark this entry as ${action} champion?`)) return;
+
+    try {
+      await axios.put(
+        `${getApiUrl()}/api/chicken-fight-registration/registrations/${registrationId}/valid-champion`,
+        { isValidChampion: newStatus }
+      );
+
+      setSuccess(`Entry marked as ${action} champion`);
+      fetchRegistrations();
+      fetchStats();
+      setTimeout(() => setSuccess(''), 2000);
+    } catch (err) {
+      setError(err.response?.data?.message || `Failed to mark as ${action} champion`);
+    }
+  };
+
   return (
     <div className={`min-h-screen flex ${isDarkMode ? 'bg-gray-900' : 'bg-white'}`}>
       {/* Left Sidebar - RESULT */}
@@ -773,14 +832,16 @@ export default function ChickenFight() {
               const meronChampions = Object.entries(entryWins)
                 .filter(([name, wins]) => {
                   const entry = entries.find(e => e.entryName === name);
-                  return entry?.gameType === '2wins' && wins >= 2;
+                  const registration = registrations.find(r => r.entryName === name);
+                  return entry?.gameType === '2wins' && wins >= 2 && registration?.isValidChampion !== false;
                 })
                 .map(([name]) => name);
 
               const walaChampions = Object.entries(entryWins)
                 .filter(([name, wins]) => {
                   const entry = entries.find(e => e.entryName === name);
-                  return entry?.gameType === '3wins' && wins >= 3;
+                  const registration = registrations.find(r => r.entryName === name);
+                  return entry?.gameType === '3wins' && wins >= 3 && registration?.isValidChampion !== false;
                 })
                 .map(([name]) => name);
 
@@ -867,11 +928,12 @@ export default function ChickenFight() {
 
               return uniqueEntries.map(entryData => {
                 const entry = entries.find(e => e.entryName === entryData.name);
+                const registration = registrations.find(r => r.entryName === entryData.name);
                 // Get all fight results for this entry (1 for win, 0 for loss)
                 const entryFights = fights.filter(f => f.entryName === entryData.name);
                 const wins = entryFights.filter(f => f.result === 1).length;
-                const isMeronChampion = entry?.gameType === '2wins' && wins >= 2;
-                const isWalaChampion = entry?.gameType === '3wins' && wins >= 3;
+                const isMeronChampion = entry?.gameType === '2wins' && wins >= 2 && registration?.isValidChampion !== false;
+                const isWalaChampion = entry?.gameType === '3wins' && wins >= 3 && registration?.isValidChampion !== false;
                 const isChampion = isMeronChampion || isWalaChampion;
 
                 return (
@@ -1558,7 +1620,8 @@ export default function ChickenFight() {
                     const meronChampionCount = Object.entries(
                       fights.reduce((acc, fight) => {
                         const entry = entries.find(e => e.entryName === fight.entryName);
-                        if (entry?.gameType === '2wins' && fight.result === 1) {
+                        const registration = registrations.find(r => r.entryName === fight.entryName);
+                        if (entry?.gameType === '2wins' && fight.result === 1 && registration?.isValidChampion !== false) {
                           acc[fight.entryName] = (acc[fight.entryName] || 0) + 1;
                         }
                         return acc;
@@ -1577,7 +1640,8 @@ export default function ChickenFight() {
                     const walaChampionCount = Object.entries(
                       fights.reduce((acc, fight) => {
                         const entry = entries.find(e => e.entryName === fight.entryName);
-                        if (entry?.gameType === '3wins' && fight.result === 1) {
+                        const registration = registrations.find(r => r.entryName === fight.entryName);
+                        if (entry?.gameType === '3wins' && fight.result === 1 && registration?.isValidChampion !== false) {
                           acc[fight.entryName] = (acc[fight.entryName] || 0) + 1;
                         }
                         return acc;
@@ -1609,7 +1673,8 @@ export default function ChickenFight() {
                     const meronChampionCount = Object.entries(
                       fights.reduce((acc, fight) => {
                         const entry = entries.find(e => e.entryName === fight.entryName);
-                        if (entry?.gameType === '2wins' && fight.result === 1) {
+                        const registration = registrations.find(r => r.entryName === fight.entryName);
+                        if (entry?.gameType === '2wins' && fight.result === 1 && registration?.isValidChampion !== false) {
                           acc[fight.entryName] = (acc[fight.entryName] || 0) + 1;
                         }
                         return acc;
@@ -1620,7 +1685,8 @@ export default function ChickenFight() {
                     const walaChampionCount = Object.entries(
                       fights.reduce((acc, fight) => {
                         const entry = entries.find(e => e.entryName === fight.entryName);
-                        if (entry?.gameType === '3wins' && fight.result === 1) {
+                        const registration = registrations.find(r => r.entryName === fight.entryName);
+                        if (entry?.gameType === '3wins' && fight.result === 1 && registration?.isValidChampion !== false) {
                           acc[fight.entryName] = (acc[fight.entryName] || 0) + 1;
                         }
                         return acc;
@@ -1808,6 +1874,17 @@ export default function ChickenFight() {
                 {submittingReg ? 'Processing...' : 'Mark All Paid'}
               </button>
               <button
+                onClick={handleWithdrawAllPaid}
+                disabled={submittingReg || registrations.length === 0 || !registrations.some(reg => reg.registrations.some(r => r.isPaid))}
+                className={`px-4 py-2 rounded-lg font-medium text-white transition ${
+                  submittingReg || registrations.length === 0 || !registrations.some(reg => reg.registrations.some(r => r.isPaid))
+                    ? isDarkMode ? 'bg-red-900 cursor-not-allowed opacity-50' : 'bg-red-300 cursor-not-allowed opacity-50'
+                    : isDarkMode ? 'bg-red-600 hover:bg-red-700' : 'bg-red-500 hover:bg-red-600'
+                }`}
+              >
+                {submittingReg ? 'Processing...' : 'Withdraw All'}
+              </button>
+              <button
                 onClick={() => setShowRegForm(true)}
                 className={`px-4 py-2 rounded-lg font-medium text-white transition ${
                   isDarkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'
@@ -1948,6 +2025,17 @@ export default function ChickenFight() {
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex gap-2">
+                            <button
+                              onClick={() => toggleValidChampion(reg._id, reg.isValidChampion)}
+                              className={`px-3 py-1 text-xs rounded font-medium ${
+                                reg.isValidChampion === false
+                                  ? isDarkMode ? 'bg-red-900 text-red-200 hover:bg-red-800' : 'bg-red-100 text-red-700'
+                                  : isDarkMode ? 'bg-green-900 text-green-200 hover:bg-green-800' : 'bg-green-100 text-green-700'
+                              }`}
+                              title={reg.isValidChampion === false ? 'Mark as valid champion' : 'Mark as invalid champion'}
+                            >
+                              {reg.isValidChampion === false ? '❌' : '✓'}
+                            </button>
                             <button
                               onClick={() => handleDeleteRegistration(reg._id)}
                               className={`px-3 py-1 text-xs rounded font-medium ${

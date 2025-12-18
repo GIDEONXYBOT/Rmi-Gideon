@@ -62,6 +62,10 @@ const chickenFightRegistrationSchema = new mongoose.Schema(
       type: String,
       default: null
     },
+    isValidChampion: {
+      type: Boolean,
+      default: true // Default to true, can be marked as invalid
+    },
     notes: {
       type: String,
       default: ''

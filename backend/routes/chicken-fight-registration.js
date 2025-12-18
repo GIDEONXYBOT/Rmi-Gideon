@@ -307,4 +307,31 @@ router.delete('/registrations/:registrationId', async (req, res) => {
   }
 });
 
+// Toggle valid champion status
+router.put('/registrations/:registrationId/valid-champion', async (req, res) => {
+  try {
+    const { registrationId } = req.params;
+    const { isValidChampion } = req.body;
+    const username = req.user.username;
+
+    const registration = await ChickenFightRegistration.findById(registrationId);
+    if (!registration) {
+      return res.status(404).json({ success: false, message: 'Registration not found' });
+    }
+
+    registration.isValidChampion = isValidChampion;
+    registration.updatedBy = username;
+    await registration.save();
+
+    res.json({
+      success: true,
+      message: `Champion status updated to ${isValidChampion ? 'valid' : 'invalid'}`,
+      registration
+    });
+  } catch (err) {
+    console.error('Error updating champion status:', err);
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
+  }
+});
+
 export default router;
