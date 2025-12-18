@@ -401,7 +401,7 @@ export default function ChickenFightResults() {
                           ? isDarkMode ? 'bg-red-900/50 text-red-400' : 'bg-red-100 text-red-700'
                           : isDarkMode ? 'bg-yellow-900/50 text-yellow-400' : 'bg-yellow-100 text-yellow-700'
                       }`}>
-                        {item.fight.legResult?.result === 'win' ? '✓ WIN' : item.fight.legResult?.result === 'loss' ? '✗ LOSS' : '◐ DRAW'}
+                        {item.fight.legResult?.result === 'win' ? '✓ WIN' : item.fight.legResult?.result === 'loss' ? '✗ LOSS' : item.fight.legResult?.result === 'draw' ? '◐ DRAW' : item.fight.legResult?.result === 'cancelled' ? '🚫 CANCELLED' : 'UNKNOWN'}
                       </div>
                     </div>
                     {fights && (
@@ -542,7 +542,7 @@ export default function ChickenFightResults() {
                       ? isDarkMode ? 'text-red-400' : 'text-red-600'
                       : isDarkMode ? 'text-yellow-400' : 'text-yellow-600'
                   }`}>
-                    {fight.legResult.result === 'win' ? '✓ WIN' : fight.legResult.result === 'loss' ? '✗ LOSS' : '◐ DRAW'}
+                    {fight.legResult.result === 'win' ? '✓ WIN' : fight.legResult.result === 'loss' ? '✗ LOSS' : fight.legResult.result === 'draw' ? '◐ DRAW' : fight.legResult.result === 'cancelled' ? '🚫 CANCELLED' : 'UNKNOWN'}
                   </div>
                   
                   <div className={`text-2xl font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>

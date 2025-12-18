@@ -441,7 +441,7 @@ export default function ChickenFight() {
           // Populate fights array from entry results
           response.data.game.entryResults.forEach(entry => {
             entry.legResults?.forEach(leg => {
-              const resultValue = leg.result === 'win' ? 1 : leg.result === 'draw' ? 0.5 : 0;
+              const resultValue = leg.result === 'win' ? 1 : leg.result === 'draw' ? 0.5 : leg.result === 'cancelled' ? -1 : 0;
               syncedFights.push({
                 legNumber: leg.legNumber,
                 entryId: entry.entryId,
@@ -888,10 +888,13 @@ export default function ChickenFight() {
                         <span
                           key={idx}
                           className={`font-bold text-sm ${
-                            fight.result === 1 ? 'text-white' : fight.result === 0.5 ? 'text-yellow-200' : 'text-red-200'
+                            fight.result === 1 ? 'text-white' : 
+                            fight.result === 0.5 ? 'text-yellow-200' : 
+                            fight.result === 'cancelled' ? 'text-gray-400' : 
+                            'text-red-200'
                           }`}
                         >
-                          {fight.result === 0.5 ? '1/2' : fight.result}
+                          {fight.result === 0.5 ? '1/2' : fight.result === 'cancelled' ? 'X' : fight.result}
                         </span>
                       ))}
                     </div>
@@ -1288,6 +1291,100 @@ export default function ChickenFight() {
               }`}
             >
               DRAW
+            </button>
+
+            {/* Cancel Fight Button */}
+            <button
+              onClick={async () => {
+                if (selectedMeronEntry && selectedWalaEntry) {
+                  // Check if either leg band has already been used
+                  if (usedLegBands.has(selectedMeronLegBand)) {
+                    setError(`Leg band ${selectedMeronLegBand} (Meron) has already fought`);
+                    return;
+                  }
+                  if (usedLegBands.has(selectedWalaLegBand)) {
+                    setError(`Leg band ${selectedWalaLegBand} (Wala) has already fought`);
+                    return;
+                  }
+                  
+                  // Build entry results for cancellation (both entries get 'cancelled' result)
+                  const entryResults = [];
+                  
+                  if (meronEntry._id !== 'unknown') {
+                    entryResults.push({
+                      entryId: meronEntry._id,
+                      entryName: meronEntry.entryName,
+                      gameType: meronEntry.gameType,
+                      legResults: [
+                        { legNumber: fightNumber + 1, result: 'cancelled' }
+                      ]
+                    });
+                  }
+                  
+                  if (walaEntry._id !== 'unknown') {
+                    entryResults.push({
+                      entryId: walaEntry._id,
+                      entryName: walaEntry.entryName,
+                      gameType: walaEntry.gameType,
+                      legResults: [
+                        { legNumber: fightNumber + 1, result: 'cancelled' }
+                      ]
+                    });
+                  }
+                  
+                  // Add cancelled fights to local fights array (but don't mark leg bands as used)
+                  const meronFight = {
+                    id: fightNumber + 1,
+                    entryName: meronEntry.entryName,
+                    legBand: selectedMeronLegBand || 'unknown',
+                    legBandFought: selectedMeronLegBand || 'unknown',
+                    result: 'cancelled'  // Special cancelled result
+                  };
+                  const walaFight = {
+                    id: fightNumber + 1,
+                    entryName: walaEntry.entryName,
+                    legBand: selectedWalaLegBand || 'unknown',
+                    legBandFought: selectedWalaLegBand || 'unknown',
+                    result: 'cancelled'  // Special cancelled result
+                  };
+                  
+                  const newFights = [...fights, meronFight, walaFight];
+                  setFights(newFights);
+                  
+                  // Record results to backend (only if there are known entries)
+                  let recordSuccess = true;
+                  if (entryResults.length > 0) {
+                    recordSuccess = await recordEntryResults(entryResults);
+                  }
+                  
+                  if (!recordSuccess) {
+                    setError('Failed to record cancellation. Please try again.');
+                    setTimeout(() => setError(''), 3000);
+                    return;
+                  }
+                  
+                  setFightNumber(fightNumber + 1);
+                  setSelectedMeronEntry('');
+                  setSelectedMeronLegBand('');
+                  setMeronLegBandSearch('');
+                  setSelectedWalaEntry('');
+                  setSelectedWalaLegBand('');
+                  setWalaLegBandSearch('');
+                  setSuccess('Fight cancelled! Entries can be reused.');
+                  setTimeout(() => setSuccess(''), 3000);
+                  
+                  // Reload game data to sync
+                  await loadGameData();
+                }
+              }}
+              disabled={!selectedMeronEntry || !selectedWalaEntry || (selectedMeronLegBand && usedLegBands.has(selectedMeronLegBand)) || (selectedWalaLegBand && usedLegBands.has(selectedWalaLegBand))}
+              className={`w-full py-3 font-bold rounded-lg text-lg transition mt-2 ${
+                selectedMeronEntry && selectedWalaEntry && (!selectedMeronLegBand || !usedLegBands.has(selectedMeronLegBand)) && (!selectedWalaLegBand || !usedLegBands.has(selectedWalaLegBand))
+                  ? 'bg-red-600 hover:bg-red-700 text-white cursor-pointer'
+                  : 'bg-red-900 text-gray-400 cursor-not-allowed opacity-50'
+              }`}
+            >
+              CANCEL FIGHT
             </button>
           </div>
 
