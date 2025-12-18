@@ -263,7 +263,7 @@ router.get('/registrations-stats', async (req, res) => {
           stats.by2wins++;
           if (gameReg.isPaid) {
             stats.paid2wins++;
-            stats.totalRevenue += gameReg.registrationFee;
+            stats.totalRevenue += gameReg.registrationFee || 500;
           } else {
             stats.unpaid2wins++;
           }
@@ -271,7 +271,7 @@ router.get('/registrations-stats', async (req, res) => {
           stats.by3wins++;
           if (gameReg.isPaid) {
             stats.paid3wins++;
-            stats.totalRevenue += gameReg.registrationFee;
+            stats.totalRevenue += gameReg.registrationFee || 1000;
           } else {
             stats.unpaid3wins++;
           }

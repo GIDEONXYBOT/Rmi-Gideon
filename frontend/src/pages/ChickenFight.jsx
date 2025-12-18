@@ -68,6 +68,19 @@ export default function ChickenFight() {
     loadHistoryDates();
   }, []);
 
+  // Load global2WinsFee from localStorage on mount
+  useEffect(() => {
+    const savedFee = localStorage.getItem('chicken-fight-global-2wins-fee');
+    if (savedFee) {
+      setGlobal2WinsFee(parseInt(savedFee, 10));
+    }
+  }, []);
+
+  // Save global2WinsFee to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem('chicken-fight-global-2wins-fee', global2WinsFee.toString());
+  }, [global2WinsFee]);
+
   // Load available history dates
   const loadHistoryDates = () => {
     const dates = [];
