@@ -48,6 +48,7 @@ export default function SidebarLayout({ role, children }) {
 
   const [payrollTotal, setPayrollTotal] = useState(0);
   const [availableBalance, setAvailableBalance] = useState(0); // sum of unwithdrawn payrolls
+  const [isMobile, setIsMobile] = useState(false);
   const [payrollLoading, setPayrollLoading] = useState(false);
   // Removed collapsible sub-menus for teller sections; keep simple flat nav
   const [pendingCount, setPendingCount] = useState(0);
@@ -144,6 +145,18 @@ export default function SidebarLayout({ role, children }) {
       }
     };
   }, [user?._id]);
+
+  // Screen size detection for sidebar rendering
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+    
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
 
   // Profile picture upload handler
   const handleAvatarClick = (e) => {
@@ -441,13 +454,12 @@ export default function SidebarLayout({ role, children }) {
       )}
 
       {/* Mobile Sidebar */}
-      <aside
-        ref={sidebarRef}
-        className={`fixed md:hidden sidebar-mobile z-40 h-screen w-64 
-        bg-white dark:bg-gray-900 border-r dark:border-gray-700 flex flex-col shadow-lg overflow-y-auto ${
-          showSidebar ? '' : 'hidden'
-        }`}
-      >
+      {showSidebar && (
+        <aside
+          ref={sidebarRef}
+          className="fixed md:hidden sidebar-mobile z-40 h-screen w-64 
+          bg-white dark:bg-gray-900 border-r dark:border-gray-700 flex flex-col shadow-lg overflow-y-auto"
+        >
         <div className="px-4 pt-4 pb-3 border-b dark:border-gray-700 flex-shrink-0">
           <div 
             className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition"
@@ -609,12 +621,16 @@ export default function SidebarLayout({ role, children }) {
           </button>
         </div>
       </aside>
-      <aside
-        ref={sidebarRef}
-        className={`hidden md:flex fixed md:sticky md:top-0 sidebar-fixed z-40 h-screen flex-col shadow-lg md:shadow-none overflow-y-auto bg-white dark:bg-gray-900 border-r dark:border-gray-700 transition-all duration-300 ${
-          sidebarExpanded ? "w-64" : "w-20"
-        }`}
-      >
+      )}
+
+      {/* Desktop Sidebar */}
+      {!isMobile && (
+        <aside
+          ref={sidebarRef}
+          className={`hidden md:flex md:fixed md:sticky md:top-0 sidebar-fixed z-40 h-screen flex-col shadow-lg md:shadow-none overflow-y-auto bg-white dark:bg-gray-900 border-r dark:border-gray-700 transition-all duration-300 ${
+            sidebarExpanded ? "w-64" : "w-20"
+          }`}
+        >
         <div className="px-4 pt-4 pb-3 border-b dark:border-gray-700 flex-shrink-0">
           {/* Collapse/Expand Button */}
           <div className="flex justify-end mb-2">
@@ -801,6 +817,7 @@ export default function SidebarLayout({ role, children }) {
           </button>
         </div>
       </aside>
+      )}
 
       {/* ✅ Floating arrow for mobile */}
       {showArrow && (

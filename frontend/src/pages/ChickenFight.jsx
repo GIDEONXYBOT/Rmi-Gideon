@@ -112,11 +112,15 @@ export default function ChickenFight() {
   };
 
   // Get leg bands for selected Meron entry
-  const meronEntry = entries.find(e => e._id === selectedMeronEntry);
+  const meronEntry = selectedMeronEntry === 'unknown' 
+    ? { _id: 'unknown', entryName: 'Unknown Entry', gameType: '2wins', legBandNumbers: [] }
+    : entries.find(e => e._id === selectedMeronEntry);
   const meronLegBands = meronEntry?.legBandNumbers || [];
 
   // Get leg bands for selected Wala entry
-  const walaEntry = entries.find(e => e._id === selectedWalaEntry);
+  const walaEntry = selectedWalaEntry === 'unknown'
+    ? { _id: 'unknown', entryName: 'Unknown Entry', gameType: '2wins', legBandNumbers: [] }
+    : entries.find(e => e._id === selectedWalaEntry);
   const walaLegBands = walaEntry?.legBandNumbers || [];
 
   // Get used fight numbers (leg numbers already used)
@@ -154,20 +158,9 @@ export default function ChickenFight() {
     
     // Special case: "000" for unknown entries
     if (trimmedValue === '000') {
-      // Find entries without leg bands (unknown entries)
-      const unknownEntries = availableMeronEntries.filter(entry => 
-        !entry.legBandNumbers || entry.legBandNumbers.length === 0
-      );
-      
-      if (unknownEntries.length > 0) {
-        // Auto-select the first unknown entry
-        setSelectedMeronEntry(unknownEntries[0]._id);
-        setSelectedMeronLegBand('unknown');
-      } else {
-        // No unknown entries available
-        setSelectedMeronEntry('');
-        setSelectedMeronLegBand('');
-      }
+      // Allow unknown entry selection
+      setSelectedMeronEntry('unknown');
+      setSelectedMeronLegBand('unknown');
       return;
     }
     
@@ -198,20 +191,9 @@ export default function ChickenFight() {
     
     // Special case: "000" for unknown entries
     if (trimmedValue === '000') {
-      // Find entries without leg bands (unknown entries)
-      const unknownEntries = availableWalaEntries.filter(entry => 
-        !entry.legBandNumbers || entry.legBandNumbers.length === 0
-      );
-      
-      if (unknownEntries.length > 0) {
-        // Auto-select the first unknown entry
-        setSelectedWalaEntry(unknownEntries[0]._id);
-        setSelectedWalaLegBand('unknown');
-      } else {
-        // No unknown entries available
-        setSelectedWalaEntry('');
-        setSelectedWalaLegBand('');
-      }
+      // Allow unknown entry selection
+      setSelectedWalaEntry('unknown');
+      setSelectedWalaLegBand('unknown');
       return;
     }
     
@@ -265,32 +247,41 @@ export default function ChickenFight() {
     };
     
     // Build entry results for backend
-    const entryResults = [
-      {
+    // Build entry results for backend (only for real entries, not unknown)
+    const entryResults = [];
+    
+    if (meronEntry._id !== 'unknown') {
+      entryResults.push({
         entryId: meronEntry._id,
         entryName: meronEntry.entryName,
         gameType: meronEntry.gameType,
         legResults: [
           { legNumber: fightNumber + 1, result: 'win' }
         ]
-      },
-      {
+      });
+    }
+    
+    if (walaEntry._id !== 'unknown') {
+      entryResults.push({
         entryId: walaEntry._id,
         entryName: walaEntry.entryName,
         gameType: walaEntry.gameType,
         legResults: [
           { legNumber: fightNumber + 1, result: 'loss' }
         ]
-      }
-    ];
+      });
+    }
     
     // Update local state
     const newFights = [...fights, meronFight, walaFight];
     setFights(newFights);
     setFightNumber(fightNumber + 1);
     
-    // Record results to backend
-    const recordSuccess = await recordEntryResults(entryResults);
+    // Record results to backend (only if there are known entries)
+    let recordSuccess = true;
+    if (entryResults.length > 0) {
+      recordSuccess = await recordEntryResults(entryResults);
+    }
     
     if (!recordSuccess) {
       setError('Failed to record results to server. Please try again.');
@@ -346,33 +337,41 @@ export default function ChickenFight() {
       result: 1  // 1 for win
     };
     
-    // Build entry results for backend
-    const entryResults = [
-      {
+    // Build entry results for backend (only for real entries, not unknown)
+    const entryResults = [];
+    
+    if (meronEntry._id !== 'unknown') {
+      entryResults.push({
         entryId: meronEntry._id,
         entryName: meronEntry.entryName,
         gameType: meronEntry.gameType,
         legResults: [
           { legNumber: fightNumber + 1, result: 'loss' }
         ]
-      },
-      {
+      });
+    }
+    
+    if (walaEntry._id !== 'unknown') {
+      entryResults.push({
         entryId: walaEntry._id,
         entryName: walaEntry.entryName,
         gameType: walaEntry.gameType,
         legResults: [
           { legNumber: fightNumber + 1, result: 'win' }
         ]
-      }
-    ];
+      });
+    }
     
     // Update local state
     const newFights = [...fights, meronFight, walaFight];
     setFights(newFights);
     setFightNumber(fightNumber + 1);
     
-    // Record results to backend
-    const recordSuccess = await recordEntryResults(entryResults);
+    // Record results to backend (only if there are known entries)
+    let recordSuccess = true;
+    if (entryResults.length > 0) {
+      recordSuccess = await recordEntryResults(entryResults);
+    }
     
     if (!recordSuccess) {
       setError('Failed to record results to server. Please try again.');
@@ -1182,9 +1181,9 @@ export default function ChickenFight() {
             {/* Win Button */}
             <button
               onClick={handleMeronWin}
-              disabled={!selectedMeronEntry || !selectedWalaEntry || (!selectedMeronLegBand && !selectedWalaLegBand) || (selectedMeronLegBand && usedLegBands.has(selectedMeronLegBand)) || (selectedWalaLegBand && usedLegBands.has(selectedWalaLegBand))}
+              disabled={!selectedMeronEntry || !selectedWalaEntry || (selectedMeronLegBand && usedLegBands.has(selectedMeronLegBand)) || (selectedWalaLegBand && usedLegBands.has(selectedWalaLegBand))}
               className={`w-full py-3 font-bold rounded-lg text-lg transition ${
-                selectedMeronEntry && selectedWalaEntry && (selectedMeronLegBand || selectedWalaLegBand) && (!selectedMeronLegBand || !usedLegBands.has(selectedMeronLegBand)) && (!selectedWalaLegBand || !usedLegBands.has(selectedWalaLegBand))
+                selectedMeronEntry && selectedWalaEntry && (!selectedMeronLegBand || !usedLegBands.has(selectedMeronLegBand)) && (!selectedWalaLegBand || !usedLegBands.has(selectedWalaLegBand))
                   ? 'bg-red-500 hover:bg-red-600 text-white cursor-pointer'
                   : 'bg-red-900 text-gray-400 cursor-not-allowed opacity-50'
               }`}
@@ -1211,24 +1210,30 @@ export default function ChickenFight() {
                   }
                   
                   // Build entry results for draw (both entries get 0.5)
-                  const entryResults = [
-                    {
+                  // Skip recording for unknown entries
+                  const entryResults = [];
+                  
+                  if (meronEntry._id !== 'unknown') {
+                    entryResults.push({
                       entryId: meronEntry._id,
                       entryName: meronEntry.entryName,
                       gameType: meronEntry.gameType,
                       legResults: [
                         { legNumber: fightNumber + 1, result: 'draw' }
                       ]
-                    },
-                    {
+                    });
+                  }
+                  
+                  if (walaEntry._id !== 'unknown') {
+                    entryResults.push({
                       entryId: walaEntry._id,
                       entryName: walaEntry.entryName,
                       gameType: walaEntry.gameType,
                       legResults: [
                         { legNumber: fightNumber + 1, result: 'draw' }
                       ]
-                    }
-                  ];
+                    });
+                  }
                   
                   // Add draws to local fights array
                   const meronFight = {
@@ -1249,7 +1254,11 @@ export default function ChickenFight() {
                   const newFights = [...fights, meronFight, walaFight];
                   setFights(newFights);
                   
-                  const recordSuccess = await recordEntryResults(entryResults);
+                  // Only record if there are known entries
+                  let recordSuccess = true;
+                  if (entryResults.length > 0) {
+                    recordSuccess = await recordEntryResults(entryResults);
+                  }
                   
                   if (!recordSuccess) {
                     setError('Failed to record draw. Please try again.');
@@ -1271,9 +1280,9 @@ export default function ChickenFight() {
                   await loadGameData();
                 }
               }}
-              disabled={!selectedMeronEntry || !selectedWalaEntry || (!selectedMeronLegBand && !selectedWalaLegBand) || (selectedMeronLegBand && usedLegBands.has(selectedMeronLegBand)) || (selectedWalaLegBand && usedLegBands.has(selectedWalaLegBand))}
+              disabled={!selectedMeronEntry || !selectedWalaEntry || (selectedMeronLegBand && usedLegBands.has(selectedMeronLegBand)) || (selectedWalaLegBand && usedLegBands.has(selectedWalaLegBand))}
               className={`w-full py-3 font-bold rounded-lg text-lg transition ${
-                selectedMeronEntry && selectedWalaEntry && (selectedMeronLegBand || selectedWalaLegBand) && (!selectedMeronLegBand || !usedLegBands.has(selectedMeronLegBand)) && (!selectedWalaLegBand || !usedLegBands.has(selectedWalaLegBand))
+                selectedMeronEntry && selectedWalaEntry && (!selectedMeronLegBand || !usedLegBands.has(selectedMeronLegBand)) && (!selectedWalaLegBand || !usedLegBands.has(selectedWalaLegBand))
                   ? 'bg-green-500 hover:bg-green-600 text-white cursor-pointer'
                   : 'bg-green-900 text-gray-400 cursor-not-allowed opacity-50'
               }`}
@@ -1370,9 +1379,9 @@ export default function ChickenFight() {
             {/* Win Button */}
             <button
               onClick={handleWalaWin}
-              disabled={!selectedMeronEntry || !selectedWalaEntry || (!selectedMeronLegBand && !selectedWalaLegBand) || (selectedMeronLegBand && usedLegBands.has(selectedMeronLegBand)) || (selectedWalaLegBand && usedLegBands.has(selectedWalaLegBand))}
+              disabled={!selectedMeronEntry || !selectedWalaEntry || (selectedMeronLegBand && usedLegBands.has(selectedMeronLegBand)) || (selectedWalaLegBand && usedLegBands.has(selectedWalaLegBand))}
               className={`w-full py-3 font-bold rounded-lg text-lg transition ${
-                selectedMeronEntry && selectedWalaEntry && (selectedMeronLegBand || selectedWalaLegBand) && (!selectedMeronLegBand || !usedLegBands.has(selectedMeronLegBand)) && (!selectedWalaLegBand || !usedLegBands.has(selectedWalaLegBand))
+                selectedMeronEntry && selectedWalaEntry && (!selectedMeronLegBand || !usedLegBands.has(selectedMeronLegBand)) && (!selectedWalaLegBand || !usedLegBands.has(selectedWalaLegBand))
                   ? 'bg-blue-500 hover:bg-blue-600 text-white cursor-pointer'
                   : 'bg-blue-900 text-gray-400 cursor-not-allowed opacity-50'
               }`}
