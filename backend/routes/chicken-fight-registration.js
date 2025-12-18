@@ -52,10 +52,10 @@ router.get('/registrations', async (req, res) => {
 // Register an entry (create registration record)
 router.post('/registrations', async (req, res) => {
   try {
-    const { entryId, entryName, gameTypes, gameDate } = req.body;
+    const { entryId, entryName, gameTypes, registrations, gameDate } = req.body;
     const username = req.user.username;
 
-    if (!entryId || !entryName || !gameTypes || !Array.isArray(gameTypes)) {
+    if (!entryId || !entryName || !gameTypes || !Array.isArray(gameTypes) || !registrations || !Array.isArray(registrations)) {
       return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
 
@@ -86,20 +86,18 @@ router.post('/registrations', async (req, res) => {
       });
     }
 
-    // Create registration record
-    const registrations = gameTypes.map(gameType => ({
-      gameType,
-      registrationFee: gameType === '2wins' ? 500 : 1000, // Example fees
-      isPaid: false,
-      paidDate: null,
-      paidBy: null
-    }));
-
+    // Create registration record using the registrations array from frontend
     const registration = new ChickenFightRegistration({
       entryId,
       entryName,
       gameDate: registerDate,
-      registrations,
+      registrations: registrations.map(reg => ({
+        gameType: reg.gameType,
+        registrationFee: reg.registrationFee,
+        isPaid: false,
+        paidDate: null,
+        paidBy: null
+      })),
       createdBy: username
     });
 
