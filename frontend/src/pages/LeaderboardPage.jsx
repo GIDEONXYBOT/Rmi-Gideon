@@ -186,7 +186,7 @@ const LeaderboardPage = () => {
 
         {/* Results List */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          {draws.slice(0, 20).reverse().map((draw, index) => (
+          {draws.slice(0, 20).map((draw, index) => (
             <div key={draw.id} className="bg-gray-800 rounded-lg p-3 border border-gray-700">
               <div className="flex justify-between items-center mb-2">
                 <div className="text-sm font-medium text-gray-300">
@@ -207,8 +207,9 @@ const LeaderboardPage = () => {
                   minute: '2-digit'
                 })}
               </div>
-              <div className="text-xs text-gray-400">
-                Total: ₱{draw.details ? (draw.details.redTotalBetAmount + draw.details.blueTotalBetAmount + (draw.details.drawTotalBetAmount || 0)).toLocaleString() : '0'}
+              <div className="flex justify-between text-xs text-gray-400">
+                <span>Total: ₱{draw.details ? (draw.details.redTotalBetAmount + draw.details.blueTotalBetAmount + (draw.details.drawTotalBetAmount || 0)).toLocaleString() : '0'}</span>
+                <span>Comm: ₱{draw.details ? Math.round((draw.details.redTotalBetAmount + draw.details.blueTotalBetAmount + (draw.details.drawTotalBetAmount || 0)) * 0.05).toLocaleString() : '0'}</span>
               </div>
             </div>
           ))}
@@ -319,67 +320,9 @@ const LeaderboardPage = () => {
           </div>
         </div>
 
-        {/* Fight Results History - Below Current Fight */}
-        <div className="flex-1 p-8">
-          <div className="max-w-6xl mx-auto">
-            <div className="bg-gray-900 rounded-lg border border-gray-700 overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-700 bg-gray-800">
-                <h3 className="text-lg font-semibold text-white">FIGHT RESULTS HISTORY</h3>
-              </div>
-              <div className="p-6">
-                {/* Results Grid */}
-                <div className="grid grid-cols-6 gap-3 mb-6">
-                  {draws.slice(0, 18).reverse().map((draw, index) => (
-                    <div key={draw.id} className="bg-gray-800 rounded border border-gray-600 p-3 text-center">
-                      <div className="text-xs text-gray-400 mb-1">
-                        #{draw.batch?.fightSequence || draw.id}
-                      </div>
-                      <div className={`text-lg font-bold ${
-                        draw.result1 === 'meron' ? 'text-red-400' :
-                        draw.result1 === 'wala' ? 'text-blue-400' :
-                        draw.result1 === 'draw' ? 'text-green-400' :
-                        'text-gray-400'
-                      }`}>
-                        {draw.result1 ? (draw.result1 === 'red' ? 'MERON' : draw.result1 === 'blue' ? 'WALA' : draw.result1.toUpperCase()) : '?'}
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        {draw.details?.redTotalBetAmount && draw.details?.blueTotalBetAmount ?
-                          `₱${(draw.details.redTotalBetAmount + draw.details.blueTotalBetAmount + (draw.details.drawTotalBetAmount || 0)).toLocaleString()}` :
-                          '₱0'
-                        }
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Winner Sequence */}
-                <div className="text-center mb-4">
-                  <div className="text-sm text-gray-400 mb-2">WINNER SEQUENCE</div>
-                  <div className="text-lg font-mono text-white bg-gray-800 p-2 rounded">
-                    {draws.slice(0, 18).reverse().map(draw => {
-                      if (!draw.result1) return '?';
-                      if (draw.result1 === 'red') return 'M';
-                      if (draw.result1 === 'blue') return 'W';
-                      if (draw.result1 === 'draw') return 'D';
-                      return draw.result1.charAt(0).toUpperCase();
-                    }).join(' ')}
-                  </div>
-                </div>
-
-                {/* Fight Numbers */}
-                <div className="text-center">
-                  <div className="text-xs text-gray-500 mb-2">FIGHT NUMBERS</div>
-                  <div className="text-sm font-mono text-gray-400">
-                    {draws.slice(0, 18).reverse().map((draw, index) => (
-                      <span key={draw.id} className="mx-1">
-                        {18 - index}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+        {/* Footer Message */}
+        <div className="text-center py-4 text-sm text-gray-500 border-t border-gray-800">
+          Payout less than 1.40 shall be canceled • Live updates every few seconds
         </div>
       </div>
 
