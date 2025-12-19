@@ -167,6 +167,7 @@ export default function LoginPage() {
               inputMode="text"
             />
           </div>
+            </FadeInUp>
 
           <FadeInUp delay={0.3}>
             <HoverScale>
