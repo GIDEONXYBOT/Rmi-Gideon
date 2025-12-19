@@ -182,8 +182,8 @@ const LeaderboardPage = () => {
           <div className="text-xs text-gray-400 mt-1 flex justify-between items-center">
             <span>{isConnected ? 'Live Updates' : 'Online'}</span>
             <span className="text-green-400 font-medium">
-              Total Comm: ₱{draws.slice(0, 20).reduce((total, draw) => {
-                if (draw.details) {
+              Total Comm: ₱{draws.reduce((total, draw) => {
+                if (draw.details && draw.result1) {
                   const fightTotal = draw.details.redTotalBetAmount + draw.details.blueTotalBetAmount + (draw.details.drawTotalBetAmount || 0);
                   return total + Math.round(fightTotal * 0.055);
                 }
