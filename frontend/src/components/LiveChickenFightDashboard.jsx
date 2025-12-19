@@ -4,9 +4,11 @@ import { SettingsContext } from '../context/SettingsContext';
 import { getApiUrl } from '../utils/apiConfig';
 import { getGlobalSocket } from '../utils/globalSocket';
 import { FadeInUp, ScaleIn, StaggerContainer, StaggerItem, Pulse } from './UIEffects';
+import { useNavigate } from 'react-router-dom';
 
 export default function LiveChickenFightDashboard() {
   const { isDarkMode } = useContext(SettingsContext);
+  const navigate = useNavigate();
   const [liveData, setLiveData] = useState({
     currentFight: null,
     fights: [],
@@ -16,6 +18,32 @@ export default function LiveChickenFightDashboard() {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // Check authentication on component mount
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      console.log('No token found, redirecting to login');
+      navigate('/login');
+      return;
+    }
+
+    // Optional: Verify token validity
+    const verifyToken = async () => {
+      try {
+        await axios.get(`${getApiUrl()}/api/auth/verify`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } catch (err) {
+        console.log('Token invalid, redirecting to login');
+        localStorage.removeItem('token');
+        navigate('/login');
+        return;
+      }
+    };
+
+    verifyToken();
+  }, [navigate]);
 
   // Load initial data
   const loadLiveData = async () => {
@@ -38,6 +66,15 @@ export default function LiveChickenFightDashboard() {
       });
     } catch (err) {
       console.error('Failed to load live data:', err);
+      
+      // Check if it's an authentication error
+      if (err.response && err.response.status === 401) {
+        console.log('Authentication failed, redirecting to login');
+        localStorage.removeItem('token');
+        navigate('/login');
+        return;
+      }
+      
       setError('Failed to load live data');
     } finally {
       setLoading(false);
