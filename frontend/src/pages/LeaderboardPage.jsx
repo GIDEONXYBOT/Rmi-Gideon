@@ -184,8 +184,9 @@ const LeaderboardPage = () => {
             <span className="text-green-400 font-medium">
               Total Comm: ₱{draws.reduce((total, draw) => {
                 if (draw.details && draw.result1 && draw.result1 !== 'draw') {
-                  const fightTotal = draw.details.redTotalBetAmount + draw.details.blueTotalBetAmount + (draw.details.drawTotalBetAmount || 0);
-                  return total + Math.round(fightTotal * 0.055);
+                  const winningBetAmount = draw.result1 === 'meron' ? draw.details.redTotalBetAmount :
+                                          draw.result1 === 'wala' ? draw.details.blueTotalBetAmount : 0;
+                  return total + Math.round(winningBetAmount * 0.055);
                 }
                 return total;
               }, 0).toLocaleString()}
@@ -219,7 +220,11 @@ const LeaderboardPage = () => {
               <div className="flex justify-between text-xs text-gray-400">
                 <span>Total: ₱{draw.details ? (draw.details.redTotalBetAmount + draw.details.blueTotalBetAmount + (draw.details.drawTotalBetAmount || 0)).toLocaleString() : '0'}</span>
                 {draw.result1 && draw.result1 !== 'draw' ? (
-                  <span>Comm: ₱{draw.details ? Math.round((draw.details.redTotalBetAmount + draw.details.blueTotalBetAmount + (draw.details.drawTotalBetAmount || 0)) * 0.055).toLocaleString() : '0'}</span>
+                  <span>Comm: ₱{draw.details ? Math.round((
+                    draw.result1 === 'meron' ? draw.details.redTotalBetAmount :
+                    draw.result1 === 'wala' ? draw.details.blueTotalBetAmount :
+                    0
+                  ) * 0.055).toLocaleString() : '0'}</span>
                 ) : null}
               </div>
             </div>
