@@ -205,6 +205,7 @@ import mediaRoutes from "./routes/media.js"; // /api/media (feed uploads)
 import chickenFightRoutes from "./routes/chicken-fight.js"; // 🐔 /api/chicken-fight
 import chickenFightRegistrationRoutes from "./routes/chicken-fight-registration.js"; // 🐔 /api/chicken-fight-registration
 import { initChickenFightSocket } from "./socket/chickenFightSocket.js"; // 🐔 Socket.IO handlers
+import { initLeaderboardSocket } from "./socket/leaderboardSocket.js"; // 📊 Leaderboard Socket.IO handlers
 
 // Temporarily disable all routes to test basic server startup
 // app.use("/api/payroll", payrollRoutes);
@@ -351,6 +352,7 @@ global.io = io;
 
 // ✅ Initialize Socket.IO handlers
 initChickenFightSocket(io);
+initLeaderboardSocket(io);
 
 // ======================================================
 // ✅ SOCKET EVENT HANDLERS (DISABLED FOR DEBUGGING)

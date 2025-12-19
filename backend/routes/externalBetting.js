@@ -3,6 +3,7 @@ import express from 'express';
 import axios from 'axios';
 // import * as cheerio from 'cheerio';
 import { requireAuth, requireRole } from '../middleware/auth.js';
+import { emitLeaderboardUpdate } from '../socket/leaderboardSocket.js';
 
 const router = express.Router();
 
@@ -427,6 +428,16 @@ router.get('/leaderboard', requireAuth, requireRole(['admin', 'super_admin']), a
     }
 
     console.log(`✅ Successfully parsed ${draws.length} draws from leaderboard`);
+
+    // Emit leaderboard update to connected clients
+    const io = req.app.io;
+    if (io) {
+      emitLeaderboardUpdate(io, {
+        draws: draws,
+        currentDraw: draws[0] || null, // Most recent draw
+        totalDraws: draws.length
+      });
+    }
 
     // Return the leaderboard data
     res.json({

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { leaderboardService } from '../services/leaderboardService';
 import { useToast } from '../context/ToastContext';
+import { getSocket } from '../socket';
 
 const LeaderboardPage = () => {
   const [draws, setDraws] = useState([]);
@@ -8,7 +9,337 @@ const LeaderboardPage = () => {
   const [error, setError] = useState(null);
   const [stats, setStats] = useState(null);
   const [currentDraw, setCurrentDraw] = useState(null);
+  const [socket, setSocket] = useState(null);
+  const [isConnected, setIsConnected] = useState(false);
   const { showToast } = useToast();
+
+  const fetchData = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const [drawsData, statsData, currentDrawData] = await Promise.all([
+        leaderboardService.fetchLeaderboardData(),
+        leaderboardService.getBettingStats(),
+        leaderboardService.getCurrentDraw()
+      ]);
+
+      setDraws(drawsData);
+      setStats(statsData);
+      setCurrentDraw(currentDrawData);
+
+      showToast({
+        type: 'success',
+        message: `Loaded ${drawsData.length} draws from external leaderboard`
+      });
+    } catch (err) {
+      console.error('Error fetching leaderboard data:', err);
+      setError(err.message);
+      showToast({
+        type: 'error',
+        message: 'Failed to load leaderboard data'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+
+    // Initialize socket connection
+    const socketInstance = getSocket();
+    setSocket(socketInstance);
+
+    if (socketInstance) {
+      socketInstance.on('connect', () => {
+        console.log('🔌 Leaderboard socket connected');
+        setIsConnected(true);
+      });
+
+      socketInstance.on('disconnect', () => {
+        console.log('🔌 Leaderboard socket disconnected');
+        setIsConnected(false);
+      });
+
+      // Listen for leaderboard updates
+      socketInstance.on('leaderboard-update', (data) => {
+        console.log('📊 Leaderboard update received:', data);
+        if (data.draws) setDraws(data.draws);
+        if (data.currentDraw) setCurrentDraw(data.currentDraw);
+        if (data.stats) setStats(data.stats);
+      });
+
+      // Listen for betting updates
+      socketInstance.on('betting-update', (data) => {
+        console.log('🎯 Betting update received:', data);
+        if (data.currentDraw) {
+          setCurrentDraw(data.currentDraw);
+        }
+      });
+
+      // Auto-refresh every 30 seconds as fallback
+      const interval = setInterval(() => {
+        if (!isConnected) {
+          fetchData();
+        }
+      }, 30000);
+
+      return () => {
+        socketInstance.off('connect');
+        socketInstance.off('disconnect');
+        socketInstance.off('leaderboard-update');
+        socketInstance.off('betting-update');
+        clearInterval(interval);
+      };
+    }
+  }, [isConnected]);
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-PH', {
+      style: 'currency',
+      currency: 'PHP'
+    }).format(amount);
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleString('en-PH', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const getCurrentTime = () => {
+    return new Date().toLocaleString('en-PH', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    });
+  };
+
+  const getCurrentDate = () => {
+    return new Date().toLocaleString('en-PH', {
+      weekday: 'short',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    }).toUpperCase();
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black text-white">
+        <div className="flex items-center justify-center h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+          <span className="ml-3 text-lg">Loading leaderboard data...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-black text-white p-6">
+        <div className="bg-red-900 border border-red-700 rounded-lg p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-red-200">Error Loading Data</h3>
+              <div className="mt-2 text-sm text-red-300">{error}</div>
+              <div className="mt-4">
+                <button
+                  onClick={fetchData}
+                  className="bg-red-800 hover:bg-red-700 text-red-200 px-3 py-2 rounded-md text-sm font-medium"
+                >
+                  Try Again
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-black text-white font-sans flex">
+      {/* Sidebar - Fight Results */}
+      <div className="w-80 bg-gray-900 border-r border-gray-700 flex flex-col">
+        {/* Header */}
+        <div className="bg-gray-800 border-b border-gray-700 px-4 py-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-white">FIGHT RESULTS</h2>
+            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+          </div>
+          <div className="text-xs text-gray-400 mt-1">
+            {isConnected ? 'Live Updates' : 'Offline Mode'}
+          </div>
+        </div>
+
+        {/* Results List */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {draws.slice(0, 20).reverse().map((draw, index) => (
+            <div key={draw.id} className="bg-gray-800 rounded-lg p-3 border border-gray-700">
+              <div className="flex justify-between items-center mb-2">
+                <div className="text-sm font-medium text-gray-300">
+                  Fight #{draw.batch?.fightSequence || draw.id}
+                </div>
+                <div className={`text-sm font-bold ${
+                  draw.result1 === 'red' ? 'text-red-400' :
+                  draw.result1 === 'blue' ? 'text-blue-400' :
+                  draw.result1 === 'draw' ? 'text-yellow-400' :
+                  'text-gray-400'
+                }`}>
+                  {draw.result1 ? draw.result1.toUpperCase() : '?'}
+                </div>
+              </div>
+              <div className="text-xs text-gray-500 mb-1">
+                {new Date(draw.createdAt).toLocaleTimeString('en-PH', {
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
+              </div>
+              <div className="text-xs text-gray-400">
+                Total: ₱{draw.details ? (draw.details.redTotalBetAmount + draw.details.blueTotalBetAmount + (draw.details.drawTotalBetAmount || 0)).toLocaleString() : '0'}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 border-t border-gray-700">
+          <div className="text-xs text-gray-500 text-center">
+            Last updated: {getCurrentTime()}
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content - Current Fight */}
+      <div className="flex-1 flex flex-col">
+        {/* Header */}
+        <div className="bg-gray-900 border-b border-gray-700 px-6 py-4">
+          <div className="flex justify-between items-center max-w-6xl mx-auto">
+            <div className="flex items-center space-x-6">
+              <div className="text-xl font-bold text-white">
+                {getCurrentTime()}
+              </div>
+              <div className="text-sm text-gray-400">
+                {getCurrentDate()}
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-bold text-yellow-400">
+                RMI FRIDAY - 90 FIGHTS
+              </div>
+              <div className="text-xs text-gray-500">
+                DECEMBER 19, 2025 MINIMUM BET 100
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Fight Display */}
+        <div className="flex-1 flex items-center justify-center p-8">
+          <div className="max-w-4xl w-full">
+            {currentDraw ? (
+              <div className="bg-gray-900 rounded-lg p-8 border border-gray-700">
+                {/* Fight Header */}
+                <div className="text-center mb-8">
+                  <div className="text-6xl font-bold text-white mb-4">
+                    FIGHT {currentDraw.batch?.fightSequence || currentDraw.id}
+                  </div>
+                  <div className="text-2xl text-gray-300 mb-4">
+                    {currentDraw.status === 'completed' ? `RESULT: ${currentDraw.result1?.toUpperCase() || 'PENDING'}` : 'LIVE BETTING'}
+                  </div>
+                  <div className={`text-xl font-bold ${currentDraw.status === 'started' ? 'text-green-400' : 'text-gray-400'}`}>
+                    {currentDraw.status === 'started' ? 'BETTING IS OPEN' : 'BETTING CLOSED'}
+                  </div>
+                </div>
+
+                {/* Betting Options */}
+                <div className="grid grid-cols-3 gap-8 mb-8">
+                  {/* Meron (Red) */}
+                  <div className="bg-red-600 hover:bg-red-500 rounded-lg p-6 text-center cursor-pointer transition-all duration-300 border-4 border-red-500 transform hover:scale-105">
+                    <div className="text-3xl font-bold text-white mb-4">MERON</div>
+                    <div className="text-2xl text-red-100 font-semibold mb-2">
+                      {currentDraw.details?.formattedRedOdds || '1.47'}
+                    </div>
+                    <div className="text-lg text-red-200">
+                      ₱{currentDraw.details?.redTotalBetAmount?.toLocaleString() || '0'}
+                    </div>
+                  </div>
+
+                  {/* Draw */}
+                  <div className="bg-yellow-600 hover:bg-yellow-500 rounded-lg p-6 text-center cursor-pointer transition-all duration-300 border-4 border-yellow-500 transform hover:scale-105">
+                    <div className="text-3xl font-bold text-white mb-4">DRAW</div>
+                    <div className="text-2xl text-yellow-100 font-semibold mb-2">
+                      {currentDraw.details?.formattedDrawOdds || '8.00'}
+                    </div>
+                    <div className="text-lg text-yellow-200">
+                      ₱{currentDraw.details?.drawTotalBetAmount?.toLocaleString() || '0'}
+                    </div>
+                  </div>
+
+                  {/* Wala (Blue) */}
+                  <div className="bg-blue-600 hover:bg-blue-500 rounded-lg p-6 text-center cursor-pointer transition-all duration-300 border-4 border-blue-500 transform hover:scale-105">
+                    <div className="text-3xl font-bold text-white mb-4">WALA</div>
+                    <div className="text-2xl text-blue-100 font-semibold mb-2">
+                      {currentDraw.details?.formattedBlueOdds || '2.63'}
+                    </div>
+                    <div className="text-lg text-blue-200">
+                      ₱{currentDraw.details?.blueTotalBetAmount?.toLocaleString() || '0'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Live Stats */}
+                <div className="text-center">
+                  <div className="text-sm text-gray-400 mb-2">TOTAL BETS</div>
+                  <div className="text-2xl font-bold text-white">
+                    ₱{currentDraw.details ? (currentDraw.details.redTotalBetAmount + currentDraw.details.blueTotalBetAmount + (currentDraw.details.drawTotalBetAmount || 0)).toLocaleString() : '0'}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center text-gray-400">
+                <div className="text-2xl mb-4">No Active Fight</div>
+                <div className="text-lg">Waiting for next fight to begin...</div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Footer Message */}
+        <div className="text-center py-4 text-sm text-gray-500 border-t border-gray-800">
+          Payout less than 1.40 shall be canceled • Live updates every few seconds
+        </div>
+      </div>
+
+      {/* Refresh Button */}
+      <div className="fixed bottom-6 right-6">
+        <button
+          onClick={fetchData}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 shadow-lg text-sm font-medium"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          <span>REFRESH</span>
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default LeaderboardPage;
 
   const fetchData = async () => {
     setLoading(true);
