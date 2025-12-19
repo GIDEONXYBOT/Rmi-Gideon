@@ -1,7 +1,7 @@
 // routes/externalBetting.js - Fetch betting data from GTArena
 import express from 'express';
 import axios from 'axios';
-import * as cheerio from 'cheerio';
+// import * as cheerio from 'cheerio';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -336,6 +336,12 @@ async function fetchBettingDataFromGTArena(username, password) {
 
     console.log(`✅ Successfully parsed ${bettingData.length} teller records from API`);
     return { staffReports: bettingData };
+  } catch (err) {
+    console.error('❌ Error in fetchBettingDataFromGTArena:', err.message);
+    throw err;
+  }
+}
+
 /**
  * GET /api/external-betting/leaderboard
  * Fetch leaderboard data from GTArena (admin/super_admin only)
