@@ -193,12 +193,12 @@ const LeaderboardPage = () => {
                   Fight #{draw.batch?.fightSequence || draw.id}
                 </div>
                 <div className={`text-sm font-bold ${
-                  draw.result1 === 'red' ? 'text-red-400' :
-                  draw.result1 === 'blue' ? 'text-blue-400' :
-                  draw.result1 === 'draw' ? 'text-yellow-400' :
+                  draw.result1 === 'meron' ? 'text-red-400' :
+                  draw.result1 === 'wala' ? 'text-blue-400' :
+                  draw.result1 === 'draw' ? 'text-green-400' :
                   'text-gray-400'
                 }`}>
-                  {draw.result1 ? draw.result1.toUpperCase() : '?'}
+                  {draw.result1 ? (draw.result1 === 'red' ? 'MERON' : draw.result1 === 'blue' ? 'WALA' : draw.result1.toUpperCase()) : '?'}
                 </div>
               </div>
               <div className="text-xs text-gray-500 mb-1">
@@ -257,7 +257,7 @@ const LeaderboardPage = () => {
                     FIGHT {currentDraw.batch?.fightSequence || currentDraw.id}
                   </div>
                   <div className="text-2xl text-gray-300 mb-4">
-                    {currentDraw.status === 'completed' ? `RESULT: ${currentDraw.result1?.toUpperCase() || 'PENDING'}` : 'LIVE BETTING'}
+                    {currentDraw.status === 'completed' ? `RESULT: ${(currentDraw.result1 === 'red' ? 'MERON' : currentDraw.result1 === 'blue' ? 'WALA' : currentDraw.result1?.toUpperCase()) || 'PENDING'}` : 'LIVE BETTING'}
                   </div>
                   <div className={`text-xl font-bold ${currentDraw.status === 'started' ? 'text-green-400' : 'text-gray-400'}`}>
                     {currentDraw.status === 'started' ? 'BETTING IS OPEN' : 'BETTING CLOSED'}
@@ -278,12 +278,12 @@ const LeaderboardPage = () => {
                   </div>
 
                   {/* Draw */}
-                  <div className="bg-yellow-600 hover:bg-yellow-500 rounded-lg p-6 text-center cursor-pointer transition-all duration-300 border-4 border-yellow-500 transform hover:scale-105">
+                  <div className="bg-green-600 hover:bg-green-500 rounded-lg p-6 text-center cursor-pointer transition-all duration-300 border-4 border-green-500 transform hover:scale-105">
                     <div className="text-3xl font-bold text-white mb-4">DRAW</div>
-                    <div className="text-2xl text-yellow-100 font-semibold mb-2">
+                    <div className="text-2xl text-green-100 font-semibold mb-2">
                       {currentDraw.details?.formattedDrawOdds || '8.00'}
                     </div>
-                    <div className="text-lg text-yellow-200">
+                    <div className="text-lg text-green-200">
                       ₱{currentDraw.details?.drawTotalBetAmount?.toLocaleString() || '0'}
                     </div>
                   </div>
@@ -335,12 +335,12 @@ const LeaderboardPage = () => {
                         #{draw.batch?.fightSequence || draw.id}
                       </div>
                       <div className={`text-lg font-bold ${
-                        draw.result1 === 'red' ? 'text-red-400' :
-                        draw.result1 === 'blue' ? 'text-blue-400' :
-                        draw.result1 === 'draw' ? 'text-yellow-400' :
+                        draw.result1 === 'meron' ? 'text-red-400' :
+                        draw.result1 === 'wala' ? 'text-blue-400' :
+                        draw.result1 === 'draw' ? 'text-green-400' :
                         'text-gray-400'
                       }`}>
-                        {draw.result1 ? draw.result1.toUpperCase() : '?'}
+                        {draw.result1 ? (draw.result1 === 'red' ? 'MERON' : draw.result1 === 'blue' ? 'WALA' : draw.result1.toUpperCase()) : '?'}
                       </div>
                       <div className="text-xs text-gray-500 mt-1">
                         {draw.details?.redTotalBetAmount && draw.details?.blueTotalBetAmount ?
@@ -356,7 +356,13 @@ const LeaderboardPage = () => {
                 <div className="text-center mb-4">
                   <div className="text-sm text-gray-400 mb-2">WINNER SEQUENCE</div>
                   <div className="text-lg font-mono text-white bg-gray-800 p-2 rounded">
-                    {draws.slice(0, 18).reverse().map(draw => draw.result1 ? draw.result1.charAt(0).toUpperCase() : '?').join(' ')}
+                    {draws.slice(0, 18).reverse().map(draw => {
+                      if (!draw.result1) return '?';
+                      if (draw.result1 === 'red') return 'M';
+                      if (draw.result1 === 'blue') return 'W';
+                      if (draw.result1 === 'draw') return 'D';
+                      return draw.result1.charAt(0).toUpperCase();
+                    }).join(' ')}
                   </div>
                 </div>
 
