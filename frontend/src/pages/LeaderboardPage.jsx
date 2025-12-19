@@ -195,11 +195,11 @@ const LeaderboardPage = () => {
 
         {/* Results List */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          {draws.slice(0, 20).map((draw, index) => (
+          {draws.filter(draw => draw.status === 'completed').slice(0, 20).map((draw, index) => (
             <div key={draw.id} className="bg-gray-800 rounded-lg p-3 border border-gray-700">
               <div className="flex justify-between items-center mb-2">
                 <div className="text-sm font-medium text-gray-300">
-                  Fight #{draw.batch?.fightSequence || draw.id}
+                  Fight #{index + 1}
                 </div>
                 <div className={`text-sm font-bold ${
                   draw.result1 === 'meron' ? 'text-red-400' :
@@ -207,7 +207,7 @@ const LeaderboardPage = () => {
                   draw.result1 === 'draw' ? 'text-green-400' :
                   'text-gray-400'
                 }`}>
-                  {draw.result1 ? (draw.result1 === 'red' ? 'MERON' : draw.result1 === 'blue' ? 'WALA' : draw.result1.toUpperCase()) : '?'}
+                  {draw.result1 ? (draw.result1 === 'red' ? 'MERON' : draw.result1 === 'blue' ? 'WALA' : draw.result1.toUpperCase()) : 'CANCEL'}
                 </div>
               </div>
               <div className="text-xs text-gray-500 mb-1">
@@ -218,7 +218,9 @@ const LeaderboardPage = () => {
               </div>
               <div className="flex justify-between text-xs text-gray-400">
                 <span>Total: ₱{draw.details ? (draw.details.redTotalBetAmount + draw.details.blueTotalBetAmount + (draw.details.drawTotalBetAmount || 0)).toLocaleString() : '0'}</span>
-                <span>Comm: ₱{draw.details ? Math.round((draw.details.redTotalBetAmount + draw.details.blueTotalBetAmount + (draw.details.drawTotalBetAmount || 0)) * 0.05).toLocaleString() : '0'}</span>
+                {draw.result1 ? (
+                  <span>Comm: ₱{draw.details ? Math.round((draw.details.redTotalBetAmount + draw.details.blueTotalBetAmount + (draw.details.drawTotalBetAmount || 0)) * 0.05).toLocaleString() : '0'}</span>
+                ) : null}
               </div>
             </div>
           ))}
@@ -264,7 +266,7 @@ const LeaderboardPage = () => {
                 {/* Fight Header */}
                 <div className="text-center mb-8">
                   <div className="text-6xl font-bold text-white mb-4">
-                    FIGHT {currentDraw.batch?.fightSequence || currentDraw.id}
+                    CURRENT FIGHT
                   </div>
                   <div className="text-2xl text-gray-300 mb-4">
                     {currentDraw.status === 'completed' ? `RESULT: ${(currentDraw.result1 === 'red' ? 'MERON' : currentDraw.result1 === 'blue' ? 'WALA' : currentDraw.result1?.toUpperCase()) || 'PENDING'}` : 'LIVE BETTING'}
