@@ -336,10 +336,109 @@ async function fetchBettingDataFromGTArena(username, password) {
 
     console.log(`✅ Successfully parsed ${bettingData.length} teller records from API`);
     return { staffReports: bettingData };
+/**
+ * GET /api/external-betting/leaderboard
+ * Fetch leaderboard data from GTArena (admin/super_admin only)
+ * Acts as a proxy to bypass CORS restrictions
+ */
+router.get('/leaderboard', requireAuth, requireRole(['admin', 'super_admin']), async (req, res) => {
+  try {
+    console.log('📡 Fetching leaderboard data from GTArena...');
+
+    const client = axios.create();
+
+    // Fetch leaderboard page directly (no authentication required for public leaderboard)
+    const leaderboardUrl = 'https://rmi-gideon.gtarena.ph/leaderboard';
+    console.log(`📥 Fetching leaderboard from: ${leaderboardUrl}`);
+
+    const response = await client.get(leaderboardUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Accept-Encoding': 'gzip, deflate',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1'
+      },
+      timeout: 10000,
+      validateStatus: () => true
+    });
+
+    console.log(`📄 Leaderboard response status: ${response.status}`);
+
+    if (response.status !== 200) {
+      throw new Error(`Failed to fetch leaderboard: HTTP ${response.status}`);
+    }
+
+    const html = response.data;
+    console.log(`📄 HTML length: ${html.length} characters`);
+
+    // Parse the HTML to extract JSON data from data-page attribute
+    const dataMatch = html.match(/data-page="([^"]*)"/);
+    if (!dataMatch) {
+      console.log('⚠️ No data-page attribute found in HTML');
+      // Try alternative patterns
+      const altMatch = html.match(/data-page='([^']*)'/);
+      if (!altMatch) {
+        throw new Error('Could not find leaderboard data in response');
+      }
+      console.log('✅ Found data-page with single quotes');
+    }
+
+    // Decode HTML entities before parsing JSON
+    const encodedData = dataMatch ? dataMatch[1] : altMatch[1];
+    console.log(`📄 Encoded data length: ${encodedData.length}`);
+
+    // Decode HTML entities (like &quot; -> ")
+    const decodedData = encodedData
+      .replace(/&quot;/g, '"')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&#39;/g, "'")
+      .replace(/&apos;/g, "'");
+
+    console.log(`📄 Decoded data length: ${decodedData.length}`);
+
+    let pageData;
+    try {
+      pageData = JSON.parse(decodedData);
+    } catch (parseError) {
+      console.error('❌ JSON parse error:', parseError.message);
+      console.log('📄 First 500 chars of decoded data:', decodedData.substring(0, 500));
+      throw new Error(`Failed to parse leaderboard JSON: ${parseError.message}`);
+    }
+
+    // Extract draws data
+    const draws = pageData?.props?.draws;
+    if (!draws || !Array.isArray(draws)) {
+      console.log('⚠️ No draws array found in pageData.props');
+      console.log('📄 Available keys in pageData:', Object.keys(pageData || {}));
+      if (pageData?.props) {
+        console.log('📄 Available keys in pageData.props:', Object.keys(pageData.props));
+      }
+      throw new Error('Unexpected leaderboard data structure');
+    }
+
+    console.log(`✅ Successfully parsed ${draws.length} draws from leaderboard`);
+
+    // Return the leaderboard data
+    res.json({
+      success: true,
+      data: draws,
+      fetchedAt: new Date(),
+      totalDraws: draws.length
+    });
+
   } catch (err) {
-    throw new Error(`Failed to fetch betting data: ${err.message}`);
+    console.error('❌ Error fetching leaderboard data:', err.message);
+    res.status(500).json({
+      success: false,
+      error: err.message,
+      message: 'Failed to fetch leaderboard data from external platform'
+    });
   }
-}
+});
 
 // Export the function for use in other modules
 export { fetchBettingDataFromGTArena };

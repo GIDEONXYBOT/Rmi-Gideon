@@ -1,9 +1,11 @@
+import { getApiUrl } from '../utils/apiConfig.js';
+
 /**
- * Service to fetch leaderboard data from external betting platform
+ * Service to fetch leaderboard data from external betting platform via backend proxy
  */
 export class LeaderboardService {
   constructor() {
-    this.baseUrl = 'https://rmi-gideon.gtarena.ph';
+    this.apiUrl = getApiUrl();
   }
 
   /**
@@ -18,32 +20,32 @@ export class LeaderboardService {
   }
 
   /**
-   * Fetch leaderboard data from the external platform
+   * Fetch leaderboard data from the external platform via backend proxy
    * @returns {Promise<Array>} Array of draw objects with betting data
    */
   async fetchLeaderboardData() {
     try {
-      const response = await fetch(`${this.baseUrl}/leaderboard`);
+      const response = await fetch(`${this.apiUrl}/api/external-betting/leaderboard`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
 
-      const html = await response.text();
+      const data = await response.json();
 
-      // Parse the HTML to extract JSON data
-      const dataMatch = html.match(/data-page="([^"]*)"/);
-      if (!dataMatch) {
-        throw new Error('Could not find leaderboard data in response');
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to fetch leaderboard data');
       }
 
-      // Decode HTML entities before parsing JSON
-      const decodedData = this.decodeHtmlEntities(dataMatch[1]);
-      const pageData = JSON.parse(decodedData);
-      const draws = pageData.props.draws;
-
-      console.log(`✅ Fetched ${draws.length} draws from leaderboard`);
-      return draws;
+      console.log(`✅ Fetched ${data.totalDraws} draws from leaderboard via backend proxy`);
+      return data.data;
 
     } catch (error) {
       console.error('❌ Error fetching leaderboard data:', error);
