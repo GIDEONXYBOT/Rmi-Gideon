@@ -1,6 +1,6 @@
 import React, { useContext } from "react";
 import ReactDOM from "react-dom/client";
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { PageWrapper } from './components/PageWrapper.jsx';
 import "./index.css";
 import axios from "axios";
 
@@ -248,7 +248,8 @@ function App() {
         <ToastProvider>
           <ChickenFightProvider>
             <BrowserRouter>
-              <Routes>
+              <PageWrapper>
+                <Routes>
             {/* Redirect root to login */}
             <Route path="/" element={<Navigate to="/login" />} />
 
@@ -562,8 +563,9 @@ function App() {
 
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+                </Routes>
+              </PageWrapper>
+            </BrowserRouter>
           </ChickenFightProvider>
         </ToastProvider>
       </SettingsProvider>

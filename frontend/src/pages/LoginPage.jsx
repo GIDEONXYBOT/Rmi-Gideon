@@ -3,6 +3,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { SettingsContext } from "../context/SettingsContext.jsx";
 import { getApiUrl } from "../utils/apiConfig.js";
+import { FadeInUp, ScaleIn, BounceIn, HoverScale } from "../components/UIEffects.jsx";
 
 export default function LoginPage() {
   const { setUser } = useContext(SettingsContext);
@@ -98,56 +99,66 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-900 px-4">
-      <div className="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-lg shadow-xl w-full max-w-md">
-        {/* Title */}
-        <h1 className="text-xl sm:text-2xl font-bold mb-6 text-center text-indigo-600 dark:text-indigo-400">
-          RMI Teller Report System
-        </h1>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-indigo-50 to-blue-100 dark:from-gray-900 dark:to-gray-800 px-4">
+      <ScaleIn>
+        <div className="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-xl shadow-2xl w-full max-w-md card-hover">
+          {/* Title */}
+          <FadeInUp>
+            <h1 className="text-xl sm:text-2xl font-bold mb-6 text-center text-indigo-600 dark:text-indigo-400">
+              RMI Teller Report System
+            </h1>
+          </FadeInUp>
 
-        {/* Error Message */}
-        {error && (
-          <p className="text-red-500 text-sm mb-3 text-center">{error}</p>
-        )}
+          {/* Error Message */}
+          {error && (
+            <BounceIn>
+              <p className="text-red-500 text-sm mb-3 text-center bg-red-50 dark:bg-red-900/20 p-2 rounded-md">
+                {error}
+              </p>
+            </BounceIn>
+          )}
 
-        {/* Login Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label
-              htmlFor="login-username"
-              className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300"
-            >
-              Username
-            </label>
-            <input
-              id="login-username"
-              name="username"
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 text-base"
-              required
-              autoComplete="username"
-              autoCapitalize="none"
-              autoCorrect="off"
-              spellCheck="false"
-            />
-          </div>
+          {/* Login Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <FadeInUp delay={0.1}>
+              <div>
+                <label
+                  htmlFor="login-username"
+                  className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300"
+                >
+                  Username
+                </label>
+                <input
+                  id="login-username"
+                  name="username"
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="w-full p-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600 focus-ring text-base transition-all duration-200"
+                  required
+                  autoComplete="username"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck="false"
+                />
+              </div>
+            </FadeInUp>
 
-          <div>
-            <label
-              htmlFor="login-password"
-              className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300"
-            >
-              Password
-            </label>
-            <input
-              id="login-password"
-              name="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 text-base"
+            <FadeInUp delay={0.2}>
+              <div>
+                <label
+                  htmlFor="login-password"
+                  className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300"
+                >
+                  Password
+                </label>
+                <input
+                  id="login-password"
+                  name="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full p-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600 focus-ring text-base transition-all duration-200"
               required
               autoComplete="current-password"
               autoCapitalize="none"
@@ -157,30 +168,39 @@ export default function LoginPage() {
             />
           </div>
 
-          <button
-            type="submit"
-            className="w-full bg-indigo-600 text-white py-2.5 rounded-md hover:bg-indigo-700 transition text-base font-medium"
-          >
-            Login
-          </button>
+          <FadeInUp delay={0.3}>
+            <HoverScale>
+              <button
+                type="submit"
+                className="w-full bg-indigo-600 text-white py-3 rounded-lg btn-effect hover:bg-indigo-700 transition-all duration-200 text-base font-medium shadow-lg"
+              >
+                Login
+              </button>
+            </HoverScale>
+          </FadeInUp>
 
-          <p className="text-sm text-center text-gray-600 dark:text-gray-400 mt-3">
-            Don’t have an account?{" "}
-            <button
-              type="button"
-              onClick={() => navigate("/register")}
-              className="text-indigo-600 dark:text-indigo-400 hover:underline"
-            >
-              Sign up
-            </button>
-          </p>
+          <FadeInUp delay={0.4}>
+            <p className="text-sm text-center text-gray-600 dark:text-gray-400 mt-4">
+              Don’t have an account?{" "}
+              <button
+                type="button"
+                onClick={() => navigate("/register")}
+                className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors duration-200 font-medium"
+              >
+                Sign up
+              </button>
+            </p>
+          </FadeInUp>
         </form>
       </div>
+      </ScaleIn>
 
       {/* Footer */}
-      <p className="mt-6 text-sm text-gray-600 dark:text-gray-400">
-        © Gideonbot.XY — All Rights Reserved
-      </p>
+      <FadeInUp delay={0.6}>
+        <p className="mt-6 text-sm text-gray-600 dark:text-gray-400">
+          © Gideonbot.XY — All Rights Reserved
+        </p>
+      </FadeInUp>
     </div>
   );
 }

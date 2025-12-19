@@ -16,6 +16,7 @@ import { SettingsContext } from "../context/SettingsContext";
 import { useToast } from "../context/ToastContext";
 import { getApiUrl } from "../utils/apiConfig";
 import { getGlobalSocket } from "../utils/globalSocket";
+import { StaggerContainer, StaggerItem, FadeInUp, HoverScale } from "../components/UIEffects";
 import PlanAbsence from "../components/PlanAbsence";
 
 function Money({ value }) {
@@ -209,20 +210,31 @@ export default function Dashboard({ overrideRole }) {
   }, [role, summary, teamStats]);
 
   // Simple card component
-  function StatCard({ item }) {
+  function StatCard({ item, index }) {
     return (
-      <div
-        className="p-4 rounded-lg shadow-sm"
-        style={{ background: cardBg, color: textColor }}
-      >
-        <div className="text-sm text-gray-400">{item.subtitle}</div>
-        <div className="flex items-end justify-between mt-2">
-          <div>
-            <div className="text-xl font-bold">{item.title}</div>
-            <div className="text-2xl font-extrabold mt-1">{item.value}</div>
+      <StaggerItem>
+        <HoverScale>
+          <div
+            className="p-4 rounded-lg shadow-sm card-hover cursor-pointer transition-all duration-300 hover:shadow-lg"
+            style={{ background: cardBg, color: textColor }}
+          >
+            <div className="text-sm text-gray-400 mb-2">{item.subtitle}</div>
+            <div className="flex items-end justify-between">
+              <div>
+                <div className="text-lg font-bold mb-1">{item.title}</div>
+                <div className="text-2xl font-extrabold">{item.value}</div>
+              </div>
+              <div className="text-3xl opacity-20">
+                {index === 0 && "👥"}
+                {index === 1 && "👔"}
+                {index === 2 && "📊"}
+                {index === 3 && "💰"}
+                {index === 4 && "💼"}
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        </HoverScale>
+      </StaggerItem>
     );
   }
 
@@ -247,7 +259,7 @@ export default function Dashboard({ overrideRole }) {
     <div style={{ background: bg, color: textColor, minHeight: "80vh" }} className="p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <FadeInUp className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold">Welcome back{user?.name ? `, ${user.name}` : ""}</h1>
             <p className="text-sm text-gray-400">Overview & live metrics</p>
@@ -255,65 +267,69 @@ export default function Dashboard({ overrideRole }) {
           <div className="text-sm text-gray-400">
             <div>Role: <span className="font-semibold">{role}</span></div>
           </div>
-        </div>
+        </FadeInUp>
 
         {/* Summary cards */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+        <StaggerContainer className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
           {cards.map((c, idx) => (
-            <StatCard key={idx} item={c} />
+            <StatCard key={idx} item={c} index={idx} />
           ))}
-        </div>
+        </StaggerContainer>
 
         {/* Charts area */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Cashflow line chart */}
-          <div className="p-4 rounded-lg shadow" style={{ background: cardBg, minWidth: 0 }}>
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="font-semibold">Cashflow (Daily)</h2>
-              <div className="text-sm text-gray-400">Income vs Expense</div>
+          <FadeInUp delay={0.2}>
+            <div className="p-4 rounded-lg shadow card-hover" style={{ background: cardBg, minWidth: 0 }}>
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="font-semibold">Cashflow (Daily)</h2>
+                <div className="text-sm text-gray-400">Income vs Expense</div>
+              </div>
+              <div style={{ width: "100%", height: 320 }}>
+                {cashflowSeries && cashflowSeries.length > 0 ? (
+                  <ResponsiveContainer>
+                    <LineChart data={cashflowSeries}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="date" tick={{ fill: textColor }} />
+                      <YAxis tick={{ fill: textColor }} />
+                      <Tooltip />
+                      <Legend />
+                      <Line type="monotone" dataKey="income" stroke="#10b981" strokeWidth={2} />
+                      <Line type="monotone" dataKey="expense" stroke="#ef4444" strokeWidth={2} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="text-center text-gray-400 py-20">No cashflow data</div>
+                )}
+              </div>
             </div>
-            <div style={{ width: "100%", height: 320 }}>
-              {cashflowSeries && cashflowSeries.length > 0 ? (
-                <ResponsiveContainer>
-                  <LineChart data={cashflowSeries}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" tick={{ fill: textColor }} />
-                    <YAxis tick={{ fill: textColor }} />
-                    <Tooltip />
-                    <Legend />
-                    <Line type="monotone" dataKey="income" stroke="#10b981" strokeWidth={2} />
-                    <Line type="monotone" dataKey="expense" stroke="#ef4444" strokeWidth={2} />
-                  </LineChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="text-center text-gray-400 py-20">No cashflow data</div>
-              )}
-            </div>
-          </div>
+          </FadeInUp>
 
           {/* Payroll bar chart */}
-          <div className="p-4 rounded-lg shadow" style={{ background: cardBg, minWidth: 0 }}>
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="font-semibold">Payroll Trend (Monthly)</h2>
-              <div className="text-sm text-gray-400">Total payroll per month</div>
+          <FadeInUp delay={0.4}>
+            <div className="p-4 rounded-lg shadow card-hover" style={{ background: cardBg, minWidth: 0 }}>
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="font-semibold">Payroll Trend (Monthly)</h2>
+                <div className="text-sm text-gray-400">Total payroll per month</div>
+              </div>
+              <div style={{ width: "100%", height: 320 }}>
+                {payrollSeries && payrollSeries.length > 0 ? (
+                  <ResponsiveContainer>
+                    <BarChart data={payrollSeries}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="month" tick={{ fill: textColor }} />
+                      <YAxis tick={{ fill: textColor }} />
+                      <Tooltip />
+                      <Legend />
+                      <Bar dataKey="totalSalary" fill="#6366f1" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="text-center text-gray-400 py-20">No payroll data</div>
+                )}
+              </div>
             </div>
-            <div style={{ width: "100%", height: 320 }}>
-              {payrollSeries && payrollSeries.length > 0 ? (
-                <ResponsiveContainer>
-                  <BarChart data={payrollSeries}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" tick={{ fill: textColor }} />
-                    <YAxis tick={{ fill: textColor }} />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="totalSalary" fill="#6366f1" />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="text-center text-gray-400 py-20">No payroll data</div>
-              )}
-            </div>
-          </div>
+          </FadeInUp>
         </div>
 
         {/* Role-specific section */}
