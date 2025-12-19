@@ -195,7 +195,7 @@ const LeaderboardPage = () => {
 
         {/* Results List */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          {draws.filter(draw => draw.status === 'completed').slice(0, 20).map((draw, index) => (
+          {draws.slice(0, 20).map((draw, index) => (
             <div key={draw.id} className="bg-gray-800 rounded-lg p-3 border border-gray-700">
               <div className="flex justify-between items-center mb-2">
                 <div className="text-sm font-medium text-gray-300">
