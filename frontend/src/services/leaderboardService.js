@@ -1,5 +1,3 @@
-import { getApiUrl } from './apiConfig.js';
-
 /**
  * Service to fetch leaderboard data from external betting platform
  */
