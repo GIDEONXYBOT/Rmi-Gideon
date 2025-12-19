@@ -341,37 +341,6 @@ const LeaderboardPage = () => {
 
 export default LeaderboardPage;
 
-  const fetchData = async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const [drawsData, statsData, currentDrawData] = await Promise.all([
-        leaderboardService.fetchLeaderboardData(),
-        leaderboardService.getBettingStats(),
-        leaderboardService.getCurrentDraw()
-      ]);
-
-      setDraws(drawsData);
-      setStats(statsData);
-      setCurrentDraw(currentDrawData);
-
-      showToast({
-        type: 'success',
-        message: `Loaded ${drawsData.length} draws from external leaderboard`
-      });
-    } catch (err) {
-      console.error('Error fetching leaderboard data:', err);
-      setError(err.message);
-      showToast({
-        type: 'error',
-        message: 'Failed to load leaderboard data'
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
     fetchData();
   }, []);
