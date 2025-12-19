@@ -21,7 +21,7 @@ export const PageTransition = ({ children, location }) => {
   );
 };
 
-export const FadeInUp = ({ children, delay = 0, duration = 0.6 }) => {
+export const FadeInUp = ({ children, delay = 0, duration = 0.4 }) => {
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
@@ -59,7 +59,7 @@ export const SlideInLeft = ({ children, delay = 0 }) => {
       initial={{ opacity: 0, x: -30 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{
-        duration: 0.5,
+        duration: 0.3,
         delay,
         ease: [0.25, 0.46, 0.45, 0.94]
       }}
@@ -75,7 +75,7 @@ export const SlideInRight = ({ children, delay = 0 }) => {
       initial={{ opacity: 0, x: 30 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{
-        duration: 0.5,
+        duration: 0.3,
         delay,
         ease: [0.25, 0.46, 0.45, 0.94]
       }}
@@ -190,7 +190,7 @@ export const BounceIn = ({ children, delay = 0 }) => {
       initial={{ opacity: 0, scale: 0.3 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{
-        duration: 0.6,
+        duration: 0.4,
         delay,
         ease: [0.68, -0.55, 0.265, 1.55]
       }}

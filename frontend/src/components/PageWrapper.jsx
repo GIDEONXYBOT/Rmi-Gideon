@@ -23,7 +23,7 @@ const pageVariants = {
 const pageTransition = {
   type: "tween",
   ease: [0.25, 0.46, 0.45, 0.94],
-  duration: 0.4
+  duration: 0.25
 };
 
 export const PageWrapper = ({ children }) => {
