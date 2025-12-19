@@ -1,0 +1,99 @@
+import { getApiUrl } from './apiConfig.js';
+
+/**
+ * Service to fetch leaderboard data from external betting platform
+ */
+export class LeaderboardService {
+  constructor() {
+    this.baseUrl = 'https://rmi-gideon.gtarena.ph';
+  }
+
+  /**
+   * Decode HTML entities in a string
+   * @param {string} text - Text containing HTML entities
+   * @returns {string} Decoded text
+   */
+  decodeHtmlEntities(text) {
+    const textarea = document.createElement('textarea');
+    textarea.innerHTML = text;
+    return textarea.value;
+  }
+
+  /**
+   * Fetch leaderboard data from the external platform
+   * @returns {Promise<Array>} Array of draw objects with betting data
+   */
+  async fetchLeaderboardData() {
+    try {
+      const response = await fetch(`${this.baseUrl}/leaderboard`);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const html = await response.text();
+
+      // Parse the HTML to extract JSON data
+      const dataMatch = html.match(/data-page="([^"]*)"/);
+      if (!dataMatch) {
+        throw new Error('Could not find leaderboard data in response');
+      }
+
+      // Decode HTML entities before parsing JSON
+      const decodedData = this.decodeHtmlEntities(dataMatch[1]);
+      const pageData = JSON.parse(decodedData);
+      const draws = pageData.props.draws;
+
+      console.log(`✅ Fetched ${draws.length} draws from leaderboard`);
+      return draws;
+
+    } catch (error) {
+      console.error('❌ Error fetching leaderboard data:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get the latest completed draw
+   * @returns {Promise<Object|null>} Latest completed draw or null
+   */
+  async getLatestCompletedDraw() {
+    const draws = await this.fetchLeaderboardData();
+    return draws.find(draw => draw.status === 'completed') || null;
+  }
+
+  /**
+   * Get current active draw (in progress)
+   * @returns {Promise<Object|null>} Current active draw or null
+   */
+  async getCurrentDraw() {
+    const draws = await this.fetchLeaderboardData();
+    return draws.find(draw => draw.status === 'started') || null;
+  }
+
+  /**
+   * Get betting statistics summary
+   * @returns {Promise<Object>} Summary statistics
+   */
+  async getBettingStats() {
+    const draws = await this.fetchLeaderboardData();
+
+    const completedDraws = draws.filter(draw => draw.status === 'completed');
+    const totalDraws = completedDraws.length;
+    const totalBets = completedDraws.reduce((sum, draw) => sum + draw.totalBets, 0);
+    const totalBetAmount = completedDraws.reduce((sum, draw) => sum + draw.totalBetAmount, 0);
+    const totalWonAmount = completedDraws.reduce((sum, draw) => sum + draw.totalWonAmount, 0);
+
+    return {
+      totalDraws,
+      totalBets,
+      totalBetAmount,
+      totalWonAmount,
+      averageBetAmount: totalDraws > 0 ? totalBetAmount / totalDraws : 0,
+      averageBetsPerDraw: totalDraws > 0 ? totalBets / totalDraws : 0
+    };
+  }
+}
+
+// Export singleton instance
+export const leaderboardService = new LeaderboardService();

@@ -155,6 +155,7 @@ import PayrollBaseSalaryFixer from "./components/PayrollBaseSalaryFixer.jsx";
 import WithdrawalApprovals from "./pages/WithdrawalApprovals.jsx";
 import AdminMapEditor from "./pages/AdminMapEditor.jsx";
 import AdminFinancialSummary from "./pages/AdminFinancialSummary.jsx";
+import LeaderboardPage from "./pages/LeaderboardPage.jsx";
 import TellerBettingData from "./pages/TellerBettingData.jsx";
 import ManageBettingData from "./pages/ManageBettingData.jsx";
 import BettingAnalytics from "./pages/BettingAnalytics.jsx";
@@ -328,6 +329,7 @@ function App() {
                       <Route path="report" element={<AdminReport />} />
                       <Route path="cashflow" element={<AdminCashflow />} />
                       <Route path="financial-summary" element={<AdminFinancialSummary />} />
+                      <Route path="leaderboard" element={<LeaderboardPage />} />
                       <Route path="user-approval" element={<AdminUserApproval />} />
                       <Route path="salary" element={<Payroll />} />
                       {/* Unified: /admin/payroll shows management UI (alias for payroll-management) */}
@@ -506,6 +508,7 @@ function App() {
                       <Route path="report" element={<AdminReport />} />
                       <Route path="cashflow" element={<AdminCashflow />} />
                       <Route path="financial-summary" element={<AdminFinancialSummary />} />
+                      <Route path="leaderboard" element={<LeaderboardPage />} />
                       <Route path="user-approval" element={<AdminUserApproval />} />
                       <Route path="salary" element={<Payroll />} />
                       {/* Unified: /admin/payroll shows management UI (alias for payroll-management) */}
