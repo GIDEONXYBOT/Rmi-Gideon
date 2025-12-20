@@ -1,7 +1,7 @@
 // routes/externalBetting.js - Fetch betting data from GTArena
 import express from 'express';
 import axios from 'axios';
-// import * as cheerio from 'cheerio';
+import * as cheerio from 'cheerio';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { emitLeaderboardUpdate } from '../socket/leaderboardSocket.js';
 
@@ -453,6 +453,138 @@ router.get('/leaderboard', requireAuth, requireRole(['admin', 'super_admin']), a
       success: false,
       error: err.message,
       message: 'Failed to fetch leaderboard data from external platform'
+    });
+  }
+});
+
+/**
+ * GET /api/external-betting/chicken-fight-bets
+ * Fetch chicken fight betting data from GTArena
+ */
+router.get('/chicken-fight-bets', requireAuth, requireRole(['admin', 'super_admin']), async (req, res) => {
+  try {
+    console.log('🐔 Fetching chicken fight betting data from GTArena...');
+
+    const client = axios.create();
+
+    // Step 1: Login to GTArena
+    const loginUrl = 'https://rmi-gideon.gtarena.ph/login';
+    console.log(`🔐 Attempting login to ${loginUrl}`);
+    const loginResponse = await client.post(loginUrl,
+      `username=${sessionData.username}&password=${sessionData.password}`,
+      {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        },
+        validateStatus: () => true
+      }
+    );
+
+    if (loginResponse.status !== 200 && loginResponse.status !== 302) {
+      throw new Error(`Login failed with status ${loginResponse.status}`);
+    }
+
+    // Get cookies from login response
+    const cookies = loginResponse.headers['set-cookie']?.join('; ') || '';
+    sessionData.cookies = cookies;
+
+    // Step 2: Fetch chicken fight betting data page
+    const chickenFightUrl = 'https://rmi-gideon.gtarena.ph/chicken-fight/betting';
+    console.log(`🐔 Fetching chicken fight betting from ${chickenFightUrl}`);
+    const bettingResponse = await client.get(chickenFightUrl, {
+      headers: {
+        'Cookie': cookies,
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      },
+      validateStatus: () => true
+    });
+
+    if (bettingResponse.status !== 200) {
+      throw new Error(`Failed to fetch chicken fight betting data: HTTP ${bettingResponse.status}`);
+    }
+
+    console.log(`📄 Chicken fight betting response status: ${bettingResponse.status}`);
+
+    // Step 3: Parse the HTML for betting data
+    const $ = cheerio.load(bettingResponse.data);
+
+    const bettingData = {
+      totalBets: 0,
+      totalAmount: 0,
+      bettingStatus: 'open',
+      currentFight: null,
+      fights: [],
+      lastUpdated: new Date().toISOString()
+    };
+
+    // Parse betting status
+    const statusText = $('.betting-status, .status, [class*="status"]').first().text().trim().toLowerCase();
+    if (statusText.includes('closed') || statusText.includes('suspend')) {
+      bettingData.bettingStatus = 'closed';
+    } else if (statusText.includes('open')) {
+      bettingData.bettingStatus = 'open';
+    }
+
+    // Parse current fight
+    const currentFightText = $('.current-fight, .fight-number, [class*="fight"]').first().text().trim();
+    const fightMatch = currentFightText.match(/fight\s*#?\s*(\d+)/i);
+    if (fightMatch) {
+      bettingData.currentFight = parseInt(fightMatch[1]);
+    }
+
+    // Parse betting amounts from tables or data elements
+    $('.bet-row, .bet-item, tr, [class*="bet"]').each((index, element) => {
+      try {
+        const $row = $(element);
+        const betText = $row.text();
+
+        // Extract amounts using regex
+        const amountMatches = betText.match(/[\d,]+\.?\d*/g);
+        if (amountMatches && amountMatches.length > 0) {
+          const amount = parseFloat(amountMatches[0].replace(/,/g, ''));
+          if (amount > 0) {
+            bettingData.totalAmount += amount;
+            bettingData.totalBets += 1;
+          }
+        }
+      } catch (parseError) {
+        console.warn(`⚠️ Failed to parse bet row ${index}:`, parseError.message);
+      }
+    });
+
+    // If no data found in structured elements, try alternative parsing
+    if (bettingData.totalBets === 0) {
+      console.log('🔄 Trying alternative chicken fight betting parsing...');
+
+      // Look for any numbers that could be betting amounts
+      const allText = $('body').text();
+      const numberMatches = allText.match(/[\d,]+\.?\d*/g);
+
+      if (numberMatches) {
+        numberMatches.forEach(match => {
+          const amount = parseFloat(match.replace(/,/g, ''));
+          if (amount > 100 && amount < 1000000) { // Reasonable betting amount range
+            bettingData.totalAmount += amount;
+            bettingData.totalBets += 1;
+          }
+        });
+      }
+    }
+
+    console.log(`✅ Successfully parsed chicken fight betting: ${bettingData.totalBets} bets, ₱${bettingData.totalAmount.toLocaleString()}, status: ${bettingData.bettingStatus}`);
+
+    res.json({
+      success: true,
+      data: bettingData
+    });
+
+  } catch (err) {
+    console.error('❌ Error fetching chicken fight betting data:', err.message);
+    res.status(500).json({
+      success: false,
+      error: err.message,
+      message: 'Failed to fetch chicken fight betting data from external platform'
     });
   }
 });

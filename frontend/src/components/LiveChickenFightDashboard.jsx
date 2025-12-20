@@ -14,6 +14,9 @@ export default function LiveChickenFightDashboard() {
     fights: [],
     bets: [],
     entries: [],
+    bettingStatus: 'open',
+    externalTotalBets: 0,
+    externalTotalAmount: 0,
     lastUpdate: null
   });
   const [loading, setLoading] = useState(true);
@@ -142,6 +145,9 @@ export default function LiveChickenFightDashboard() {
           fights: data.fights || [],
           bets: data.bets || [],
           entries: data.entries || [],
+          bettingStatus: data.bettingStatus || 'open',
+          externalTotalBets: data.externalTotalBets || 0,
+          externalTotalAmount: data.externalTotalAmount || 0,
           lastUpdate: new Date()
         });
       });
@@ -215,6 +221,14 @@ export default function LiveChickenFightDashboard() {
               <span>Last Update: {liveData.lastUpdate?.toLocaleTimeString()}</span>
               <span>•</span>
               <span className="font-mono font-bold text-blue-600">{currentTime.toLocaleTimeString()}</span>
+              <span>•</span>
+              <span className={`px-2 py-1 rounded text-xs font-bold ${
+                liveData.bettingStatus === 'open' ? 'bg-green-100 text-green-800' :
+                liveData.bettingStatus === 'closed' ? 'bg-red-100 text-red-800' :
+                'bg-yellow-100 text-yellow-800'
+              }`}>
+                {liveData.bettingStatus?.toUpperCase() || 'OPEN'}
+              </span>
               <button
                 onClick={() => {
                   setLoading(true);
@@ -271,6 +285,25 @@ export default function LiveChickenFightDashboard() {
             </div>
           </StaggerItem>
         </StaggerContainer>
+
+        {/* External Betting Data */}
+        {(liveData.externalTotalBets > 0 || liveData.externalTotalAmount > 0) && (
+          <FadeInUp delay={0.15}>
+            <div className={`p-6 rounded-xl shadow-lg mb-8 ${isDarkMode ? 'bg-purple-900/20 border-purple-500' : 'bg-purple-50 border-purple-200'} border-l-4`}>
+              <h2 className="text-xl font-bold mb-4 text-purple-600">🌐 External Source Data</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-purple-600 mb-1">{liveData.externalTotalBets}</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">External Bets</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-purple-600 mb-1">{formatCurrency(liveData.externalTotalAmount)}</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">External Amount</div>
+                </div>
+              </div>
+            </div>
+          </FadeInUp>
+        )}
 
         {/* Current Fight Status */}
         <FadeInUp delay={0.2}>

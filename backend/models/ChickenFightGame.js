@@ -69,6 +69,11 @@ const chickenFightGameSchema = new mongoose.Schema(
       type: Number,
       default: 0
     },
+    bettingStatus: {
+      type: String,
+      enum: ['open', 'closed', 'suspended'],
+      default: 'open'
+    },
     lastUpdatedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User'
