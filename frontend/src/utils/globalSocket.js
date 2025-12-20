@@ -27,7 +27,8 @@ export function getGlobalSocket() {
       if (hostname === 'localhost' || hostname === '127.0.0.1') {
         socketUrl = 'ws://localhost:5000';
       } else {
-        socketUrl = `${wsProtocol}//${hostname}:5000`;
+        // In production, connect to the same host/port as the current page (no explicit port)
+        socketUrl = `${wsProtocol}//${hostname}`;
       }
 
       console.log('🔌 Connecting to Socket.IO:', socketUrl);

@@ -71,6 +71,11 @@ const LeaderboardPage = () => {
       socketInstance.on('connect', () => {
         console.log('🔌 Leaderboard socket connected');
         setIsConnected(true);
+        
+        // Subscribe to leaderboard and betting updates
+        socketInstance.emit('subscribe-leaderboard');
+        socketInstance.emit('subscribe-betting');
+        
         // Fetch fresh data when socket connects
         fetchData(true);
       });
