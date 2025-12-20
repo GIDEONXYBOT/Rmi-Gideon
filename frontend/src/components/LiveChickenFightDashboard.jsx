@@ -122,43 +122,20 @@ export default function LiveChickenFightDashboard() {
 
     const socket = getGlobalSocket();
     if (socket) {
-      // Join today's fights room
-      const today = new Date().toISOString().split('T')[0];
-      socket.emit('joinTodaysFights', { gameDate: today });
-
-      // Listen for live updates
-      socket.on('fightsUpdated', (data) => {
-        console.log('🔄 Live fights update:', data);
-        setLiveData(prev => ({
-          ...prev,
+      // Listen for live chicken fight updates
+      socket.on('chickenFightUpdated', (data) => {
+        console.log('🐔 Live chicken fight update:', data);
+        setLiveData({
+          currentFight: data.currentFight || 0,
           fights: data.fights || [],
-          currentFight: data.fightNumber || prev.currentFight,
+          bets: data.bets || [],
+          entries: data.entries || [],
           lastUpdate: new Date()
-        }));
-      });
-
-      socket.on('resultsRecorded', (data) => {
-        console.log('🏆 Live results recorded:', data);
-        setLiveData(prev => ({
-          ...prev,
-          fights: data.fight?.fights || prev.fights,
-          lastUpdate: new Date()
-        }));
-      });
-
-      socket.on('entriesUpdated', (data) => {
-        console.log('✏️ Live entries updated:', data);
-        setLiveData(prev => ({
-          ...prev,
-          entries: data.entries || prev.entries,
-          lastUpdate: new Date()
-        }));
+        });
       });
 
       return () => {
-        socket.off('fightsUpdated');
-        socket.off('resultsRecorded');
-        socket.off('entriesUpdated');
+        socket.off('chickenFightUpdated');
       };
     }
   }, []);
