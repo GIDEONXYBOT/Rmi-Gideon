@@ -422,80 +422,120 @@ const LeaderboardPage = () => {
               {/* Bead Plate Pattern - Traditional Baccarat Style */}
               <div className="bg-gray-800 rounded-lg p-4 max-w-5xl mx-auto">
                 <div className="text-center mb-4">
-                  <h4 className="text-lg font-semibold text-white">BEAD PLATE</h4>
-                  <div className="text-xs text-gray-400">Traditional Baccarat Pattern</div>
+                  <h4 className="text-lg font-semibold text-white">REGLA PATTERN</h4>
+                  <div className="text-xs text-gray-400">Each column shows consecutive wins of the same result</div>
                 </div>
 
-                {/* Baccarat-Style Bead Plate - Traditional Layout */}
-                <div className="relative max-w-4xl mx-auto">
-                  {/* 8 columns, 6 rows per column - Traditional baccarat layout */}
-                  <div className="grid grid-cols-8 gap-2">
-                    {Array.from({ length: 8 * 6 }, (_, index) => {
-                      const column = Math.floor(index / 6);
-                      const row = index % 6;
-                      const drawIndex = column * 6 + (5 - row); // Start from bottom of each column
+                {/* Regla Pattern - Streak-based Layout */}
+                <div className="relative max-w-6xl mx-auto">
+                  {/* Generate Regla Pattern */}
+                  {(() => {
+                    const reglaColumns = [];
+                    let currentColumn = [];
+                    let lastResult = null;
 
-                      const draw = draws[drawIndex];
-                      if (!draw) return (
-                        <div key={index} className="w-8 h-8 rounded-full border-2 border-gray-700 bg-gray-800"></div>
-                      );
-
+                    // Process draws to create regla columns
+                    for (let i = 0; i < Math.min(draws.length, 60); i++) {
+                      const draw = draws[i];
                       const result = draw.result1;
-                      const isMeron = result === 'meron' || result === 'red';
-                      const isWala = result === 'wala' || result === 'blue';
-                      const isDraw = result === 'draw';
-                      const isCancel = !result || result === 'cancel';
 
-                      return (
-                        <div
-                          key={draw.id}
-                          className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-xs font-bold ${
-                            isMeron ? 'bg-red-600 border-red-500 text-white' :
-                            isWala ? 'bg-blue-600 border-blue-500 text-white' :
-                            isDraw ? 'bg-green-600 border-green-500 text-white' :
-                            'bg-gray-600 border-gray-500 text-gray-300'
-                          }`}
-                          title={`Fight ${draw.batch?.fightSequence || draw.id}: ${result ? result.toUpperCase() : 'CANCEL'}`}
-                        >
-                          {isMeron ? 'M' : isWala ? 'W' : isDraw ? 'D' : 'C'}
-                        </div>
-                      );
-                    })}
-                  </div>
+                      // Normalize result
+                      const normalizedResult = result === 'meron' || result === 'red' ? 'meron' :
+                                             result === 'wala' || result === 'blue' ? 'wala' :
+                                             result === 'draw' ? 'draw' : 'cancel';
 
-                  {/* Column labels */}
-                  <div className="grid grid-cols-8 gap-2 mt-2">
-                    {Array.from({ length: 8 }, (_, i) => (
-                      <div key={i} className="text-center text-xs text-gray-500">
-                        Shoe {i + 1}
+                      // If result changed or first result, start new column
+                      if (normalizedResult !== lastResult && lastResult !== null) {
+                        if (currentColumn.length > 0) {
+                          reglaColumns.push([...currentColumn]);
+                          currentColumn = [];
+                        }
+                      }
+
+                      // Add to current column
+                      currentColumn.push({ draw, result: normalizedResult });
+
+                      // Update last result
+                      lastResult = normalizedResult;
+
+                      // Limit columns to prevent overflow
+                      if (reglaColumns.length >= 12) break;
+                    }
+
+                    // Add the last column if it has items
+                    if (currentColumn.length > 0) {
+                      reglaColumns.push(currentColumn);
+                    }
+
+                    return (
+                      <div className="flex justify-center gap-3 overflow-x-auto pb-4">
+                        {reglaColumns.map((column, columnIndex) => (
+                          <div key={columnIndex} className="flex flex-col gap-1">
+                            {/* Column header */}
+                            <div className="text-center text-xs text-gray-500 mb-1">
+                              Run {columnIndex + 1}
+                            </div>
+
+                            {/* Column beads - max 10 per column */}
+                            {Array.from({ length: 10 }, (_, rowIndex) => {
+                              const item = column[rowIndex];
+                              if (!item) {
+                                return (
+                                  <div key={rowIndex} className="w-8 h-8 rounded-full border-2 border-gray-700 bg-gray-800"></div>
+                                );
+                              }
+
+                              const { draw, result } = item;
+                              const isMeron = result === 'meron';
+                              const isWala = result === 'wala';
+                              const isDraw = result === 'draw';
+                              const isCancel = result === 'cancel';
+
+                              return (
+                                <div
+                                  key={draw.id}
+                                  className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-xs font-bold ${
+                                    isMeron ? 'bg-red-600 border-red-500 text-white' :
+                                    isWala ? 'bg-blue-600 border-blue-500 text-white' :
+                                    isDraw ? 'bg-green-600 border-green-500 text-white' :
+                                    'bg-gray-600 border-gray-500 text-gray-300'
+                                  }`}
+                                  title={`Fight ${draw.batch?.fightSequence || draw.id}: ${result.toUpperCase()}`}
+                                >
+                                  {isMeron ? 'M' : isWala ? 'W' : isDraw ? 'D' : 'C'}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })()}
                 </div>
 
                 {/* Pattern Statistics */}
                 <div className="mt-4 grid grid-cols-4 gap-4 text-center text-sm">
                   <div className="bg-red-900 bg-opacity-50 rounded p-2">
                     <div className="text-red-300 font-bold text-lg">
-                      {draws.slice(0, 48).filter(d => d.result1 === 'meron' || d.result1 === 'red').length}
+                      {draws.slice(0, 60).filter(d => d.result1 === 'meron' || d.result1 === 'red').length}
                     </div>
                     <div className="text-red-400 text-xs">Meron</div>
                   </div>
                   <div className="bg-blue-900 bg-opacity-50 rounded p-2">
                     <div className="text-blue-300 font-bold text-lg">
-                      {draws.slice(0, 48).filter(d => d.result1 === 'wala' || d.result1 === 'blue').length}
+                      {draws.slice(0, 60).filter(d => d.result1 === 'wala' || d.result1 === 'blue').length}
                     </div>
                     <div className="text-blue-400 text-xs">Wala</div>
                   </div>
                   <div className="bg-green-900 bg-opacity-50 rounded p-2">
                     <div className="text-green-300 font-bold text-lg">
-                      {draws.slice(0, 48).filter(d => d.result1 === 'draw').length}
+                      {draws.slice(0, 60).filter(d => d.result1 === 'draw').length}
                     </div>
                     <div className="text-green-400 text-xs">Draw</div>
                   </div>
                   <div className="bg-gray-900 bg-opacity-50 rounded p-2">
                     <div className="text-gray-300 font-bold text-lg">
-                      {draws.slice(0, 48).filter(d => !d.result1 || d.result1 === 'cancel').length}
+                      {draws.slice(0, 60).filter(d => !d.result1 || d.result1 === 'cancel').length}
                     </div>
                     <div className="text-gray-400 text-xs">Cancel</div>
                   </div>
