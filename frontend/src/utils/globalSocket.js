@@ -8,6 +8,7 @@
  */
 
 import { io } from "socket.io-client";
+import { getApiUrl } from './apiConfig.js';
 
 let globalSocket = null;
 
@@ -18,18 +19,10 @@ export function getGlobalSocket() {
 
   if (!globalSocket) {
     try {
-      const hostname = window.location.hostname;
-      const protocol = window.location.protocol;
-      const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:';
-
-      // Auto-detect IP for mobile/network access
-      let socketUrl;
-      if (hostname === 'localhost' || hostname === '127.0.0.1') {
-        socketUrl = 'ws://localhost:5000';
-      } else {
-        // In production, connect to the same host/port as the current page (no explicit port)
-        socketUrl = `${wsProtocol}//${hostname}`;
-      }
+      const apiUrl = getApiUrl();
+      
+      // Convert HTTP/HTTPS to WS/WSS
+      const socketUrl = apiUrl.replace(/^http/, 'ws');
 
       console.log('🔌 Connecting to Socket.IO:', socketUrl);
       globalSocket = io(socketUrl, {
