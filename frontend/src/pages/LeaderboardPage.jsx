@@ -428,26 +428,28 @@ const LeaderboardPage = () => {
 
                 {/* Regla Pattern - Streak-based Layout */}
                 <div className="relative max-w-6xl mx-auto">
-                  {/* Generate Regla Pattern - Fixed 60x6 Grid */}
+                  {/* Generate Regla Pattern - Fixed 6x60 Grid */}
                   {(() => {
-                    const totalRows = 60;
-                    const totalColumns = 6;
+                    const totalRows = 6;
+                    const totalColumns = 60;
                     const maxBeads = totalRows * totalColumns;
 
                     // Get the most recent draws (up to maxBeads)
                     const recentDraws = draws.slice(0, maxBeads);
 
                     return (
-                      <div className="flex justify-center gap-2 overflow-x-auto pb-4">
-                        {/* Create 6 columns */}
+                      <div className="flex justify-center gap-1 overflow-x-auto pb-4">
+                        {/* Create 60 columns */}
                         {Array.from({ length: totalColumns }, (_, columnIndex) => (
                           <div key={columnIndex} className="flex flex-col gap-1">
-                            {/* Column header */}
-                            <div className="text-center text-xs text-gray-500 mb-1">
-                              Col {columnIndex + 1}
-                            </div>
+                            {/* Column header - only show every 10th column to avoid clutter */}
+                            {columnIndex % 10 === 0 && (
+                              <div className="text-center text-xs text-gray-500 mb-1">
+                                {columnIndex + 1}
+                              </div>
+                            )}
 
-                            {/* 60 rows per column */}
+                            {/* 6 rows per column */}
                             {Array.from({ length: totalRows }, (_, rowIndex) => {
                               // Calculate the bead index in the sequence (left to right, top to bottom)
                               const beadIndex = columnIndex * totalRows + rowIndex;
@@ -470,7 +472,7 @@ const LeaderboardPage = () => {
                               return (
                                 <div
                                   key={`${columnIndex}-${rowIndex}`}
-                                  className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-xs font-bold ${
+                                  className={`w-6 h-6 rounded-full border flex items-center justify-center text-xs font-bold ${
                                     draw ? (
                                       isMeron ? 'bg-red-600 border-red-500 text-white' :
                                       isWala ? 'bg-blue-600 border-blue-500 text-white' :
@@ -480,7 +482,7 @@ const LeaderboardPage = () => {
                                   }`}
                                   title={draw ? `Fight ${fightNumber}: ${normalizedResult.toUpperCase()}` : 'No result'}
                                 >
-                                  {draw ? fightNumber : ''}
+                                  {draw ? (fightNumber > 99 ? '..' : fightNumber) : ''}
                                 </div>
                               );
                             })}
