@@ -255,7 +255,7 @@ const LeaderboardPage = () => {
                 Total Comm: {formatCurrency(draws.reduce((total, draw) => {
                   if (draw.details && draw.result1 && draw.result1 !== 'draw') {
                     const fightTotal = draw.details.redTotalBetAmount + draw.details.blueTotalBetAmount + (draw.details.drawTotalBetAmount || 0);
-                    return total + (fightTotal * 0.05488);
+                    return total + (fightTotal * 0.055);
                   }
                   return total;
                 }, 0))}
@@ -281,8 +281,8 @@ const LeaderboardPage = () => {
                   Fight #{draw.batch?.fightSequence || draw.id}
                 </div>
                 <div className={`text-sm font-bold ${
-                  draw.result1 === 'meron' ? 'text-red-400' :
-                  draw.result1 === 'wala' ? 'text-blue-400' :
+                  draw.result1 === 'red' ? 'text-red-400' :
+                  draw.result1 === 'blue' ? 'text-blue-400' :
                   draw.result1 === 'draw' ? 'text-green-400' :
                   'text-gray-400'
                 }`}>
@@ -298,7 +298,7 @@ const LeaderboardPage = () => {
               <div className="flex justify-between text-xs text-gray-400">
                 <span>Total: ₱{draw.details ? (draw.details.redTotalBetAmount + draw.details.blueTotalBetAmount + (draw.details.drawTotalBetAmount || 0)).toLocaleString() : '0'}</span>
                 {draw.result1 && draw.result1 !== 'draw' ? (
-                  <span>Comm: ₱{draw.details ? ((draw.details.redTotalBetAmount + draw.details.blueTotalBetAmount + (draw.details.drawTotalBetAmount || 0)) * 0.05488).toFixed(2) : '0.00'}</span>
+                  <span>Comm: ₱{draw.details ? ((draw.details.redTotalBetAmount + draw.details.blueTotalBetAmount + (draw.details.drawTotalBetAmount || 0)) * 0.055).toFixed(2) : '0.00'}</span>
                 ) : null}
               </div>
             </div>
