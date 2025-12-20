@@ -434,9 +434,11 @@ const LeaderboardPage = () => {
                     let currentColumn = [];
                     let lastMainResult = null; // Only track Meron/Wala changes
 
-                    // Process draws to create regla columns
-                    for (let i = 0; i < Math.min(draws.length, 60); i++) {
-                      const draw = draws[i];
+                    // Process draws in reverse order (newest first) to create regla columns
+                    const reversedDraws = [...draws.slice(0, 60)].reverse();
+
+                    for (let i = 0; i < reversedDraws.length; i++) {
+                      const draw = reversedDraws[i];
                       const result = draw.result1;
 
                       // Normalize result
@@ -449,13 +451,13 @@ const LeaderboardPage = () => {
 
                       if (isMainResult && normalizedResult !== lastMainResult && lastMainResult !== null) {
                         if (currentColumn.length > 0) {
-                          reglaColumns.push([...currentColumn]);
+                          reglaColumns.unshift([...currentColumn]); // Add to beginning for newest first
                           currentColumn = [];
                         }
                       }
 
                       // Add to current column
-                      currentColumn.push({ draw, result: normalizedResult });
+                      currentColumn.unshift({ draw, result: normalizedResult }); // Add to beginning
 
                       // Update last main result only for Meron/Wala
                       if (isMainResult) {
@@ -468,7 +470,7 @@ const LeaderboardPage = () => {
 
                     // Add the last column if it has items
                     if (currentColumn.length > 0) {
-                      reglaColumns.push(currentColumn);
+                      reglaColumns.unshift(currentColumn); // Add to beginning
                     }
 
                     return (
@@ -477,10 +479,10 @@ const LeaderboardPage = () => {
                           <div key={columnIndex} className="flex flex-col gap-1">
                             {/* Column header */}
                             <div className="text-center text-xs text-gray-500 mb-1">
-                              Run {columnIndex + 1}
+                              Run {reglaColumns.length - columnIndex}
                             </div>
 
-                            {/* Column beads - max 10 per column */}
+                            {/* Column beads - max 10 per column, newest at top */}
                             {Array.from({ length: 10 }, (_, rowIndex) => {
                               const item = column[rowIndex];
                               if (!item) {
