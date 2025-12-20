@@ -154,13 +154,22 @@ const LeaderboardPage = () => {
     });
   };
 
-  const getCurrentDate = () => {
-    return new Date().toLocaleString('en-PH', {
-      weekday: 'short',
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    }).toUpperCase();
+  const getStreakCount = (draws, ...targetResults) => {
+    let streak = 0;
+    for (let i = 0; i < Math.min(draws.length, 20); i++) {
+      const result = draws[i].result1;
+      const isTarget = targetResults.some(target => 
+        result === target || 
+        (target === 'meron' && result === 'red') || 
+        (target === 'wala' && result === 'blue')
+      );
+      if (isTarget) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+    return streak;
   };
 
   if (loading && draws.length === 0) {
@@ -401,15 +410,19 @@ const LeaderboardPage = () => {
                 <div className="text-sm text-gray-400 mt-1">Recent fight results</div>
               </div>
 
-              {/* Bead Plate Pattern - Casino Style */}
-              <div className="bg-gray-800 rounded-lg p-4 max-w-4xl mx-auto">
+              {/* Bead Plate Pattern - Traditional Baccarat Style */}
+              <div className="bg-gray-800 rounded-lg p-4 max-w-5xl mx-auto">
                 <div className="text-center mb-4">
                   <h4 className="text-lg font-semibold text-white">BEAD PLATE</h4>
+                  <div className="text-xs text-gray-400">Traditional Baccarat Pattern</div>
                 </div>
 
-                {/* Bead Plate Grid - 6 columns like traditional baccarat */}
-                <div className="grid grid-cols-6 gap-1">
-                  {draws.slice(0, 60).map((draw, index) => {
+                {/* Baccarat-Style Bead Plate - 6 columns, 20 rows */}
+                <div className="grid grid-cols-6 gap-1 max-w-md mx-auto">
+                  {Array.from({ length: 120 }, (_, index) => {
+                    const draw = draws[index];
+                    if (!draw) return null;
+
                     const result = draw.result1;
                     const isMeron = result === 'meron' || result === 'red';
                     const isWala = result === 'wala' || result === 'blue';
@@ -419,7 +432,7 @@ const LeaderboardPage = () => {
                     return (
                       <div
                         key={draw.id}
-                        className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-xs font-bold ${
+                        className={`w-6 h-6 rounded-full border flex items-center justify-center text-xs font-bold ${
                           isMeron ? 'bg-red-600 border-red-500 text-white' :
                           isWala ? 'bg-blue-600 border-blue-500 text-white' :
                           isDraw ? 'bg-green-600 border-green-500 text-white' :
@@ -436,28 +449,37 @@ const LeaderboardPage = () => {
                 {/* Pattern Statistics */}
                 <div className="mt-4 grid grid-cols-4 gap-4 text-center text-sm">
                   <div className="bg-red-900 bg-opacity-50 rounded p-2">
-                    <div className="text-red-300 font-bold">
-                      {draws.slice(0, 60).filter(d => d.result1 === 'meron' || d.result1 === 'red').length}
+                    <div className="text-red-300 font-bold text-lg">
+                      {draws.slice(0, 120).filter(d => d.result1 === 'meron' || d.result1 === 'red').length}
                     </div>
-                    <div className="text-red-400">Meron</div>
+                    <div className="text-red-400 text-xs">Meron</div>
                   </div>
                   <div className="bg-blue-900 bg-opacity-50 rounded p-2">
-                    <div className="text-blue-300 font-bold">
-                      {draws.slice(0, 60).filter(d => d.result1 === 'wala' || d.result1 === 'blue').length}
+                    <div className="text-blue-300 font-bold text-lg">
+                      {draws.slice(0, 120).filter(d => d.result1 === 'wala' || d.result1 === 'blue').length}
                     </div>
-                    <div className="text-blue-400">Wala</div>
+                    <div className="text-blue-400 text-xs">Wala</div>
                   </div>
                   <div className="bg-green-900 bg-opacity-50 rounded p-2">
-                    <div className="text-green-300 font-bold">
-                      {draws.slice(0, 60).filter(d => d.result1 === 'draw').length}
+                    <div className="text-green-300 font-bold text-lg">
+                      {draws.slice(0, 120).filter(d => d.result1 === 'draw').length}
                     </div>
-                    <div className="text-green-400">Draw</div>
+                    <div className="text-green-400 text-xs">Draw</div>
                   </div>
                   <div className="bg-gray-900 bg-opacity-50 rounded p-2">
-                    <div className="text-gray-300 font-bold">
-                      {draws.slice(0, 60).filter(d => !d.result1 || d.result1 === 'cancel').length}
+                    <div className="text-gray-300 font-bold text-lg">
+                      {draws.slice(0, 120).filter(d => !d.result1 || d.result1 === 'cancel').length}
                     </div>
-                    <div className="text-gray-400">Cancel</div>
+                    <div className="text-gray-400 text-xs">Cancel</div>
+                  </div>
+                </div>
+
+                {/* Trend Indicators */}
+                <div className="mt-4 text-center text-xs text-gray-400">
+                  <div className="flex justify-center space-x-4">
+                    <span>🔴 Meron Streak: {getStreakCount(draws, 'meron', 'red')}</span>
+                    <span>🔵 Wala Streak: {getStreakCount(draws, 'wala', 'blue')}</span>
+                    <span>🟢 Draw Streak: {getStreakCount(draws, 'draw')}</span>
                   </div>
                 </div>
               </div>
