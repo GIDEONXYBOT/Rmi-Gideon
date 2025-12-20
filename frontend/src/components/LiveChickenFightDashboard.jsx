@@ -215,6 +215,15 @@ export default function LiveChickenFightDashboard() {
               <span>Last Update: {liveData.lastUpdate?.toLocaleTimeString()}</span>
               <span>•</span>
               <span className="font-mono font-bold text-blue-600">{currentTime.toLocaleTimeString()}</span>
+              <button
+                onClick={() => {
+                  setLoading(true);
+                  loadLiveData();
+                }}
+                className="px-3 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 transition-colors"
+              >
+                🔄 Refresh
+              </button>
               <Pulse>
                 <span className="text-green-600 font-semibold">● LIVE</span>
               </Pulse>
