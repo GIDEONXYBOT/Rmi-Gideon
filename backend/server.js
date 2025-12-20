@@ -145,6 +145,15 @@ mongoose
     } catch (schedulerError) {
       console.error("❌ Failed to initialize leaderboard scheduler:", schedulerError);
     }
+
+    // Initialize chicken fight update scheduler for real-time updates
+    try {
+      const { initChickenFightUpdateScheduler } = await import("./scheduler/chickenFightUpdate.js");
+      initChickenFightUpdateScheduler(io);
+      console.log("🐔 Chicken fight update scheduler initialized");
+    } catch (schedulerError) {
+      console.error("❌ Failed to initialize chicken fight scheduler:", schedulerError);
+    }
   })
   .catch((err) => {
     console.error("❌ MongoDB connection error:", err);

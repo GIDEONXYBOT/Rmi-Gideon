@@ -66,3 +66,24 @@ export function initChickenFightSocket(io) {
     });
   });
 }
+
+// Function to emit chicken fight updates to all connected clients
+export function emitChickenFightUpdate(io, data) {
+  const chickenFightNamespace = io.of('/chicken-fight');
+  const today = new Date().toISOString().split('T')[0];
+
+  // Emit to today's fights room
+  chickenFightNamespace.to(`fights-${today}`).emit('fightsUpdated', {
+    fights: data.fights,
+    fightNumber: data.currentFight,
+    updatedAt: data.lastUpdate
+  });
+
+  // Emit entries update
+  chickenFightNamespace.to(`entries-${today}`).emit('entriesUpdated', {
+    entries: data.entries,
+    updatedAt: data.lastUpdate
+  });
+
+  console.log('📡 Chicken fight live update emitted to all connected clients');
+}

@@ -18,6 +18,7 @@ export default function LiveChickenFightDashboard() {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   // Check authentication on component mount
   useEffect(() => {
@@ -44,6 +45,15 @@ export default function LiveChickenFightDashboard() {
 
     verifyToken();
   }, [navigate]);
+
+  // Live clock that updates every second
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
 
   // Load initial data
   const loadLiveData = async () => {
@@ -78,6 +88,31 @@ export default function LiveChickenFightDashboard() {
       setError('Failed to load live data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Background update function (doesn't show loading)
+  const updateLiveData = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+
+      const [fightsRes, betsRes, entriesRes] = await Promise.all([
+        axios.get(`${getApiUrl()}/api/chicken-fight/fights/today`, { headers }),
+        axios.get(`${getApiUrl()}/api/chicken-fight/bets?gameDate=${new Date().toISOString().split('T')[0]}`, { headers }),
+        axios.get(`${getApiUrl()}/api/chicken-fight/entries`, { headers })
+      ]);
+
+      setLiveData({
+        currentFight: fightsRes.data.fightNumber || 0,
+        fights: fightsRes.data.fights || [],
+        bets: betsRes.data.bets || [],
+        entries: entriesRes.data.entries || [],
+        lastUpdate: new Date()
+      });
+    } catch (err) {
+      console.error('Failed to update live data:', err);
+      // Don't set error state for background updates
     }
   };
 
@@ -126,6 +161,15 @@ export default function LiveChickenFightDashboard() {
         socket.off('entriesUpdated');
       };
     }
+  }, []);
+
+  // Set up periodic background updates every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      updateLiveData();
+    }, 5000);
+
+    return () => clearInterval(interval);
   }, []);
 
   // Calculate live betting stats
@@ -180,6 +224,8 @@ export default function LiveChickenFightDashboard() {
               <span>Current Fight: #{liveData.currentFight || 'None'}</span>
               <span>•</span>
               <span>Last Update: {liveData.lastUpdate?.toLocaleTimeString()}</span>
+              <span>•</span>
+              <span className="font-mono font-bold text-blue-600">{currentTime.toLocaleTimeString()}</span>
               <Pulse>
                 <span className="text-green-600 font-semibold">● LIVE</span>
               </Pulse>
