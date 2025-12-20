@@ -345,7 +345,7 @@ async function fetchBettingDataFromGTArena(username, password) {
 
 /**
  * GET /api/external-betting/leaderboard
- * Fetch leaderboard data from GTArena (public access for frontend) - updated for external data fetching
+ * Fetch leaderboard data from GTArena (public access for frontend) - redeploy trigger
  * Acts as a proxy to bypass CORS restrictions
  */
 router.get('/leaderboard', async (req, res) => {
