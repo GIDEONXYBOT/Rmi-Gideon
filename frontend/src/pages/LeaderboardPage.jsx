@@ -428,88 +428,59 @@ const LeaderboardPage = () => {
 
                 {/* Regla Pattern - Streak-based Layout */}
                 <div className="relative max-w-6xl mx-auto">
-                  {/* Generate Regla Pattern */}
+                  {/* Generate Regla Pattern - Fixed 60x6 Grid */}
                   {(() => {
-                    const reglaColumns = [];
-                    let currentColumn = [];
-                    let lastMainResult = null; // Only track Meron/Wala changes
+                    const totalRows = 60;
+                    const totalColumns = 6;
+                    const maxBeads = totalRows * totalColumns;
 
-                    // Process draws in reverse order (newest first) to create regla columns
-                    const reversedDraws = [...draws.slice(0, 60)].reverse();
-
-                    for (let i = 0; i < reversedDraws.length; i++) {
-                      const draw = reversedDraws[i];
-                      const result = draw.result1;
-
-                      // Normalize result
-                      const normalizedResult = result === 'meron' || result === 'red' ? 'meron' :
-                                             result === 'wala' || result === 'blue' ? 'wala' :
-                                             result === 'draw' ? 'draw' : 'cancel';
-
-                      // Only start new column for Meron/Wala changes, Draw/Cancel continue in same column
-                      const isMainResult = normalizedResult === 'meron' || normalizedResult === 'wala';
-
-                      if (isMainResult && normalizedResult !== lastMainResult && lastMainResult !== null) {
-                        if (currentColumn.length > 0) {
-                          reglaColumns.unshift([...currentColumn]); // Add to beginning for newest first
-                          currentColumn = [];
-                        }
-                      }
-
-                      // Add to current column
-                      currentColumn.unshift({ draw, result: normalizedResult }); // Add to beginning
-
-                      // Update last main result only for Meron/Wala
-                      if (isMainResult) {
-                        lastMainResult = normalizedResult;
-                      }
-
-                      // Limit columns to prevent overflow
-                      if (reglaColumns.length >= 12) break;
-                    }
-
-                    // Add the last column if it has items
-                    if (currentColumn.length > 0) {
-                      reglaColumns.unshift(currentColumn); // Add to beginning
-                    }
+                    // Get the most recent draws (up to maxBeads)
+                    const recentDraws = draws.slice(0, maxBeads);
 
                     return (
-                      <div className="flex justify-center gap-3 overflow-x-auto pb-4">
-                        {reglaColumns.map((column, columnIndex) => (
+                      <div className="flex justify-center gap-2 overflow-x-auto pb-4">
+                        {/* Create 6 columns */}
+                        {Array.from({ length: totalColumns }, (_, columnIndex) => (
                           <div key={columnIndex} className="flex flex-col gap-1">
                             {/* Column header */}
                             <div className="text-center text-xs text-gray-500 mb-1">
-                              Run {reglaColumns.length - columnIndex}
+                              Col {columnIndex + 1}
                             </div>
 
-                            {/* Column beads - max 10 per column, newest at top */}
-                            {Array.from({ length: 10 }, (_, rowIndex) => {
-                              const item = column[rowIndex];
-                              if (!item) {
-                                return (
-                                  <div key={rowIndex} className="w-8 h-8 rounded-full border-2 border-gray-700 bg-gray-800"></div>
-                                );
-                              }
+                            {/* 60 rows per column */}
+                            {Array.from({ length: totalRows }, (_, rowIndex) => {
+                              // Calculate the bead index in the sequence (left to right, top to bottom)
+                              const beadIndex = columnIndex * totalRows + rowIndex;
 
-                              const { draw, result } = item;
-                              const fightNumber = draw.batch?.fightSequence || draw.id;
-                              const isMeron = result === 'meron';
-                              const isWala = result === 'wala';
-                              const isDraw = result === 'draw';
-                              const isCancel = result === 'cancel';
+                              // Get the draw for this position (newest first)
+                              const draw = recentDraws[beadIndex];
+                              const result = draw?.result1;
+
+                              // Normalize result
+                              const normalizedResult = result === 'meron' || result === 'red' ? 'meron' :
+                                                     result === 'wala' || result === 'blue' ? 'wala' :
+                                                     result === 'draw' ? 'draw' : 'cancel';
+
+                              const fightNumber = draw?.batch?.fightSequence || draw?.id;
+                              const isMeron = normalizedResult === 'meron';
+                              const isWala = normalizedResult === 'wala';
+                              const isDraw = normalizedResult === 'draw';
+                              const isCancel = normalizedResult === 'cancel';
 
                               return (
                                 <div
-                                  key={draw.id}
+                                  key={`${columnIndex}-${rowIndex}`}
                                   className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-xs font-bold ${
-                                    isMeron ? 'bg-red-600 border-red-500 text-white' :
-                                    isWala ? 'bg-blue-600 border-blue-500 text-white' :
-                                    isDraw ? 'bg-green-600 border-green-500 text-white' :
-                                    'bg-gray-600 border-gray-500 text-gray-300'
+                                    draw ? (
+                                      isMeron ? 'bg-red-600 border-red-500 text-white' :
+                                      isWala ? 'bg-blue-600 border-blue-500 text-white' :
+                                      isDraw ? 'bg-green-600 border-green-500 text-white' :
+                                      'bg-gray-600 border-gray-500 text-gray-300'
+                                    ) : 'border-gray-700 bg-gray-800'
                                   }`}
-                                  title={`Fight ${fightNumber}: ${result.toUpperCase()}`}
+                                  title={draw ? `Fight ${fightNumber}: ${normalizedResult.toUpperCase()}` : 'No result'}
                                 >
-                                  {fightNumber}
+                                  {draw ? fightNumber : ''}
                                 </div>
                               );
                             })}
