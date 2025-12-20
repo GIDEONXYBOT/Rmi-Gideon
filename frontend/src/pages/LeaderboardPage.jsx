@@ -503,25 +503,25 @@ const LeaderboardPage = () => {
                 <div className="mt-4 grid grid-cols-4 gap-4 text-center text-sm">
                   <div className="bg-red-900 bg-opacity-50 rounded p-2">
                     <div className="text-red-300 font-bold text-lg">
-                      {draws.slice(0, 60).filter(d => d.result1 === 'meron' || d.result1 === 'red').length}
+                      {draws.slice(0, 100).filter(d => d.result1 === 'meron' || d.result1 === 'red').length}
                     </div>
                     <div className="text-red-400 text-xs">Meron</div>
                   </div>
                   <div className="bg-blue-900 bg-opacity-50 rounded p-2">
                     <div className="text-blue-300 font-bold text-lg">
-                      {draws.slice(0, 60).filter(d => d.result1 === 'wala' || d.result1 === 'blue').length}
+                      {draws.slice(0, 100).filter(d => d.result1 === 'wala' || d.result1 === 'blue').length}
                     </div>
                     <div className="text-blue-400 text-xs">Wala</div>
                   </div>
                   <div className="bg-green-900 bg-opacity-50 rounded p-2">
                     <div className="text-green-300 font-bold text-lg">
-                      {draws.slice(0, 60).filter(d => d.result1 === 'draw').length}
+                      {draws.slice(0, 100).filter(d => d.result1 === 'draw').length}
                     </div>
                     <div className="text-green-400 text-xs">Draw</div>
                   </div>
                   <div className="bg-gray-900 bg-opacity-50 rounded p-2">
                     <div className="text-gray-300 font-bold text-lg">
-                      {draws.slice(0, 60).filter(d => !d.result1 || d.result1 === 'cancel').length}
+                      {draws.slice(0, 100).filter(d => !d.result1 || d.result1 === 'cancel').length}
                     </div>
                     <div className="text-gray-400 text-xs">Cancel</div>
                   </div>

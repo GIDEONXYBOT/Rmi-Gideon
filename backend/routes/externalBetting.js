@@ -73,19 +73,49 @@ router.get('/debug', requireAuth, requireRole(['admin', 'super_admin']), async (
 });
 
 /**
- * POST /api/external-betting/set-credentials
- * Set GTArena credentials (admin only)
+ * POST /api/external-betting/import-historical
+ * Import historical fight data (admin only)
  */
-router.post('/set-credentials', requireAuth, requireRole(['admin', 'super_admin']), async (req, res) => {
+router.post('/import-historical', requireAuth, requireRole(['admin', 'super_admin']), async (req, res) => {
   try {
-    const { username, password } = req.body;
-    if (!username || !password) {
-      return res.status(400).json({ error: 'Username and password required' });
+    const { fights } = req.body;
+
+    if (!Array.isArray(fights)) {
+      return res.status(400).json({ error: 'Fights must be an array' });
     }
-    sessionData.username = username;
-    sessionData.password = password;
-    res.json({ success: true, message: 'Credentials saved' });
+
+    let importedCount = 0;
+    fights.forEach(fight => {
+      if (!historicalDraws.has(fight.id)) {
+        historicalDraws.set(fight.id, fight);
+        importedCount++;
+      }
+    });
+
+    console.log(`📊 Imported ${importedCount} historical fights. Total historical draws: ${historicalDraws.size}`);
+
+    // Emit leaderboard update to connected clients
+    const io = req.app.io;
+    if (io) {
+      const allDraws = Array.from(historicalDraws.values());
+      allDraws.sort((a, b) => (a.batch?.fightSequence || 0) - (b.batch?.fightSequence || 0));
+
+      emitLeaderboardUpdate(io, {
+        draws: allDraws,
+        currentDraw: allDraws[allDraws.length - 1] || null,
+        totalDraws: allDraws.length
+      });
+    }
+
+    res.json({
+      success: true,
+      imported: importedCount,
+      total: historicalDraws.size,
+      message: `Successfully imported ${importedCount} historical fights`
+    });
+
   } catch (err) {
+    console.error('❌ Error importing historical data:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -388,13 +418,26 @@ router.get('/leaderboard', async (req, res) => {
       'https://rmi-gideon.gtarena.ph/leaderboard?page=all',
       'https://rmi-gideon.gtarena.ph/api/leaderboard',
       'https://rmi-gideon.gtarena.ph/api/draws',
-      'https://rmi-gideon.gtarena.ph/api/events/current/draws'
+      'https://rmi-gideon.gtarena.ph/api/events/current/draws',
+      'https://rmi-gideon.gtarena.ph/api/fights/history',
+      'https://rmi-gideon.gtarena.ph/api/draws/history',
+      'https://rmi-gideon.gtarena.ph/reports/draws',
+      'https://rmi-gideon.gtarena.ph/reports/fights'
     ];
+
+    // Also try with different query parameters for historical data
+    const queryParams = ['', '?limit=300', '?per_page=300', '?size=300', '?all=1', '?historical=1', '?archive=1'];
+    const allUrls = [];
+    potentialUrls.forEach(url => {
+      queryParams.forEach(param => {
+        allUrls.push(url + param);
+      });
+    });
 
     let html = '';
     let successfulUrl = '';
 
-    for (const url of potentialUrls) {
+    for (const url of allUrls) {
       try {
         console.log(`🔍 Trying authenticated URL: ${url}`);
         const response = await client.get(url, {
@@ -515,7 +558,7 @@ router.get('/leaderboard', async (req, res) => {
 
     // Check if we need more historical data
     if (historicalDraws.size < 115) {
-      console.log(`⚠️ Only have ${historicalDraws.size} historical draws, expected around 115. This will grow over time as new data becomes available.`);
+      console.log(`⚠️ Only have ${historicalDraws.size} historical draws, expected around 115+. This will grow over time as new data becomes available.`);
     }
 
     // Convert Map to array and sort by fight sequence (ascending - oldest first)
