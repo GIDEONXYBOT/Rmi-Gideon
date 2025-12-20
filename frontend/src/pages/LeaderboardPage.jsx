@@ -6,15 +6,21 @@ import { getSocket } from '../socket';
 const LeaderboardPage = () => {
   const [draws, setDraws] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [backgroundLoading, setBackgroundLoading] = useState(false);
   const [error, setError] = useState(null);
   const [stats, setStats] = useState(null);
   const [currentDraw, setCurrentDraw] = useState(null);
   const [socket, setSocket] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(null);
   const { showToast } = useToast();
 
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchData = async (isBackground = false) => {
+    if (isBackground) {
+      setBackgroundLoading(true);
+    } else {
+      setLoading(true);
+    }
     setError(null);
 
     try {
@@ -27,27 +33,37 @@ const LeaderboardPage = () => {
       setDraws(drawsData);
       setStats(statsData);
       setCurrentDraw(currentDrawData);
+      setLastUpdated(new Date());
 
-      showToast({
-        type: 'success',
-        message: `Loaded ${drawsData.length} draws from external leaderboard`
-      });
+      if (!isBackground) {
+        showToast({
+          type: 'success',
+          message: `Loaded ${drawsData.length} draws from external leaderboard`
+        });
+      }
     } catch (err) {
       console.error('Error fetching leaderboard data:', err);
-      setError(err.message);
-      showToast({
-        type: 'error',
-        message: 'Failed to load leaderboard data'
-      });
+      if (!isBackground) {
+        setError(err.message);
+        showToast({
+          type: 'error',
+          message: 'Failed to load leaderboard data'
+        });
+      }
     } finally {
-      setLoading(false);
+      if (isBackground) {
+        setBackgroundLoading(false);
+      } else {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
-    fetchData();
+    // Load initial data immediately without blocking UI
+    fetchData(false);
 
-    // Initialize socket connection
+    // Initialize socket connection for real-time updates
     const socketInstance = getSocket();
     setSocket(socketInstance);
 
@@ -55,6 +71,8 @@ const LeaderboardPage = () => {
       socketInstance.on('connect', () => {
         console.log('🔌 Leaderboard socket connected');
         setIsConnected(true);
+        // Fetch fresh data when socket connects
+        fetchData(true);
       });
 
       socketInstance.on('disconnect', () => {
@@ -68,6 +86,7 @@ const LeaderboardPage = () => {
         if (data.draws) setDraws(data.draws);
         if (data.currentDraw) setCurrentDraw(data.currentDraw);
         if (data.stats) setStats(data.stats);
+        setLastUpdated(new Date());
       });
 
       // Listen for betting updates
@@ -75,15 +94,14 @@ const LeaderboardPage = () => {
         console.log('🎯 Betting update received:', data);
         if (data.currentDraw) {
           setCurrentDraw(data.currentDraw);
+          setLastUpdated(new Date());
         }
       });
 
-      // Auto-refresh every 30 seconds as fallback
+      // Background refresh every 5 minutes as fallback
       const interval = setInterval(() => {
-        if (!isConnected) {
-          fetchData();
-        }
-      }, 30000);
+        fetchData(true);
+      }, 300000); // 5 minutes
 
       return () => {
         socketInstance.off('connect');
@@ -93,7 +111,7 @@ const LeaderboardPage = () => {
         clearInterval(interval);
       };
     }
-  }, [isConnected]);
+  }, []);
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-PH', {
@@ -130,7 +148,7 @@ const LeaderboardPage = () => {
     }).toUpperCase();
   };
 
-  if (loading) {
+  if (loading && draws.length === 0) {
     return (
       <div className="min-h-screen bg-black text-white">
         <div className="flex items-center justify-center h-screen">
@@ -141,7 +159,7 @@ const LeaderboardPage = () => {
     );
   }
 
-  if (error) {
+  if (error && draws.length === 0) {
     return (
       <div className="min-h-screen bg-black text-white p-6">
         <div className="bg-red-900 border border-red-700 rounded-lg p-4">
@@ -156,7 +174,7 @@ const LeaderboardPage = () => {
               <div className="mt-2 text-sm text-red-300">{error}</div>
               <div className="mt-4">
                 <button
-                  onClick={fetchData}
+                  onClick={() => fetchData(false)}
                   className="bg-red-800 hover:bg-red-700 text-red-200 px-3 py-2 rounded-md text-sm font-medium"
                 >
                   Try Again
@@ -177,19 +195,44 @@ const LeaderboardPage = () => {
         <div className="bg-gray-800 border-b border-gray-700 px-4 py-3">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-white">FIGHT RESULTS</h2>
-            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => fetchData(true)}
+                disabled={backgroundLoading}
+                className="text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 px-2 py-1 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Refresh data"
+              >
+                ↻
+              </button>
+              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+            </div>
           </div>
           <div className="text-xs text-gray-400 mt-1 flex justify-between items-center">
-            <span>{isConnected ? 'Live Updates' : 'Online'}</span>
-            <span className="text-green-400 font-medium">
-              Total Comm: ₱{draws.reduce((total, draw) => {
-                if (draw.details && draw.result1 && draw.result1 !== 'draw') {
-                  const fightTotal = draw.details.redTotalBetAmount + draw.details.blueTotalBetAmount + (draw.details.drawTotalBetAmount || 0);
-                  return total + (fightTotal * 0.05488);
-                }
-                return total;
-              }, 0).toFixed(2)}
-            </span>
+            <div className="flex items-center space-x-2">
+              <span>{isConnected ? 'Live Updates' : 'Online'}</span>
+              {backgroundLoading && (
+                <div className="flex items-center">
+                  <div className="animate-spin rounded-full h-3 w-3 border border-gray-500 border-t-transparent"></div>
+                  <span className="ml-1">Updating...</span>
+                </div>
+              )}
+            </div>
+            <div className="text-right">
+              <div className="text-green-400 font-medium">
+                Total Comm: ₱{draws.reduce((total, draw) => {
+                  if (draw.details && draw.result1 && draw.result1 !== 'draw') {
+                    const fightTotal = draw.details.redTotalBetAmount + draw.details.blueTotalBetAmount + (draw.details.drawTotalBetAmount || 0);
+                    return total + (fightTotal * 0.05488);
+                  }
+                  return total;
+                }, 0).toFixed(2)}
+              </div>
+              {lastUpdated && (
+                <div className="text-xs text-gray-500">
+                  Updated: {lastUpdated.toLocaleTimeString()}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

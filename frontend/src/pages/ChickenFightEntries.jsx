@@ -114,17 +114,19 @@ export default function ChickenFightEntries() {
         return;
       }
 
-      // Check for duplicate leg bands (excluding current entry if editing)
-      const allExistingLegBands = entries
-        .filter(entry => entry._id !== editingId) // Exclude current entry if editing
+      // Check for duplicate leg bands within the same game type (excluding current entry if editing)
+      const sameGameTypeEntries = entries
+        .filter(entry => entry.gameType === gameType && entry._id !== editingId); // Only check same game type, exclude current entry if editing
+      
+      const allExistingLegBandsInSameGameType = sameGameTypeEntries
         .flatMap(entry => entry.legBandNumbers);
       
       const duplicateLegBands = legBands
         .map(b => b.trim())
-        .filter(band => allExistingLegBands.includes(band));
+        .filter(band => allExistingLegBandsInSameGameType.includes(band));
       
       if (duplicateLegBands.length > 0) {
-        setError(`Leg band(s) ${duplicateLegBands.join(', ')} already exist in other entries`);
+        setError(`Leg band(s) ${duplicateLegBands.join(', ')} already exist in other ${gameType} entries`);
         setSubmitting(false);
         return;
       }

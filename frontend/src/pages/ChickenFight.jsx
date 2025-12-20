@@ -50,9 +50,11 @@ export default function ChickenFight() {
   const [selectedMeronEntry, setSelectedMeronEntry] = useState('');
   const [selectedMeronLegBand, setSelectedMeronLegBand] = useState('');
   const [meronLegBandSearch, setMeronLegBandSearch] = useState('');
+  const [meronLegBandEntries, setMeronLegBandEntries] = useState([]); // Multiple entries with same leg band
   const [selectedWalaEntry, setSelectedWalaEntry] = useState('');
   const [selectedWalaLegBand, setSelectedWalaLegBand] = useState('');
   const [walaLegBandSearch, setWalaLegBandSearch] = useState('');
+  const [walaLegBandEntries, setWalaLegBandEntries] = useState([]); // Multiple entries with same leg band
   const [showHistory, setShowHistory] = useState(false);
   const [historyDates, setHistoryDates] = useState([]);
   const [selectedHistoryDate, setSelectedHistoryDate] = useState(null);
@@ -129,9 +131,11 @@ export default function ChickenFight() {
       setSelectedMeronEntry('');
       setSelectedMeronLegBand('');
       setMeronLegBandSearch('');
+      setMeronLegBandEntries([]); // Clear multiple entries state
       setSelectedWalaEntry('');
       setSelectedWalaLegBand('');
       setWalaLegBandSearch('');
+      setWalaLegBandEntries([]); // Clear multiple entries state
       localStorage.removeItem(`chicken-fight-${today}`);
       localStorage.removeItem(`chicken-fight-number-${today}`);
       setSuccess('Today\'s records have been reset');
@@ -167,18 +171,43 @@ export default function ChickenFight() {
     return true;
   });
 
-  // Filter Meron entries - exclude if already selected in Wala
-  const availableMeronEntries = availableEntries.filter(entry => entry._id !== selectedWalaEntry);
+  // Filter Meron entries - exclude if already selected in Wala, and exclude entries with no available leg bands
+  const availableMeronEntries = availableEntries.filter(entry => {
+    // Exclude if already selected in Wala
+    if (entry._id === selectedWalaEntry) return false;
+    
+    // Exclude if entry has no leg bands available (all used in fights)
+    if (entry.legBandNumbers && entry.legBandNumbers.length > 0) {
+      const availableBands = entry.legBandNumbers.filter(band => !usedLegBands.has(band));
+      return availableBands.length > 0;
+    }
+    
+    // Include entries with no leg bands (unknown entries)
+    return true;
+  });
 
-  // Filter Wala entries - exclude if already selected in Meron
-  const availableWalaEntries = availableEntries.filter(entry => entry._id !== selectedMeronEntry);
+  // Filter Wala entries - exclude if already selected in Meron, and exclude entries with no available leg bands
+  const availableWalaEntries = availableEntries.filter(entry => {
+    // Exclude if already selected in Meron
+    if (entry._id === selectedMeronEntry) return false;
+    
+    // Exclude if entry has no leg bands available (all used in fights)
+    if (entry.legBandNumbers && entry.legBandNumbers.length > 0) {
+      const availableBands = entry.legBandNumbers.filter(band => !usedLegBands.has(band));
+      return availableBands.length > 0;
+    }
+    
+    // Include entries with no leg bands (unknown entries)
+    return true;
+  });
 
-  // Handle Meron leg band search - auto-select entry and leg band
+  // Handle Meron leg band search - auto-select entry and leg band or show multiple options
   const handleMeronLegBandSearch = (value) => {
     setMeronLegBandSearch(value);
     if (!value.trim()) {
       setSelectedMeronEntry('');
       setSelectedMeronLegBand('');
+      setMeronLegBandEntries([]);
       return;
     }
     
@@ -189,29 +218,40 @@ export default function ChickenFight() {
       // Allow unknown entry selection
       setSelectedMeronEntry('unknown');
       setSelectedMeronLegBand('unknown');
+      setMeronLegBandEntries([]);
       return;
     }
     
-    // Search for entry with this leg band
-    const foundEntry = availableMeronEntries.find(entry => 
-      entry.legBandNumbers?.includes(trimmedValue)
+    // Search for all entries with this leg band that is available (not used)
+    const foundEntries = availableMeronEntries.filter(entry => 
+      entry.legBandNumbers?.includes(trimmedValue) && !usedLegBands.has(trimmedValue)
     );
-    if (foundEntry) {
-      setSelectedMeronEntry(foundEntry._id);
+    
+    if (foundEntries.length === 1) {
+      // Only one entry found, auto-select it
+      setSelectedMeronEntry(foundEntries[0]._id);
+      setSelectedMeronLegBand(trimmedValue);
+      setMeronLegBandEntries([]);
+    } else if (foundEntries.length > 1) {
+      // Multiple entries found, show selection dropdown
+      setMeronLegBandEntries(foundEntries);
+      setSelectedMeronEntry('');
       setSelectedMeronLegBand(trimmedValue);
     } else {
-      // If no entry found with this leg band, clear selection
+      // No entry found with this leg band, clear selection
       setSelectedMeronEntry('');
       setSelectedMeronLegBand('');
+      setMeronLegBandEntries([]);
     }
   };
 
-  // Handle Wala leg band search - auto-select entry and leg band
+  // Handle Wala leg band search - auto-select entry and leg band or show multiple options
   const handleWalaLegBandSearch = (value) => {
     setWalaLegBandSearch(value);
     if (!value.trim()) {
       setSelectedWalaEntry('');
       setSelectedWalaLegBand('');
+      setWalaLegBandEntries([]);
       return;
     }
     
@@ -222,20 +262,30 @@ export default function ChickenFight() {
       // Allow unknown entry selection
       setSelectedWalaEntry('unknown');
       setSelectedWalaLegBand('unknown');
+      setWalaLegBandEntries([]);
       return;
     }
     
-    // Search for entry with this leg band
-    const foundEntry = availableWalaEntries.find(entry => 
-      entry.legBandNumbers?.includes(trimmedValue)
+    // Search for all entries with this leg band that is available (not used)
+    const foundEntries = availableWalaEntries.filter(entry => 
+      entry.legBandNumbers?.includes(trimmedValue) && !usedLegBands.has(trimmedValue)
     );
-    if (foundEntry) {
-      setSelectedWalaEntry(foundEntry._id);
+    
+    if (foundEntries.length === 1) {
+      // Only one entry found, auto-select it
+      setSelectedWalaEntry(foundEntries[0]._id);
+      setSelectedWalaLegBand(trimmedValue);
+      setWalaLegBandEntries([]);
+    } else if (foundEntries.length > 1) {
+      // Multiple entries found, show selection dropdown
+      setWalaLegBandEntries(foundEntries);
+      setSelectedWalaEntry('');
       setSelectedWalaLegBand(trimmedValue);
     } else {
-      // If no entry found with this leg band, clear selection
+      // No entry found with this leg band, clear selection
       setSelectedWalaEntry('');
       setSelectedWalaLegBand('');
+      setWalaLegBandEntries([]);
     }
   };
 
@@ -321,9 +371,11 @@ export default function ChickenFight() {
     setSelectedMeronEntry('');
     setSelectedMeronLegBand('');
     setMeronLegBandSearch('');
+    setMeronLegBandEntries([]); // Clear multiple entries state
     setSelectedWalaEntry('');
     setSelectedWalaLegBand('');
     setWalaLegBandSearch('');
+    setWalaLegBandEntries([]); // Clear multiple entries state
     setTimeout(() => setSuccess(''), 2000);
     
     // Reload game data to sync
@@ -411,9 +463,11 @@ export default function ChickenFight() {
     setSelectedMeronEntry('');
     setSelectedMeronLegBand('');
     setMeronLegBandSearch('');
+    setMeronLegBandEntries([]); // Clear multiple entries state
     setSelectedWalaEntry('');
     setSelectedWalaLegBand('');
     setWalaLegBandSearch('');
+    setWalaLegBandEntries([]); // Clear multiple entries state
     setTimeout(() => setSuccess(''), 2000);
     
     // Reload game data to sync
@@ -1204,7 +1258,30 @@ export default function ChickenFight() {
                 placeholder="Enter leg band number or '000' for unknown..."
                 className="w-full px-4 py-2 rounded-lg bg-red-600 text-white border border-red-500 placeholder-red-300"
               />
-              {meronLegBandSearch && selectedMeronEntry && (
+              
+              {/* Entry selection for multiple entries with same leg band */}
+              {meronLegBandEntries.length > 1 && (
+                <div className="mt-2">
+                  <label className="block text-xs font-medium mb-1">Multiple entries found - select one:</label>
+                  <select
+                    value={selectedMeronEntry}
+                    onChange={(e) => {
+                      setSelectedMeronEntry(e.target.value);
+                      setMeronLegBandEntries([]); // Clear multiple entries after selection
+                    }}
+                    className="w-full px-3 py-1 rounded bg-red-600 text-white border border-red-500 text-sm"
+                  >
+                    <option value="">Choose entry...</option>
+                    {meronLegBandEntries.map(entry => (
+                      <option key={entry._id} value={entry._id}>
+                        {entry.entryName} ({entry.gameType})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              
+              {meronLegBandSearch && selectedMeronEntry && meronLegBandEntries.length <= 1 && (
                 <div className="mt-2 p-2 bg-red-600 rounded text-sm">
                   <div className="font-medium">{meronEntry?.entryName}</div>
                   <div className="text-xs">
@@ -1223,6 +1300,7 @@ export default function ChickenFight() {
                   setSelectedMeronEntry(e.target.value);
                   setSelectedMeronLegBand(''); // Clear leg band when manually selecting entry
                   setMeronLegBandSearch('');
+                  setMeronLegBandEntries([]); // Clear multiple entries state
                   if (e.target.value) {
                     const entry = entries.find(ent => ent._id === e.target.value);
                     if (entry && entry.legBandNumbers && entry.legBandNumbers.length > 0) {
@@ -1459,9 +1537,11 @@ export default function ChickenFight() {
                   setSelectedMeronEntry('');
                   setSelectedMeronLegBand('');
                   setMeronLegBandSearch('');
+                  setMeronLegBandEntries([]); // Clear multiple entries state
                   setSelectedWalaEntry('');
                   setSelectedWalaLegBand('');
                   setWalaLegBandSearch('');
+                  setWalaLegBandEntries([]); // Clear multiple entries state
                   setSuccess('Fight cancelled! Entries can be reused.');
                   setTimeout(() => setSuccess(''), 3000);
                   
@@ -1494,7 +1574,30 @@ export default function ChickenFight() {
                 placeholder="Enter leg band number or '000' for unknown..."
                 className="w-full px-4 py-2 rounded-lg bg-blue-600 text-white border border-blue-500 placeholder-blue-300"
               />
-              {walaLegBandSearch && selectedWalaEntry && (
+              
+              {/* Entry selection for multiple entries with same leg band */}
+              {walaLegBandEntries.length > 1 && (
+                <div className="mt-2">
+                  <label className="block text-xs font-medium mb-1">Multiple entries found - select one:</label>
+                  <select
+                    value={selectedWalaEntry}
+                    onChange={(e) => {
+                      setSelectedWalaEntry(e.target.value);
+                      setWalaLegBandEntries([]); // Clear multiple entries after selection
+                    }}
+                    className="w-full px-3 py-1 rounded bg-blue-600 text-white border border-blue-500 text-sm"
+                  >
+                    <option value="">Choose entry...</option>
+                    {walaLegBandEntries.map(entry => (
+                      <option key={entry._id} value={entry._id}>
+                        {entry.entryName} ({entry.gameType})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              
+              {walaLegBandSearch && selectedWalaEntry && walaLegBandEntries.length <= 1 && (
                 <div className="mt-2 p-2 bg-blue-600 rounded text-sm">
                   <div className="font-medium">{walaEntry?.entryName}</div>
                   <div className="text-xs">
@@ -1513,6 +1616,7 @@ export default function ChickenFight() {
                   setSelectedWalaEntry(e.target.value);
                   setSelectedWalaLegBand(''); // Clear leg band when manually selecting entry
                   setWalaLegBandSearch('');
+                  setWalaLegBandEntries([]); // Clear multiple entries state
                   if (e.target.value) {
                     const entry = entries.find(ent => ent._id === e.target.value);
                     if (entry && entry.legBandNumbers && entry.legBandNumbers.length > 0) {
