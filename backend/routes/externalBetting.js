@@ -619,8 +619,8 @@ export async function fetchChickenFightBettingData() {
     const cookies = loginResponse.headers['set-cookie']?.join('; ') || '';
     console.log('✅ [SCRAPER] Login successful');
 
-    // Fetch betting page
-    const chickenFightUrl = 'https://rmi-gideon.gtarena.ph/chicken-fight/betting';
+    // Fetch betting page - now using leaderboard for more accurate data
+    const chickenFightUrl = 'https://rmi-gideon.gtarena.ph/leaderboard';
     const bettingResponse = await client.get(chickenFightUrl, {
       headers: {
         'Cookie': cookies,
@@ -630,41 +630,81 @@ export async function fetchChickenFightBettingData() {
       timeout: 15000
     });
 
-    console.log(`📄 [SCRAPER] Betting page status: ${bettingResponse.status}`);
+    console.log(`📄 [SCRAPER] Leaderboard page status: ${bettingResponse.status}`);
 
     if (bettingResponse.status !== 200) {
       throw new Error(`Failed to fetch betting page: ${bettingResponse.status}`);
     }
 
-    // Parse HTML
+    // Parse HTML using cheerio for accurate data extraction
     const $ = cheerio.load(bettingResponse.data);
-    const pageText = $('body').text();
 
-    const bettingData = {
-      totalBets: 0,
-      totalAmount: 0,
-      bettingStatus: 'open',
-      currentFight: null,
-      source: 'gtarena',
-      lastUpdated: new Date().toISOString()
-    };
+    let totalAmount = 0;
+    let totalBets = 0;
+    let bettingStatus = 'open';
 
-    // Parse status
-    const statusLower = pageText.toLowerCase();
-    if (statusLower.includes('closed') || statusLower.includes('tutup')) {
-      bettingData.bettingStatus = 'closed';
-    }
-    console.log(`📊 [SCRAPER] Status: ${bettingData.bettingStatus}`);
+    // Parse leaderboard data similar to leaderboardUpdate.js
+    $('.draw-container, .draw-item, [class*="draw"]').each((index, element) => {
+      try {
+        const $draw = $(element);
 
-    // Parse amounts
-    const amounts = pageText.match(/\\d{2,}|\\d{1,}\\,\\d{3}/g) || [];
-    amounts.forEach(amountStr => {
-      const parsed = parseFloat(amountStr.replace(/,/g, ''));
-      if (parsed >= 100 && parsed <= 1000000000) {
-        bettingData.totalAmount += parsed;
-        bettingData.totalBets += 1;
+        // Extract betting amounts for each draw
+        const redTotalBet = parseFloat(
+          $draw.find('.red-total, .meron-total, [class*="red"], [class*="meron"]').text().replace(/[^0-9.-]/g, '') || '0'
+        );
+        const blueTotalBet = parseFloat(
+          $draw.find('.blue-total, .wala-total, [class*="blue"], [class*="wala"]').text().replace(/[^0-9.-]/g, '') || '0'
+        );
+        const drawTotalBet = parseFloat(
+          $draw.find('.draw-total, .tie-total, [class*="draw"], [class*="tie"]').text().replace(/[^0-9.-]/g, '') || '0'
+        );
+
+        // Add to totals
+        totalAmount += redTotalBet + blueTotalBet + drawTotalBet;
+        if (redTotalBet > 0) totalBets++;
+        if (blueTotalBet > 0) totalBets++;
+        if (drawTotalBet > 0) totalBets++;
+
+        // Check for betting status
+        const drawText = $draw.text().toLowerCase();
+        if (drawText.includes('closed') || drawText.includes('tutup') || drawText.includes('finished')) {
+          bettingStatus = 'closed';
+        }
+      } catch (parseError) {
+        console.warn(`⚠️ Failed to parse draw ${index}:`, parseError.message);
       }
     });
+
+    // If no structured data found, fall back to text parsing
+    if (totalAmount === 0) {
+      console.log('🔄 No structured data found, trying text parsing...');
+      const pageText = $('body').text();
+
+      // Parse status
+      const statusLower = pageText.toLowerCase();
+      if (statusLower.includes('closed') || statusLower.includes('tutup')) {
+        bettingStatus = 'closed';
+      }
+
+      // Parse amounts using regex
+      const amounts = pageText.match(/\d{2,}|\d{1,}\,\d{3}/g) || [];
+      amounts.forEach(amountStr => {
+        const parsed = parseFloat(amountStr.replace(/,/g, ''));
+        if (parsed >= 100 && parsed <= 1000000000) {
+          totalAmount += parsed;
+          totalBets += 1;
+        }
+      });
+    }
+
+    const bettingData = {
+      totalBets: totalBets,
+      totalAmount: totalAmount,
+      bettingStatus: bettingStatus,
+      currentFight: null,
+      source: 'gtarena-leaderboard',
+      lastUpdated: new Date().toISOString()
+    };
 
     console.log(`💰 [SCRAPER] Found: ${bettingData.totalBets} bets, ₱${bettingData.totalAmount.toLocaleString()}`);
     return bettingData;
@@ -675,7 +715,7 @@ export async function fetchChickenFightBettingData() {
       totalBets: 0,
       totalAmount: 0,
       bettingStatus: 'open',
-      source: 'gtarena',
+      source: 'gtarena-leaderboard',
       lastUpdated: new Date().toISOString(),
       error: err.message
     };
