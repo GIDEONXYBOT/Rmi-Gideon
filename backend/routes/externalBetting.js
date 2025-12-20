@@ -345,10 +345,10 @@ async function fetchBettingDataFromGTArena(username, password) {
 
 /**
  * GET /api/external-betting/leaderboard
- * Fetch leaderboard data from GTArena (admin/super_admin only)
+ * Fetch leaderboard data from GTArena (public access for frontend) - updated for external data fetching
  * Acts as a proxy to bypass CORS restrictions
  */
-router.get('/leaderboard', requireAuth, requireRole(['admin', 'super_admin']), async (req, res) => {
+router.get('/leaderboard', async (req, res) => {
   try {
     console.log('📡 Fetching leaderboard data from GTArena...');
 
