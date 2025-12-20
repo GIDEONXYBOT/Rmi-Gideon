@@ -332,11 +332,6 @@ const LeaderboardPage = () => {
                   <div className="text-2xl text-gray-300 mb-4">
                     {currentDraw.status === 'completed' ? `RESULT: ${(currentDraw.result1 === 'red' ? 'MERON' : currentDraw.result1 === 'blue' ? 'WALA' : currentDraw.result1?.toUpperCase()) || 'PENDING'}` : 'LIVE BETTING'}
                   </div>
-                  {currentDraw.status !== 'completed' && (
-                    <div className="text-sm text-yellow-400 font-medium mb-2 bg-yellow-900 bg-opacity-20 px-3 py-1 rounded inline-block">
-                      PAYOUT LESS THAN 1.40 SHALL BE CANCELED
-                    </div>
-                  )}
                   <div className={`text-xl font-bold ${currentDraw.status === 'started' ? 'text-green-400' : 'text-gray-400'}`}>
                     {currentDraw.status === 'started' ? 'BETTING IS OPEN' : 'BETTING CLOSED'}
                   </div>
@@ -394,6 +389,61 @@ const LeaderboardPage = () => {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+
+        {/* History Pattern Card */}
+        <div className="p-8">
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-gray-900 rounded-lg p-6 border border-gray-700">
+              <div className="text-center mb-6">
+                <h3 className="text-xl font-bold text-white">FIGHT HISTORY PATTERN</h3>
+                <div className="text-sm text-gray-400 mt-1">Recent fight results</div>
+              </div>
+
+              {/* History Grid */}
+              <div className="grid grid-cols-10 gap-2 max-w-2xl mx-auto">
+                {draws.slice(0, 50).map((draw, index) => (
+                  <div
+                    key={draw.id}
+                    className={`aspect-square rounded border-2 flex items-center justify-center text-xs font-bold ${
+                      draw.result1 === 'meron' || draw.result1 === 'red'
+                        ? 'bg-red-600 border-red-500 text-white'
+                        : draw.result1 === 'wala' || draw.result1 === 'blue'
+                        ? 'bg-blue-600 border-blue-500 text-white'
+                        : draw.result1 === 'draw'
+                        ? 'bg-green-600 border-green-500 text-white'
+                        : 'bg-gray-600 border-gray-500 text-gray-300'
+                    }`}
+                    title={`Fight ${draw.batch?.fightSequence || draw.id}: ${draw.result1 ? draw.result1.toUpperCase() : 'CANCEL'}`}
+                  >
+                    {draw.result1 === 'meron' || draw.result1 === 'red' ? 'M' :
+                     draw.result1 === 'wala' || draw.result1 === 'blue' ? 'W' :
+                     draw.result1 === 'draw' ? 'D' : 'C'}
+                  </div>
+                ))}
+              </div>
+
+              {/* Legend */}
+              <div className="flex justify-center space-x-6 mt-6 text-sm">
+                <div className="flex items-center space-x-2">
+                  <div className="w-4 h-4 bg-red-600 border border-red-500 rounded"></div>
+                  <span className="text-gray-300">Meron</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-4 h-4 bg-blue-600 border border-blue-500 rounded"></div>
+                  <span className="text-gray-300">Wala</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-4 h-4 bg-green-600 border border-green-500 rounded"></div>
+                  <span className="text-gray-300">Draw</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-4 h-4 bg-gray-600 border border-gray-500 rounded"></div>
+                  <span className="text-gray-300">Cancel</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
