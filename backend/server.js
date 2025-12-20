@@ -274,7 +274,7 @@ app.use("/api/salaries", salariesRoutes);
 app.use("/api/media", mediaRoutes);
 app.use("/api/chicken-fight", chickenFightRoutes); // 🐔 Chicken Fight betting system
 app.use("/api/chicken-fight-registration", chickenFightRegistrationRoutes); // 🐔 Chicken Fight registration
-app.use("/api/draws", drawsRoutes); // 📊 Draw results for regla pattern
+app.use("/api/draws", drawsRoutes); // 📊 Draw results for regla pattern - updated for public access
 // Deployed: 2025-12-08
 // app.use("/api/chat", chatRoutes);
 // app.use("/api/schedule", scheduleRoutes);
