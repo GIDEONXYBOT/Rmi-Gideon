@@ -332,6 +332,11 @@ const LeaderboardPage = () => {
                   <div className="text-2xl text-gray-300 mb-4">
                     {currentDraw.status === 'completed' ? `RESULT: ${(currentDraw.result1 === 'red' ? 'MERON' : currentDraw.result1 === 'blue' ? 'WALA' : currentDraw.result1?.toUpperCase()) || 'PENDING'}` : 'LIVE BETTING'}
                   </div>
+                  {currentDraw.status !== 'completed' && (
+                    <div className="text-sm text-yellow-400 font-medium mb-2 bg-yellow-900 bg-opacity-20 px-3 py-1 rounded inline-block">
+                      PAYOUT LESS THAN 1.40 SHALL BE CANCELED
+                    </div>
+                  )}
                   <div className={`text-xl font-bold ${currentDraw.status === 'started' ? 'text-green-400' : 'text-gray-400'}`}>
                     {currentDraw.status === 'started' ? 'BETTING IS OPEN' : 'BETTING CLOSED'}
                   </div>
