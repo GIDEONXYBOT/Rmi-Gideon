@@ -13,30 +13,12 @@ router.use(requireAuth);
  */
 router.get('/', async (req, res) => {
   try {
-    // Import mongoose and Draw model dynamically
-    const mongoose = (await import('mongoose')).default;
-
-    // Define Draw schema inline (matching the populated data structure)
-    const drawSchema = new mongoose.Schema({
-      id: Number,
-      batch: {
-        fightSequence: Number
-      },
-      result1: String,
-      details: {
-        redTotalBetAmount: Number,
-        blueTotalBetAmount: Number,
-        drawTotalBetAmount: Number
-      },
-      createdAt: Date
-    }, { collection: 'draws' });
-
-    const Draw = mongoose.model('Draw', drawSchema, 'draws');
-
-    // Fetch all draws sorted by fight sequence (oldest first)
-    const draws = await Draw.find()
-      .sort({ 'batch.fightSequence': 1, id: 1 })
-      .limit(360); // Limit to reasonable amount for display
+    // Query the draws collection directly
+    const draws = await req.app.db.collection('draws')
+      .find({})
+      .sort({ id: 1 }) // Sort by numeric id field (1, 2, 3...)
+      .limit(360) // Limit to reasonable amount for display
+      .toArray();
 
     console.log(`✅ Fetched ${draws.length} draws from database`);
 
@@ -61,26 +43,15 @@ router.get('/', async (req, res) => {
  */
 router.get('/current', async (req, res) => {
   try {
-    const mongoose = (await import('mongoose')).default;
-
-    const drawSchema = new mongoose.Schema({
-      id: Number,
-      batch: {
-        fightSequence: Number
-      },
-      result1: String,
-      details: Object,
-      createdAt: Date
-    }, { collection: 'draws' });
-
-    const Draw = mongoose.model('Draw', drawSchema, 'draws');
-
-    const currentDraw = await Draw.findOne()
-      .sort({ 'batch.fightSequence': -1, createdAt: -1 });
+    const currentDraw = await req.app.db.collection('draws')
+      .find({})
+      .sort({ id: -1 }) // Sort by numeric id descending (newest first)
+      .limit(1)
+      .toArray();
 
     res.json({
       success: true,
-      data: currentDraw
+      data: currentDraw[0] || null
     });
 
   } catch (err) {
