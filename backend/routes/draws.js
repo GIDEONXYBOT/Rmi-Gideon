@@ -1,12 +1,12 @@
 // backend/routes/draws.js - Manage draw results
 import express from 'express';
 import mongoose from 'mongoose';
-import { requireAuth } from '../middleware/auth.js';
+// import { requireAuth } from '../middleware/auth.js'; // Removed for public access
 
 const router = express.Router();
 
-// Apply auth middleware to all routes
-router.use(requireAuth);
+// Remove auth middleware for public access to draw results
+// router.use(requireAuth);
 
 /**
  * GET /api/draws
