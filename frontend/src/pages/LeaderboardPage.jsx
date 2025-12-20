@@ -439,7 +439,7 @@ const LeaderboardPage = () => {
                       .sort((a, b) => {
                         const fightA = a.batch?.fightSequence || a.id || 0;
                         const fightB = b.batch?.fightSequence || b.id || 0;
-                        return fightA - fightB;
+                        return fightA - fightB; // Sort ascending (1, 2, 3...)
                       })
                       .slice(0, maxBeads); // Limit to max capacity
 

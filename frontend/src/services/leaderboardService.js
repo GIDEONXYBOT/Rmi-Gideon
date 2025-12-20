@@ -20,12 +20,12 @@ export class LeaderboardService {
   }
 
   /**
-   * Fetch leaderboard data from the external platform via backend proxy
+   * Fetch leaderboard data from local database
    * @returns {Promise<Array>} Array of draw objects with betting data
    */
   async fetchLeaderboardData() {
     try {
-      const response = await fetch(`${this.apiUrl}/api/external-betting/leaderboard`, {
+      const response = await fetch(`${this.apiUrl}/api/draws`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -44,7 +44,7 @@ export class LeaderboardService {
         throw new Error(data.error || 'Failed to fetch leaderboard data');
       }
 
-      console.log(`✅ Fetched ${data.totalDraws} draws from leaderboard via backend proxy`);
+      console.log(`✅ Fetched ${data.totalDraws} draws from local database`);
       return data.data;
 
     } catch (error) {
@@ -67,8 +67,32 @@ export class LeaderboardService {
    * @returns {Promise<Object|null>} Current active draw or null
    */
   async getCurrentDraw() {
-    const draws = await this.fetchLeaderboardData();
-    return draws.find(draw => draw.status === 'started') || null;
+    try {
+      const response = await fetch(`${this.apiUrl}/api/draws/current`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to fetch current draw');
+      }
+
+      return data.data;
+
+    } catch (error) {
+      console.error('Error fetching current draw:', error);
+      throw error;
+    }
   }
 
   /**
