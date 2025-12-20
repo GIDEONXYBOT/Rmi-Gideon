@@ -20,15 +20,14 @@ export class LeaderboardService {
   }
 
   /**
-   * Fetch leaderboard data from local database
+   * Fetch leaderboard data from external GTArena API
    * @returns {Promise<Array>} Array of draw objects with betting data
    */
   async fetchLeaderboardData() {
     try {
-      const response = await fetch(`${this.apiUrl}/api/draws`, {
+      const response = await fetch(`${this.apiUrl}/api/external-betting/leaderboard`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json'
         }
       });
@@ -44,11 +43,33 @@ export class LeaderboardService {
         throw new Error(data.error || 'Failed to fetch leaderboard data');
       }
 
-      console.log(`✅ Fetched ${data.totalDraws} draws from local database`);
+      console.log(`✅ Fetched ${data.totalDraws} draws from GTArena leaderboard`);
       return data.data;
 
     } catch (error) {
-      console.error('❌ Error fetching leaderboard data:', error);
+      console.error('❌ Error fetching external leaderboard data:', error);
+      console.log('⚠️ Falling back to local draws data...');
+
+      // Fallback to local draws endpoint
+      try {
+        const fallbackResponse = await fetch(`${this.apiUrl}/api/draws`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (fallbackResponse.ok) {
+          const fallbackData = await fallbackResponse.json();
+          if (fallbackData.success) {
+            console.log(`✅ Fallback: Fetched ${fallbackData.totalDraws} draws from local database`);
+            return fallbackData.data;
+          }
+        }
+      } catch (fallbackError) {
+        console.error('❌ Fallback also failed:', fallbackError);
+      }
+
       throw error;
     }
   }
@@ -68,30 +89,29 @@ export class LeaderboardService {
    */
   async getCurrentDraw() {
     try {
-      const response = await fetch(`${this.apiUrl}/api/draws/current`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to fetch current draw');
-      }
-
-      return data.data;
-
+      // Get all draws from external API and find the most recent one
+      const draws = await this.fetchLeaderboardData();
+      // Return the first draw (most recent) or null if no draws
+      return draws.length > 0 ? draws[0] : null;
     } catch (error) {
-      console.error('Error fetching current draw:', error);
-      throw error;
+      console.error('❌ Error fetching current draw:', error);
+      // Fallback to local endpoint
+      try {
+        const response = await fetch(`${this.apiUrl}/api/draws/current`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          return data.success ? data.data : null;
+        }
+      } catch (fallbackError) {
+        console.error('❌ Current draw fallback failed:', fallbackError);
+      }
+      return null;
     }
   }
 
