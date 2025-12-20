@@ -154,6 +154,15 @@ const LeaderboardPage = () => {
     });
   };
 
+  const getCurrentDate = () => {
+    return new Date().toLocaleString('en-PH', {
+      weekday: 'short',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    }).toUpperCase();
+  };
+
   const getStreakCount = (draws, ...targetResults) => {
     let streak = 0;
     for (let i = 0; i < Math.min(draws.length, 20); i++) {
