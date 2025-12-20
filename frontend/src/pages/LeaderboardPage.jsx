@@ -13,6 +13,7 @@ const LeaderboardPage = () => {
   const [socket, setSocket] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
+  const [currentTime, setCurrentTime] = useState(new Date());
   const { showToast } = useToast();
 
   const fetchData = async (isBackground = false) => {
@@ -116,6 +117,15 @@ const LeaderboardPage = () => {
         clearInterval(interval);
       };
     }
+  }, []);
+
+  // Live clock that updates every second
+  useEffect(() => {
+    const clockInterval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(clockInterval);
   }, []);
 
   const formatCurrency = (amount) => {
@@ -231,6 +241,9 @@ const LeaderboardPage = () => {
                   }
                   return total;
                 }, 0).toFixed(2)}
+              </div>
+              <div className="text-xs text-blue-400 font-mono">
+                🕐 {currentTime.toLocaleTimeString()}
               </div>
               {lastUpdated && (
                 <div className="text-xs text-gray-500">

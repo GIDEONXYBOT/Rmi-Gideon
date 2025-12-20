@@ -141,10 +141,10 @@ export function initLeaderboardUpdateScheduler(io) {
   // Initial fetch
   fetchAndEmitUpdates();
 
-  // Set up periodic updates every 30 seconds
-  updateInterval = setInterval(fetchAndEmitUpdates, 30000);
+  // Set up periodic updates every 5 seconds (instead of 30)
+  updateInterval = setInterval(fetchAndEmitUpdates, 5000);
 
-  console.log('📊 Leaderboard update scheduler started - updating every 30 seconds');
+  console.log('📊 Leaderboard update scheduler started - updating every 5 seconds');
 
   return {
     stop: () => {
