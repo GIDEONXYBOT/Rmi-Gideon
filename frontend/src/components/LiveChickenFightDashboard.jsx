@@ -313,7 +313,10 @@ export default function LiveChickenFightDashboard() {
                       }`}>
                         {bet.side.toUpperCase()}
                       </span>
-                      <span className="font-medium">{bet.entryName}</span>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{bet.entryName}</span>
+                        <span className="text-xs text-gray-500">by {bet.createdByName}</span>
+                      </div>
                       <span className="text-sm text-gray-600 dark:text-gray-400">
                         Fight #{bet.gameType}
                       </span>
