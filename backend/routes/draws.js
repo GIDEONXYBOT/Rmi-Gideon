@@ -1,5 +1,6 @@
 // backend/routes/draws.js - Manage draw results
 import express from 'express';
+import mongoose from 'mongoose';
 import { requireAuth } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -13,8 +14,8 @@ router.use(requireAuth);
  */
 router.get('/', async (req, res) => {
   try {
-    // Query the draws collection directly
-    const draws = await req.app.db.collection('draws')
+    // Query the draws collection directly using mongoose
+    const draws = await mongoose.connection.db.collection('draws')
       .find({})
       .sort({ id: 1 }) // Sort by numeric id field (1, 2, 3...)
       .limit(360) // Limit to reasonable amount for display
@@ -43,7 +44,7 @@ router.get('/', async (req, res) => {
  */
 router.get('/current', async (req, res) => {
   try {
-    const currentDraw = await req.app.db.collection('draws')
+    const currentDraw = await mongoose.connection.db.collection('draws')
       .find({})
       .sort({ id: -1 }) // Sort by numeric id descending (newest first)
       .limit(1)
