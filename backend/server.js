@@ -136,6 +136,15 @@ mongoose
       console.error("❌ Failed to initialize scheduler:", schedulerError);
       // Don't exit, just log the error
     }
+
+    // Initialize leaderboard update scheduler for real-time updates
+    try {
+      const { initLeaderboardUpdateScheduler } = await import("./scheduler/leaderboardUpdate.js");
+      initLeaderboardUpdateScheduler(io);
+      console.log("📊 Leaderboard update scheduler initialized");
+    } catch (schedulerError) {
+      console.error("❌ Failed to initialize leaderboard scheduler:", schedulerError);
+    }
   })
   .catch((err) => {
     console.error("❌ MongoDB connection error:", err);
