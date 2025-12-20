@@ -128,6 +128,15 @@ const LeaderboardPage = () => {
     return () => clearInterval(clockInterval);
   }, []);
 
+  // Auto refresh page every 2 seconds
+  useEffect(() => {
+    const refreshInterval = setInterval(() => {
+      window.location.reload();
+    }, 2000);
+
+    return () => clearInterval(refreshInterval);
+  }, []);
+
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-PH', {
       style: 'currency',
@@ -234,13 +243,13 @@ const LeaderboardPage = () => {
             </div>
             <div className="text-right">
               <div className="text-green-400 font-medium">
-                Total Comm: ₱{draws.reduce((total, draw) => {
+                Total Comm: {formatCurrency(draws.reduce((total, draw) => {
                   if (draw.details && draw.result1 && draw.result1 !== 'draw') {
                     const fightTotal = draw.details.redTotalBetAmount + draw.details.blueTotalBetAmount + (draw.details.drawTotalBetAmount || 0);
                     return total + (fightTotal * 0.05488);
                   }
                   return total;
-                }, 0).toFixed(2)}
+                }, 0))}
               </div>
               <div className="text-xs text-blue-400 font-mono">
                 🕐 {currentTime.toLocaleTimeString()}
