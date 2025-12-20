@@ -432,7 +432,7 @@ const LeaderboardPage = () => {
                   {(() => {
                     const reglaColumns = [];
                     let currentColumn = [];
-                    let lastResult = null;
+                    let lastMainResult = null; // Only track Meron/Wala changes
 
                     // Process draws to create regla columns
                     for (let i = 0; i < Math.min(draws.length, 60); i++) {
@@ -444,8 +444,10 @@ const LeaderboardPage = () => {
                                              result === 'wala' || result === 'blue' ? 'wala' :
                                              result === 'draw' ? 'draw' : 'cancel';
 
-                      // If result changed or first result, start new column
-                      if (normalizedResult !== lastResult && lastResult !== null) {
+                      // Only start new column for Meron/Wala changes, Draw/Cancel continue in same column
+                      const isMainResult = normalizedResult === 'meron' || normalizedResult === 'wala';
+
+                      if (isMainResult && normalizedResult !== lastMainResult && lastMainResult !== null) {
                         if (currentColumn.length > 0) {
                           reglaColumns.push([...currentColumn]);
                           currentColumn = [];
@@ -455,8 +457,10 @@ const LeaderboardPage = () => {
                       // Add to current column
                       currentColumn.push({ draw, result: normalizedResult });
 
-                      // Update last result
-                      lastResult = normalizedResult;
+                      // Update last main result only for Meron/Wala
+                      if (isMainResult) {
+                        lastMainResult = normalizedResult;
+                      }
 
                       // Limit columns to prevent overflow
                       if (reglaColumns.length >= 12) break;
@@ -486,6 +490,7 @@ const LeaderboardPage = () => {
                               }
 
                               const { draw, result } = item;
+                              const fightNumber = draw.batch?.fightSequence || draw.id;
                               const isMeron = result === 'meron';
                               const isWala = result === 'wala';
                               const isDraw = result === 'draw';
@@ -500,9 +505,9 @@ const LeaderboardPage = () => {
                                     isDraw ? 'bg-green-600 border-green-500 text-white' :
                                     'bg-gray-600 border-gray-500 text-gray-300'
                                   }`}
-                                  title={`Fight ${draw.batch?.fightSequence || draw.id}: ${result.toUpperCase()}`}
+                                  title={`Fight ${fightNumber}: ${result.toUpperCase()}`}
                                 >
-                                  {isMeron ? 'M' : isWala ? 'W' : isDraw ? 'D' : 'C'}
+                                  {fightNumber}
                                 </div>
                               );
                             })}
