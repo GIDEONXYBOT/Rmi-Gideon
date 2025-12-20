@@ -3,7 +3,7 @@ import { emitChickenFightUpdate } from '../socket/chickenFightSocket.js';
 import ChickenFightGame from '../models/ChickenFightGame.js';
 import ChickenFightBet from '../models/ChickenFightBet.js';
 import ChickenFightEntry from '../models/ChickenFightEntry.js';
-import axios from 'axios';
+import { fetchChickenFightBettingData } from '../routes/externalBetting.js';
 
 let updateInterval = null;
 let isRunning = false;
@@ -64,24 +64,16 @@ export function initChickenFightUpdateScheduler(io) {
       // Try to fetch external betting data
       let externalData = null;
       try {
-        console.log('🌐 Fetching external chicken fight betting data...');
-        const apiUrl = process.env.NODE_ENV === 'production'
-          ? 'https://rmi-gideon.onrender.com'
-          : 'http://localhost:5000';
-
-        const response = await axios.get(`${apiUrl}/api/external-betting/chicken-fight-bets`, {
-          headers: {
-            'Authorization': `Bearer ${process.env.INTERNAL_API_TOKEN || 'internal-service-token'}`
-          },
-          timeout: 10000
-        });
-
-        if (response.data && response.data.success) {
-          externalData = response.data.data;
-          console.log(`✅ External data fetched: ${externalData.totalBets} bets, ₱${externalData.totalAmount?.toLocaleString()}, status: ${externalData.bettingStatus}`);
+        console.log('🌐 Fetching external chicken fight betting...');
+        externalData = await fetchChickenFightBettingData();
+        if (externalData && !externalData.error) {
+          console.log(`✅ External: ${externalData.totalBets} bets, ₱${externalData.totalAmount?.toLocaleString()}, status: ${externalData.bettingStatus}`);
+        } else {
+          console.warn('⚠️ External error:', externalData?.error);
+          externalData = null;
         }
-      } catch (externalError) {
-        console.warn('⚠️ Failed to fetch external chicken fight data:', externalError.message);
+      } catch (err) {
+        console.warn('⚠️ External fetch failed:', err.message);
       }
 
       // Combine database and external data

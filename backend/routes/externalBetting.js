@@ -589,6 +589,99 @@ router.get('/chicken-fight-bets', requireAuth, requireRole(['admin', 'super_admi
   }
 });
 
+/**
+ * Fetch chicken fight betting data directly from GTArena (for use in scheduler)
+ */
+export async function fetchChickenFightBettingData() {
+  try {
+    console.log('🐔 [SCRAPER] Fetching chicken fight betting from GTArena...');
+
+    const client = axios.create();
+
+    // Login
+    const loginUrl = 'https://rmi-gideon.gtarena.ph/login';
+    const loginResponse = await client.post(loginUrl,
+      `username=${sessionData.username}&password=${sessionData.password}`,
+      {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+        },
+        validateStatus: () => true,
+        timeout: 15000
+      }
+    );
+
+    if (loginResponse.status !== 200 && loginResponse.status !== 302) {
+      throw new Error(`Login failed: ${loginResponse.status}`);
+    }
+
+    const cookies = loginResponse.headers['set-cookie']?.join('; ') || '';
+    console.log('✅ [SCRAPER] Login successful');
+
+    // Fetch betting page
+    const chickenFightUrl = 'https://rmi-gideon.gtarena.ph/chicken-fight/betting';
+    const bettingResponse = await client.get(chickenFightUrl, {
+      headers: {
+        'Cookie': cookies,
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+      },
+      validateStatus: () => true,
+      timeout: 15000
+    });
+
+    console.log(`📄 [SCRAPER] Betting page status: ${bettingResponse.status}`);
+
+    if (bettingResponse.status !== 200) {
+      throw new Error(`Failed to fetch betting page: ${bettingResponse.status}`);
+    }
+
+    // Parse HTML
+    const $ = cheerio.load(bettingResponse.data);
+    const pageText = $('body').text();
+
+    const bettingData = {
+      totalBets: 0,
+      totalAmount: 0,
+      bettingStatus: 'open',
+      currentFight: null,
+      source: 'gtarena',
+      lastUpdated: new Date().toISOString()
+    };
+
+    // Parse status
+    const statusLower = pageText.toLowerCase();
+    if (statusLower.includes('closed') || statusLower.includes('tutup')) {
+      bettingData.bettingStatus = 'closed';
+    }
+    console.log(`📊 [SCRAPER] Status: ${bettingData.bettingStatus}`);
+
+    // Parse amounts
+    const amounts = pageText.match(/\\d{2,}|\\d{1,}\\,\\d{3}/g) || [];
+    amounts.forEach(amountStr => {
+      const parsed = parseFloat(amountStr.replace(/,/g, ''));
+      if (parsed >= 100 && parsed <= 1000000000) {
+        bettingData.totalAmount += parsed;
+        bettingData.totalBets += 1;
+      }
+    });
+
+    console.log(`💰 [SCRAPER] Found: ${bettingData.totalBets} bets, ₱${bettingData.totalAmount.toLocaleString()}`);
+    return bettingData;
+
+  } catch (err) {
+    console.error('❌ [SCRAPER] Error:', err.message);
+    return {
+      totalBets: 0,
+      totalAmount: 0,
+      bettingStatus: 'open',
+      source: 'gtarena',
+      lastUpdated: new Date().toISOString(),
+      error: err.message
+    };
+  }
+}
+
 // Export the function for use in other modules
 export { fetchBettingDataFromGTArena };
 
