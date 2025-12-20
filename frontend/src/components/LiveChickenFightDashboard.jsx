@@ -20,6 +20,18 @@ export default function LiveChickenFightDashboard() {
   const [error, setError] = useState('');
   const [currentTime, setCurrentTime] = useState(new Date());
 
+  // Format large numbers properly
+  const formatCurrency = (amount) => {
+    const num = parseFloat(amount) || 0;
+    if (num >= 1000000) {
+      return `₱${(num / 1000000).toFixed(1)}M`;
+    } else if (num >= 1000) {
+      return `₱${(num / 1000).toFixed(1)}K`;
+    } else {
+      return `₱${num.toLocaleString()}`;
+    }
+  };
+
   // Check authentication on component mount
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -152,7 +164,7 @@ export default function LiveChickenFightDashboard() {
   // Calculate live betting stats
   const getBettingStats = () => {
     const totalBets = liveData.bets.length;
-    const totalAmount = liveData.bets.reduce((sum, bet) => sum + (bet.amount || 0), 0);
+    const totalAmount = liveData.bets.reduce((sum, bet) => sum + (parseFloat(bet.amount) || 0), 0);
     const meronBets = liveData.bets.filter(bet => bet.side === 'meron');
     const walaBets = liveData.bets.filter(bet => bet.side === 'wala');
 
@@ -161,8 +173,8 @@ export default function LiveChickenFightDashboard() {
       totalAmount,
       meronCount: meronBets.length,
       walaCount: walaBets.length,
-      meronAmount: meronBets.reduce((sum, bet) => sum + (bet.amount || 0), 0),
-      walaAmount: walaBets.reduce((sum, bet) => sum + (bet.amount || 0), 0)
+      meronAmount: meronBets.reduce((sum, bet) => sum + (parseFloat(bet.amount) || 0), 0),
+      walaAmount: walaBets.reduce((sum, bet) => sum + (parseFloat(bet.amount) || 0), 0)
     };
   };
 
@@ -224,7 +236,7 @@ export default function LiveChickenFightDashboard() {
           <StaggerItem>
             <div className={`p-6 rounded-xl shadow-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'} card-hover`}>
               <div className="text-center">
-                <div className="text-3xl font-bold text-green-600 mb-2">₱{stats.totalAmount.toLocaleString()}</div>
+                <div className="text-3xl font-bold text-green-600 mb-2">{formatCurrency(stats.totalAmount)}</div>
                 <div className="text-sm text-gray-600 dark:text-gray-400">Total Amount</div>
               </div>
             </div>
@@ -235,7 +247,7 @@ export default function LiveChickenFightDashboard() {
               <div className="text-center">
                 <div className="text-2xl font-bold text-red-600 mb-1">{stats.meronCount}</div>
                 <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Meron Bets</div>
-                <div className="text-lg font-semibold text-red-600">₱{stats.meronAmount.toLocaleString()}</div>
+                <div className="text-lg font-semibold text-red-600">{formatCurrency(stats.meronAmount)}</div>
               </div>
             </div>
           </StaggerItem>
@@ -245,7 +257,7 @@ export default function LiveChickenFightDashboard() {
               <div className="text-center">
                 <div className="text-2xl font-bold text-blue-600 mb-1">{stats.walaCount}</div>
                 <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Wala Bets</div>
-                <div className="text-lg font-semibold text-blue-600">₱{stats.walaAmount.toLocaleString()}</div>
+                <div className="text-lg font-semibold text-blue-600">{formatCurrency(stats.walaAmount)}</div>
               </div>
             </div>
           </StaggerItem>
@@ -322,7 +334,7 @@ export default function LiveChickenFightDashboard() {
                       </span>
                     </div>
                     <div className="text-right">
-                      <div className="font-bold text-green-600">₱{bet.amount.toLocaleString()}</div>
+                      <div className="font-bold text-green-600">{formatCurrency(bet.amount)}</div>
                       <div className="text-xs text-gray-500">
                         {new Date(bet.createdAt).toLocaleTimeString()}
                       </div>

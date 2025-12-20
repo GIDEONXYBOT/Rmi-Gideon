@@ -34,11 +34,22 @@ export function initChickenFightUpdateScheduler(io) {
         fightNumber: game?.fightNumber || 0
       };
 
-      // Fetch bets for today directly from database
+      // Fetch bets for today directly from database (more inclusive date range)
       console.log('📥 Fetching bets data from database...');
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date();
+      endOfDay.setHours(23, 59, 59, 999);
+
       const bets = await ChickenFightBet.find({
-        gameDate: { $gte: today, $lt: tomorrow }
+        gameDate: { $gte: startOfDay, $lte: endOfDay }
       }).sort({ createdAt: -1 });
+
+      console.log(`📊 Found ${bets.length} bets for today`);
+      if (bets.length > 0) {
+        const totalAmount = bets.reduce((sum, bet) => sum + (parseFloat(bet.amount) || 0), 0);
+        console.log(`💰 Total betting amount: ₱${totalAmount.toLocaleString()}`);
+      }
 
       // Fetch entries directly from database
       console.log('📥 Fetching entries data from database...');
