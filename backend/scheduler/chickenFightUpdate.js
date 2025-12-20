@@ -8,9 +8,6 @@ import { fetchChickenFightBettingData } from '../routes/externalBetting.js';
 let updateInterval = null;
 let isRunning = false;
 
-let updateInterval = null;
-let isRunning = false;
-
 export function initChickenFightUpdateScheduler(io) {
   if (isRunning) {
     console.log('🐔 Chicken fight update scheduler already running');

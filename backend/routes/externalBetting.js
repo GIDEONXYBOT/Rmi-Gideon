@@ -15,6 +15,9 @@ let sessionData = {
   lastFetch: null
 };
 
+// Store historical draws data
+let historicalDraws = new Map(); // Use Map to store by draw ID for easy updates
+
 /**
  * GET /api/external-betting/debug
  * Debug endpoint to test login and see raw HTML
@@ -350,101 +353,194 @@ async function fetchBettingDataFromGTArena(username, password) {
  */
 router.get('/leaderboard', async (req, res) => {
   try {
-    console.log('📡 Fetching leaderboard data from GTArena...');
+    console.log('📡 Fetching leaderboard data from GTArena with authentication...');
 
     const client = axios.create();
 
-    // Fetch leaderboard page directly (no authentication required for public leaderboard)
-    const leaderboardUrl = 'https://rmi-gideon.gtarena.ph/leaderboard';
-    console.log(`📥 Fetching leaderboard from: ${leaderboardUrl}`);
-
-    const response = await client.get(leaderboardUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
-        'Accept-Encoding': 'gzip, deflate',
-        'Connection': 'keep-alive',
-        'Upgrade-Insecure-Requests': '1'
-      },
-      timeout: 10000,
-      validateStatus: () => true
-    });
-
-    console.log(`📄 Leaderboard response status: ${response.status}`);
-
-    if (response.status !== 200) {
-      throw new Error(`Failed to fetch leaderboard: HTTP ${response.status}`);
-    }
-
-    const html = response.data;
-    console.log(`📄 HTML length: ${html.length} characters`);
-
-    // Parse the HTML to extract JSON data from data-page attribute
-    const dataMatch = html.match(/data-page="([^"]*)"/);
-    if (!dataMatch) {
-      console.log('⚠️ No data-page attribute found in HTML');
-      // Try alternative patterns
-      const altMatch = html.match(/data-page='([^']*)'/);
-      if (!altMatch) {
-        throw new Error('Could not find leaderboard data in response');
+    // Step 1: Login to get authenticated session
+    const loginUrl = 'https://rmi-gideon.gtarena.ph/login';
+    console.log(`🔐 Attempting login to ${loginUrl}`);
+    const loginResponse = await client.post(loginUrl,
+      `username=${sessionData.username}&password=${sessionData.password}`,
+      {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        },
+        validateStatus: () => true
       }
-      console.log('✅ Found data-page with single quotes');
+    );
+    console.log(`📊 Login response status: ${loginResponse.status}`);
+
+    // Get cookies from login response
+    const cookies = loginResponse.headers['set-cookie']?.join('; ') || '';
+    console.log(`🍪 Cookies length: ${cookies.length}`);
+
+    if (loginResponse.status !== 200 && loginResponse.status !== 302) {
+      console.log('⚠️ Login may have failed, proceeding with public access');
     }
 
-    // Decode HTML entities before parsing JSON
-    const encodedData = dataMatch ? dataMatch[1] : altMatch[1];
-    console.log(`📄 Encoded data length: ${encodedData.length}`);
+    // Try multiple potential endpoints to get historical data
+    const potentialUrls = [
+      'https://rmi-gideon.gtarena.ph/leaderboard',
+      'https://rmi-gideon.gtarena.ph/reports/event/page',
+      'https://rmi-gideon.gtarena.ph/leaderboard?page=1',
+      'https://rmi-gideon.gtarena.ph/leaderboard?page=all',
+      'https://rmi-gideon.gtarena.ph/api/leaderboard',
+      'https://rmi-gideon.gtarena.ph/api/draws',
+      'https://rmi-gideon.gtarena.ph/api/events/current/draws'
+    ];
 
-    // Decode HTML entities (like &quot; -> ")
-    const decodedData = encodedData
-      .replace(/&quot;/g, '"')
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&#39;/g, "'")
-      .replace(/&apos;/g, "'");
+    let html = '';
+    let successfulUrl = '';
 
-    console.log(`📄 Decoded data length: ${decodedData.length}`);
+    for (const url of potentialUrls) {
+      try {
+        console.log(`🔍 Trying authenticated URL: ${url}`);
+        const response = await client.get(url, {
+          headers: {
+            'Cookie': cookies,
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          },
+          timeout: 15000,
+          validateStatus: () => true
+        });
 
-    let pageData;
-    try {
-      pageData = JSON.parse(decodedData);
-    } catch (parseError) {
-      console.error('❌ JSON parse error:', parseError.message);
-      console.log('📄 First 500 chars of decoded data:', decodedData.substring(0, 500));
-      throw new Error(`Failed to parse leaderboard JSON: ${parseError.message}`);
-    }
-
-    // Extract draws data
-    const draws = pageData?.props?.draws;
-    if (!draws || !Array.isArray(draws)) {
-      console.log('⚠️ No draws array found in pageData.props');
-      console.log('📄 Available keys in pageData:', Object.keys(pageData || {}));
-      if (pageData?.props) {
-        console.log('📄 Available keys in pageData.props:', Object.keys(pageData.props));
+        if (response.status === 200 && response.data) {
+          html = response.data;
+          successfulUrl = url;
+          console.log(`✅ Successfully fetched data from: ${url}`);
+          break;
+        }
+      } catch (error) {
+        console.log(`❌ Failed to fetch from ${url}: ${error.message}`);
+        continue;
       }
-      throw new Error('Unexpected leaderboard data structure');
+    }
+
+    if (!html) {
+      throw new Error('All potential URLs failed');
+    }
+
+    console.log(`📄 HTML/API response length: ${html.length} characters`);
+
+    // Parse the response - could be HTML with data-page or direct JSON
+    let draws = [];
+
+    if (html.trim().startsWith('{') || html.trim().startsWith('[')) {
+      // Direct JSON response
+      console.log('📄 Response appears to be JSON');
+      try {
+        const jsonData = JSON.parse(html);
+        draws = jsonData.draws || jsonData.data || jsonData;
+        if (!Array.isArray(draws)) {
+          draws = [draws];
+        }
+      } catch (error) {
+        console.error('❌ Failed to parse JSON response:', error.message);
+        throw new Error('Invalid JSON response from API');
+      }
+    } else {
+      // HTML response - parse data-page attribute
+      console.log('📄 Response appears to be HTML');
+      const dataMatch = html.match(/data-page="([^"]*)"/);
+      if (!dataMatch) {
+        console.log('⚠️ No data-page attribute found in HTML');
+        // Try alternative patterns
+        const altMatch = html.match(/data-page='([^']*)'/);
+        if (!altMatch) {
+          throw new Error('Could not find leaderboard data in response');
+        }
+        console.log('✅ Found data-page with single quotes');
+      }
+
+      // Decode HTML entities before parsing JSON
+      const encodedData = dataMatch ? dataMatch[1] : altMatch[1];
+      console.log(`📄 Encoded data length: ${encodedData.length}`);
+
+      // Decode HTML entities (like &quot; -> ")
+      const decodedData = encodedData
+        .replace(/&quot;/g, '"')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&#39;/g, "'")
+        .replace(/&apos;/g, "'");
+
+      console.log(`📄 Decoded data length: ${decodedData.length}`);
+
+      let pageData;
+      try {
+        pageData = JSON.parse(decodedData);
+      } catch (parseError) {
+        console.error('❌ JSON parse error:', parseError.message);
+        console.log('📄 First 500 chars of decoded data:', decodedData.substring(0, 500));
+        throw new Error(`Failed to parse leaderboard JSON: ${parseError.message}`);
+      }
+
+      // Extract draws data
+      draws = pageData?.props?.draws;
+      if (!draws || !Array.isArray(draws)) {
+        console.log('⚠️ No draws array found in pageData.props');
+        console.log('📄 Available keys in pageData:', Object.keys(pageData || {}));
+        if (pageData?.props) {
+          console.log('📄 Available keys in pageData.props:', Object.keys(pageData.props));
+        }
+        throw new Error('Unexpected leaderboard data structure');
+      }
     }
 
     console.log(`✅ Successfully parsed ${draws.length} draws from leaderboard`);
+
+    // Accumulate historical data
+    let newDrawsCount = 0;
+    draws.forEach(draw => {
+      if (!historicalDraws.has(draw.id)) {
+        historicalDraws.set(draw.id, draw);
+        newDrawsCount++;
+      } else {
+        // Update existing draw with latest data
+        historicalDraws.set(draw.id, { ...historicalDraws.get(draw.id), ...draw });
+      }
+    });
+
+    console.log(`📊 Accumulated ${newDrawsCount} new draws. Total historical draws: ${historicalDraws.size}`);
+
+    // Check if we need more historical data
+    if (historicalDraws.size < 115) {
+      console.log(`⚠️ Only have ${historicalDraws.size} historical draws, expected around 115. This will grow over time as new data becomes available.`);
+    }
+
+    // Convert Map to array and sort by fight sequence (ascending - oldest first)
+    const allDraws = Array.from(historicalDraws.values());
+    allDraws.sort((a, b) => (a.batch?.fightSequence || 0) - (b.batch?.fightSequence || 0));
+
+    console.log(`📊 Historical draw sequence range: ${allDraws[0]?.batch?.fightSequence || 'N/A'} to ${allDraws[allDraws.length - 1]?.batch?.fightSequence || 'N/A'}`);
 
     // Emit leaderboard update to connected clients
     const io = req.app.io;
     if (io) {
       emitLeaderboardUpdate(io, {
-        draws: draws,
-        currentDraw: draws[0] || null, // Most recent draw
-        totalDraws: draws.length
+        draws: allDraws,
+        currentDraw: allDraws[allDraws.length - 1] || null, // Most recent draw
+        totalDraws: allDraws.length
       });
     }
 
-    // Return the leaderboard data
+    // Return accumulated historical data
     res.json({
       success: true,
-      data: draws,
-      fetchedAt: new Date(),
-      totalDraws: draws.length
+      data: allDraws,
+      totalDraws: allDraws.length,
+      fetchedAt: new Date().toISOString(),
+      message: `Returning ${allDraws.length} accumulated historical draws`
     });
 
   } catch (err) {

@@ -6,6 +6,82 @@ import { emitLeaderboardUpdate } from '../socket/leaderboardSocket.js';
 let updateInterval = null;
 let isRunning = false;
 
+// Fallback scraping function in case API fails
+const fallbackScraping = async (io) => {
+  try {
+    const client = axios.create();
+    const leaderboardUrl = 'https://rmi-gideon.gtarena.ph/leaderboard';
+
+    const response = await client.get(leaderboardUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      },
+      timeout: 10000
+    });
+
+    if (response.status !== 200) return;
+
+    const $ = cheerio.load(response.data);
+    const draws = [];
+
+    // Try to find data-page attribute first (same as externalBetting.js)
+    const dataPage = $('#app').attr('data-page');
+    if (dataPage) {
+      try {
+        const pageData = JSON.parse(dataPage.replace(/&quot;/g, '"').replace(/&amp;/g, '&'));
+        if (pageData?.props?.draws) {
+          const apiDraws = pageData.props.draws;
+          console.log(`✅ Fallback found ${apiDraws.length} draws in data-page`);
+
+          emitLeaderboardUpdate(io, {
+            draws: apiDraws,
+            currentDraw: apiDraws[0] || null,
+            totalDraws: apiDraws.length
+          });
+          return;
+        }
+      } catch (e) {
+        console.warn('⚠️ Failed to parse data-page in fallback');
+      }
+    }
+
+    // Alternative parsing if data-page fails
+    $('tr, .fight, [class*="fight"]').each((index, element) => {
+      try {
+        const $row = $(element);
+        const text = $row.text();
+        const numbers = text.match(/[\d,]+\.?\d*/g);
+        if (numbers && numbers.length >= 3) {
+          draws.push({
+            id: `fallback-draw-${index}`,
+            result1: null,
+            result2: null,
+            details: {
+              redTotalBetAmount: parseFloat(numbers[0].replace(/,/g, '')) || 0,
+              blueTotalBetAmount: parseFloat(numbers[1].replace(/,/g, '')) || 0,
+              drawTotalBetAmount: parseFloat(numbers[2].replace(/,/g, '')) || 0
+            },
+            timestamp: new Date().toISOString()
+          });
+        }
+      } catch (error) {
+        // Ignore parsing errors
+      }
+    });
+
+    if (draws.length > 0) {
+      console.log(`✅ Fallback scraping found ${draws.length} draws`);
+      emitLeaderboardUpdate(io, {
+        draws: draws,
+        currentDraw: draws[0] || null,
+        totalDraws: draws.length
+      });
+    }
+  } catch (error) {
+    console.error('❌ Fallback scraping failed:', error.message);
+  }
+};
+
 export function initLeaderboardUpdateScheduler(io) {
   if (isRunning) {
     console.log('📊 Leaderboard update scheduler already running');
@@ -20,121 +96,42 @@ export function initLeaderboardUpdateScheduler(io) {
     try {
       console.log('🔄 Fetching leaderboard data for live updates...');
 
-      const client = axios.create();
+      // Use the externalBetting API endpoint instead of direct scraping
+      const apiUrl = 'http://localhost:5000/api/external-betting/leaderboard';
+      console.log(`📡 Calling internal API: ${apiUrl}`);
 
-      // Fetch leaderboard page directly (no authentication required for public leaderboard)
-      const leaderboardUrl = 'https://rmi-gideon.gtarena.ph/leaderboard';
-      console.log(`📥 Fetching leaderboard from: ${leaderboardUrl}`);
-
-      const response = await client.get(leaderboardUrl, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        },
-        timeout: 10000
+      const response = await axios.get(apiUrl, {
+        timeout: 15000,
+        validateStatus: () => true
       });
 
-      console.log(`📄 Leaderboard response status: ${response.status}`);
+      if (response.status === 200 && response.data) {
+        const { data: draws, totalDraws } = response.data;
 
-      if (response.status !== 200) {
-        throw new Error(`Failed to fetch leaderboard: HTTP ${response.status}`);
-      }
+        if (draws && draws.length > 0) {
+          console.log(`✅ Successfully received ${draws.length} draws from API`);
 
-      const $ = cheerio.load(response.data);
+          // Emit leaderboard update to connected clients
+          emitLeaderboardUpdate(io, {
+            draws: draws,
+            currentDraw: draws[0] || null, // Most recent draw
+            totalDraws: totalDraws || draws.length
+          });
 
-      // Parse leaderboard data (same logic as externalBetting.js)
-      const draws = [];
-
-      // Find all draw containers
-      $('.draw-container, .draw-item, [class*="draw"]').each((index, element) => {
-        try {
-          const $draw = $(element);
-
-          // Extract draw information
-          const drawId = $draw.attr('data-draw-id') ||
-                        $draw.find('[data-draw-id]').attr('data-draw-id') ||
-                        `draw-${index}`;
-
-          const result1 = $draw.find('.result, .winner, [class*="result"]').first().text().trim().toLowerCase();
-          const result2 = $draw.find('.result, .winner, [class*="result"]').eq(1).text().trim().toLowerCase();
-
-          // Extract betting amounts
-          const redTotalBet = parseFloat(
-            $draw.find('.red-total, .meron-total, [class*="red"]').text().replace(/[^0-9.-]/g, '') || '0'
-          );
-          const blueTotalBet = parseFloat(
-            $draw.find('.blue-total, .wala-total, [class*="blue"]').text().replace(/[^0-9.-]/g, '') || '0'
-          );
-          const drawTotalBet = parseFloat(
-            $draw.find('.draw-total, .tie-total, [class*="draw"]').text().replace(/[^0-9.-]/g, '') || '0'
-          );
-
-          // Only include draws with actual betting data
-          if (redTotalBet > 0 || blueTotalBet > 0 || drawTotalBet > 0) {
-            draws.push({
-              id: drawId,
-              result1: result1 || null,
-              result2: result2 || null,
-              details: {
-                redTotalBetAmount: redTotalBet,
-                blueTotalBetAmount: blueTotalBet,
-                drawTotalBetAmount: drawTotalBet
-              },
-              timestamp: new Date().toISOString()
-            });
-          }
-        } catch (parseError) {
-          console.warn(`⚠️ Failed to parse draw ${index}:`, parseError.message);
+          console.log('📡 Live leaderboard update emitted to all connected clients');
+        } else {
+          console.warn('⚠️ No draws received from API');
         }
-      });
-
-      if (draws.length === 0) {
-        // Try alternative parsing method
-        console.log('🔄 Trying alternative leaderboard parsing...');
-
-        // Look for table rows or other structures
-        $('tr, .fight, [class*="fight"]').each((index, element) => {
-          try {
-            const $row = $(element);
-            const text = $row.text();
-
-            // Simple regex to extract numbers
-            const numbers = text.match(/[\d,]+\.?\d*/g);
-            if (numbers && numbers.length >= 3) {
-              draws.push({
-                id: `alt-draw-${index}`,
-                result1: null,
-                result2: null,
-                details: {
-                  redTotalBetAmount: parseFloat(numbers[0].replace(/,/g, '')) || 0,
-                  blueTotalBetAmount: parseFloat(numbers[1].replace(/,/g, '')) || 0,
-                  drawTotalBetAmount: parseFloat(numbers[2].replace(/,/g, '')) || 0
-                },
-                timestamp: new Date().toISOString()
-              });
-            }
-          } catch (altParseError) {
-            console.warn(`⚠️ Alternative parsing failed for row ${index}:`, altParseError.message);
-          }
-        });
-      }
-
-      if (draws.length > 0) {
-        console.log(`✅ Successfully parsed ${draws.length} draws for live updates`);
-
-        // Emit leaderboard update to connected clients
-        emitLeaderboardUpdate(io, {
-          draws: draws,
-          currentDraw: draws[0] || null, // Most recent draw
-          totalDraws: draws.length
-        });
-
-        console.log('📡 Live leaderboard update emitted to all connected clients');
       } else {
-        console.warn('⚠️ No draws found in leaderboard response');
+        console.error(`❌ API call failed with status ${response.status}:`, response.data);
       }
 
     } catch (error) {
       console.error('❌ Leaderboard update scheduler error:', error.message);
+
+      // Fallback to direct scraping if API fails
+      console.log('🔄 Falling back to direct HTML scraping...');
+      await fallbackScraping(io);
     }
   };
 
