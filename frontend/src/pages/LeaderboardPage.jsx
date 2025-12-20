@@ -428,24 +428,30 @@ const LeaderboardPage = () => {
 
                 {/* Regla Pattern - Streak-based Layout */}
                 <div className="relative max-w-6xl mx-auto">
-                  {/* Generate Regla Pattern - Fixed 6x60 Grid */}
+                  {/* Generate Regla Pattern - Auto-adjust to show all results from oldest to newest */}
                   {(() => {
                     const totalRows = 6;
                     const totalColumns = 60;
                     const maxBeads = totalRows * totalColumns;
 
-                    // Get the most recent draws (up to maxBeads)
-                    const recentDraws = draws.slice(0, maxBeads);
+                    // Get all draws and sort by fight number (oldest first)
+                    const allDraws = [...draws]
+                      .sort((a, b) => {
+                        const fightA = a.batch?.fightSequence || a.id || 0;
+                        const fightB = b.batch?.fightSequence || b.id || 0;
+                        return fightA - fightB;
+                      })
+                      .slice(0, maxBeads); // Limit to max capacity
 
                     return (
                       <div className="flex justify-center gap-1 overflow-x-auto pb-4">
                         {/* Create 60 columns */}
                         {Array.from({ length: totalColumns }, (_, columnIndex) => (
                           <div key={columnIndex} className="flex flex-col gap-1">
-                            {/* Column header - only show every 10th column to avoid clutter */}
+                            {/* Column header - show fight range */}
                             {columnIndex % 10 === 0 && (
                               <div className="text-center text-xs text-gray-500 mb-1">
-                                {columnIndex + 1}
+                                {columnIndex * totalRows + 1}-{Math.min((columnIndex + 1) * totalRows, allDraws.length)}
                               </div>
                             )}
 
@@ -454,8 +460,8 @@ const LeaderboardPage = () => {
                               // Calculate the bead index in the sequence (left to right, top to bottom)
                               const beadIndex = columnIndex * totalRows + rowIndex;
 
-                              // Get the draw for this position (newest first)
-                              const draw = recentDraws[beadIndex];
+                              // Get the draw for this position (oldest first)
+                              const draw = allDraws[beadIndex];
                               const result = draw?.result1;
 
                               // Normalize result
