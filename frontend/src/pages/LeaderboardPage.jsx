@@ -104,10 +104,10 @@ const LeaderboardPage = () => {
         }
       });
 
-      // Background refresh every 5 minutes as fallback
+      // Background refresh every 2 seconds as fallback
       const interval = setInterval(() => {
         fetchData(true);
-      }, 300000); // 5 minutes
+      }, 2000); // 2 seconds
 
       return () => {
         socketInstance.off('connect');
@@ -126,15 +126,6 @@ const LeaderboardPage = () => {
     }, 1000);
 
     return () => clearInterval(clockInterval);
-  }, []);
-
-  // Auto refresh page every 2 seconds
-  useEffect(() => {
-    const refreshInterval = setInterval(() => {
-      window.location.reload();
-    }, 2000);
-
-    return () => clearInterval(refreshInterval);
   }, []);
 
   const formatCurrency = (amount) => {
