@@ -482,12 +482,14 @@ const LeaderboardPage = () => {
                     {coins.map((coin, index) => {
                       if (!coin.animationStarted) return null;
                       
-                      // Stack coins upward from bottom with random positions
+                      // Stack coins upward from bottom with random positions and orientations
                       const randomX = Math.random() * 260; // Random horizontal position within pile
                       const randomY = Math.floor(Math.random() * 5) * 32; // Stack in layers (0, 32, 64, 96, 128px)
-                      const randomLeft = Math.random() * 300 - 150; // Spread across container
-                      const rotate = Math.random() * 45 - 22.5;
-                      const tilt = Math.random() * 80 - 40;
+                      
+                      // Multiple rotation axes for varied coin orientations
+                      const rotateZ = Math.random() * 360; // Full rotation around Z axis
+                      const rotateX = Math.random() * 180 - 90; // Front/back tilt (-90 to 90)
+                      const rotateY = Math.random() * 180; // Side flip (0 to 180 - shows edge/side)
                       
                       return (
                         <div 
@@ -496,7 +498,7 @@ const LeaderboardPage = () => {
                           style={{
                             left: `${randomX}px`,
                             bottom: `${randomY}px`,
-                            transform: `rotate(${rotate}deg) rotateX(${tilt}deg) perspective(600px)`,
+                            transform: `perspective(600px) rotateZ(${rotateZ}deg) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`,
                             zIndex: index,
                             position: 'absolute'
                           }}
