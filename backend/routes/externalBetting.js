@@ -112,6 +112,29 @@ router.get('/debug', requireAuth, requireRole(['admin', 'super_admin']), async (
 });
 
 /**
+ * GET /api/external-betting/debug-db
+ * Debug endpoint to check database content
+ */
+router.get('/debug-db', async (req, res) => {
+  try {
+    const mongoose = (await import('mongoose')).default;
+    if (mongoose.connection.readyState !== 1) {
+      await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/rmi-teller-report');
+    }
+    
+    const count = await mongoose.connection.db.collection('draws').countDocuments();
+    const sample = await mongoose.connection.db.collection('draws').find({}).limit(3).toArray();
+    
+    res.json({
+      totalDraws: count,
+      sample: sample.map(d => ({ id: d.id, sequence: d.batch?.fightSequence }))
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
  * POST /api/external-betting/import-historical
  * Import historical fight data (admin only)
  */
