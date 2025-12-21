@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { Fragment, useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { SettingsContext } from '../context/SettingsContext';
 import { useToast } from '../context/ToastContext';
@@ -15,6 +15,18 @@ export default function TellerSalaryCalculation() {
   const [selectedWeek, setSelectedWeek] = useState(new Date().toISOString().split('T')[0]);
   const [weekStart, setWeekStart] = useState(null);
   const [weekEnd, setWeekEnd] = useState(null);
+  const dayLabels = [
+    { key: 'mon', label: 'Mon' },
+    { key: 'tue', label: 'Tue' },
+    { key: 'wed', label: 'Wed' },
+    { key: 'thu', label: 'Thu' },
+    { key: 'fri', label: 'Fri' },
+    { key: 'sat', label: 'Sat' },
+    { key: 'sun', label: 'Sun' }
+  ];
+  const baseSalaryAmount = 450;
+  const sumOver = (overObj = {}) =>
+    dayLabels.reduce((sum, { key }) => sum + (overObj[key] || 0), 0);
 
   // Check if user is super_admin or supervisor
   const isSuperAdminOrSupervisor = user?.role === 'super_admin' || user?.role === 'supervisor';
@@ -39,7 +51,7 @@ export default function TellerSalaryCalculation() {
       const diffToMonday = date.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
       const start = new Date(date.setDate(diffToMonday));
       const end = new Date(start);
-      end.setDate(end.getDate() + 4); // Friday
+      end.setDate(end.getDate() + 6); // Sunday
 
       setWeekStart(start);
       setWeekEnd(end);
@@ -170,8 +182,8 @@ export default function TellerSalaryCalculation() {
           ) : (
             tellers.map((teller) => {
               const dailyOver = teller.over || {};
-              const totalOver = Object.values(dailyOver).reduce((sum, val) => sum + (val || 0), 0);
-              const baseSalary = 450;
+              const totalOver = sumOver(dailyOver);
+              const baseSalary = baseSalaryAmount;
 
               return (
                 <div
@@ -205,21 +217,22 @@ export default function TellerSalaryCalculation() {
                       <h4 className={`text-sm font-semibold mb-3 ${dark ? 'text-gray-300' : 'text-gray-700'}`}>
                         Daily Over (Cash)
                       </h4>
-                      <div className="space-y-2">
-                        {['mon', 'tue', 'wed', 'thu', 'fri'].map((day) => {
-                          const label = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-                          const overAmount = dailyOver[day] || 0;
+                      <div className="grid grid-cols-3 gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400 border-b pb-2">
+                        <span>Day</span>
+                        <span>Over</span>
+                        <span>Base Salary</span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 text-sm mt-3">
+                        {dayLabels.map(({ key, label }) => {
+                          const overAmount = dailyOver[key] || 0;
                           return (
-                            <div key={day} className="flex justify-between items-center">
-                              <span className={`text-sm ${dark ? 'text-gray-400' : 'text-gray-600'}`}>
-                                {label[['mon', 'tue', 'wed', 'thu', 'fri'].indexOf(day)]}
-                              </span>
-                              <span className={`font-semibold ${
+                            <Fragment key={key}>
+                              <div className={`text-sm ${dark ? 'text-gray-400' : 'text-gray-600'}`}>{label}</div>
+                              <div className={`text-sm font-semibold ${
                                 overAmount > 0 ? 'text-green-600' : overAmount < 0 ? 'text-red-600' : dark ? 'text-gray-500' : 'text-gray-400'
-                              }`}>
-                                ₱{overAmount.toFixed(2)}
-                              </span>
-                            </div>
+                              }`}>₱{overAmount.toFixed(2)}</div>
+                              <div className={`text-sm ${dark ? 'text-gray-300' : 'text-gray-600'}`}>₱{baseSalaryAmount.toFixed(2)}</div>
+                            </Fragment>
                           );
                         })}
                       </div>
@@ -272,20 +285,14 @@ export default function TellerSalaryCalculation() {
             <div className={`rounded-xl p-6 ${dark ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
               <p className={`text-sm ${dark ? 'text-gray-400' : 'text-gray-600'} mb-2`}>Total Weekly Over</p>
               <p className="text-3xl font-bold text-green-600">
-                ₱{tellers.reduce((sum, t) => {
-                  const total = (t.over?.mon || 0) + (t.over?.tue || 0) + (t.over?.wed || 0) + (t.over?.thu || 0) + (t.over?.fri || 0);
-                  return sum + total;
-                }, 0).toFixed(2)}
+                ₱{tellers.reduce((sum, t) => sum + sumOver(t.over), 0).toFixed(2)}
               </p>
             </div>
 
             <div className={`rounded-xl p-6 ${dark ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
               <p className={`text-sm ${dark ? 'text-gray-400' : 'text-gray-600'} mb-2`}>Avg Weekly Over</p>
               <p className="text-3xl font-bold text-purple-600">
-                ₱{(tellers.length > 0 ? tellers.reduce((sum, t) => {
-                  const total = (t.over?.mon || 0) + (t.over?.tue || 0) + (t.over?.wed || 0) + (t.over?.thu || 0) + (t.over?.fri || 0);
-                  return sum + total;
-                }, 0) / tellers.length : 0).toFixed(2)}
+                ₱{(tellers.length > 0 ? tellers.reduce((sum, t) => sum + sumOver(t.over), 0) / tellers.length : 0).toFixed(2)}
               </p>
             </div>
           </div>
