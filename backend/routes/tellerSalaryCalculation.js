@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const Payroll = require('../models/payroll');
+const Payroll = require('../models/Payroll');
 const Employee = require('../models/Employee');
 const Teller = require('../models/Teller');
 const auth = require('../middleware/auth');
