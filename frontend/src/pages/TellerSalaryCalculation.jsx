@@ -169,8 +169,8 @@ export default function TellerSalaryCalculation() {
             </div>
           ) : (
             tellers.map((teller) => {
-              const dailyOT = teller.overtime || {};
-              const totalOT = Object.values(dailyOT).reduce((sum, val) => sum + (val || 0), 0);
+              const dailyOver = teller.over || {};
+              const totalOver = Object.values(dailyOver).reduce((sum, val) => sum + (val || 0), 0);
               const baseSalary = 450;
 
               return (
@@ -208,7 +208,7 @@ export default function TellerSalaryCalculation() {
                       <div className="space-y-2">
                         {['mon', 'tue', 'wed', 'thu', 'fri'].map((day) => {
                           const label = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-                          const overAmount = dailyOT[day] || 0;
+                          const overAmount = dailyOver[day] || 0;
                           return (
                             <div key={day} className="flex justify-between items-center">
                               <span className={`text-sm ${dark ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -231,8 +231,8 @@ export default function TellerSalaryCalculation() {
                         <span className={`font-semibold ${dark ? 'text-gray-300' : 'text-gray-700'}`}>
                           Weekly Over Total
                         </span>
-                        <span className={`text-xl font-bold ${totalOT > 0 ? 'text-green-600' : totalOT < 0 ? 'text-red-600' : 'text-gray-400'}`}>
-                          ₱{totalOT.toFixed(2)}
+                        <span className={`text-xl font-bold ${totalOver > 0 ? 'text-green-600' : totalOver < 0 ? 'text-red-600' : 'text-gray-400'}`}>
+                          ₱{totalOver.toFixed(2)}
                         </span>
                       </div>
                     </div>
