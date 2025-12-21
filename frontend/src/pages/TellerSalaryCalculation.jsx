@@ -3,7 +3,7 @@ import axios from 'axios';
 import { SettingsContext } from '../context/SettingsContext';
 import { useToast } from '../context/ToastContext';
 import { getApiUrl } from '../utils/apiConfig';
-import { Loader2, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+import { Loader2, ChevronLeft, ChevronRight, Calendar, Printer } from 'lucide-react';
 
 export default function TellerSalaryCalculation() {
   const { user, settings } = useContext(SettingsContext);
@@ -27,6 +27,61 @@ export default function TellerSalaryCalculation() {
   const baseSalaryAmount = 450;
   const sumOver = (overObj = {}) =>
     dayLabels.reduce((sum, { key }) => sum + (overObj[key] || 0), 0);
+  const formatCurrency = (value) => `₱${value.toFixed(2)}`;
+  const getWeekRangeLabel = () => {
+    if (weekStart && weekEnd) {
+      return `${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+    }
+    return 'Week overview';
+  };
+
+  const handlePrint = (teller) => {
+    const dailyOver = teller.over || {};
+    const weekLabel = getWeekRangeLabel();
+    const printableRows = dayLabels
+      .map(({ key, label }) => {
+        const overAmount = dailyOver[key] || 0;
+        return `<div class="row"><span>${label}</span><span>${formatCurrency(overAmount)}</span><span>${formatCurrency(baseSalaryAmount)}</span></div>`;
+      })
+      .join('');
+
+    const html = `<!doctype html>
+<html>
+<head>
+  <title>${teller.name} - Teller Report</title>
+  <style>
+    body { font-family: 'Helvetica', Arial, sans-serif; padding: 12px; margin: 0; width: 280px; }
+    h2 { margin: 0 0 4px; font-size: 18px; }
+    p { margin: 2px 0; font-size: 12px; }
+    .row { display: flex; justify-content: space-between; margin: 4px 0; font-size: 13px; }
+    .divider { border-top: 1px dashed #111; margin: 10px 0; }
+    .signature { margin-top: 14px; font-size: 11px; }
+    .signature-line { border-top: 1px solid #000; margin-top: 10px; padding-top: 4px; }
+  </style>
+</head>
+<body>
+  <h2>${teller.name}</h2>
+  <p>Teller ID: ${teller.id}</p>
+  <p>${weekLabel}</p>
+  <div class="divider"></div>
+  ${printableRows}
+  <div class="divider"></div>
+  <div class="row"><strong>Total</strong><strong>${formatCurrency(sumOver(dailyOver))}</strong><strong>${formatCurrency(baseSalaryAmount)}</strong></div>
+  <div class="signature">
+    <p>Prepared by: __________________________</p>
+    <p class="signature-line">Signature</p>
+  </div>
+</body>
+</html>`;
+
+    const printWindow = window.open('', '_blank', 'width=340,height=640');
+    if (!printWindow) return;
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+    printWindow.close();
+  };
 
   // Check if user is super_admin or supervisor
   const isSuperAdminOrSupervisor = user?.role === 'super_admin' || user?.role === 'supervisor';
@@ -194,8 +249,20 @@ export default function TellerSalaryCalculation() {
                 >
                   {/* Card Header */}
                   <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 p-4">
-                    <h3 className="text-lg font-bold text-white">{teller.name}</h3>
-                    <p className="text-indigo-100 text-sm">Teller ID: {teller.id}</p>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="text-lg font-bold text-white">{teller.name}</h3>
+                        <p className="text-indigo-100 text-sm">Teller ID: {teller.id}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handlePrint(teller)}
+                        className="inline-flex items-center gap-1 px-3 py-1 bg-white/20 hover:bg-white/30 rounded-full text-white text-xs font-semibold transition"
+                      >
+                        <Printer size={14} />
+                        Print
+                      </button>
+                    </div>
                   </div>
 
                   {/* Card Content */}
@@ -261,6 +328,16 @@ export default function TellerSalaryCalculation() {
                         <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-1">
                           Base (₱{baseSalary.toFixed(2)}) + Over (₱{totalOver.toFixed(2)})
                         </p>
+                    </div>
+                    <div className="mt-4 border-t border-dashed border-gray-400 pt-3 text-xs text-gray-500 dark:text-gray-400">
+                      <div className="flex justify-between items-center">
+                        <span>Prepared By</span>
+                        <div className="border-t border-dashed border-gray-400 w-32" />
+                      </div>
+                      <div className="flex justify-between items-center mt-2">
+                        <span>Supervisor Signature</span>
+                        <div className="border-t border-dashed border-gray-400 w-32" />
+                      </div>
                     </div>
                   </div>
                 </div>
