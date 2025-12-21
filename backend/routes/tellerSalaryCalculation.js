@@ -28,15 +28,11 @@ router.get('/', requireAuth, async (req, res) => {
       return res.status(400).json({ message: 'weekStart and weekEnd are required' });
     }
 
-    // Parse dates
+    // Parse dates and convert to string format (YYYY-MM-DD)
     const start = new Date(weekStart);
     const end = new Date(weekEnd);
-    end.setHours(23, 59, 59, 999);
-
-    // Build filter
-    let filter = {
-      date: { $gte: start, $lte: end }
-    };
+    const startDateStr = weekStart;
+    const endDateStr = weekEnd;
 
     // If supervisor, filter by their assigned tellers
     let tellerFilter = {};
@@ -59,8 +55,9 @@ router.get('/', requireAuth, async (req, res) => {
     }
 
     // Fetch teller reports for the week to get 'over' amounts
+    // Note: TellerReport.date is a String in format YYYY-MM-DD
     const tellerReports = await TellerReport.find({
-      date: { $gte: start, $lte: end },
+      date: { $gte: startDateStr, $lte: endDateStr },
       tellerId: { $in: tellerIds }
     }).lean();
 
@@ -86,7 +83,8 @@ router.get('/', requireAuth, async (req, res) => {
     tellerReports.forEach(report => {
       const tellerIdStr = report.tellerId?.toString();
       if (tellerMap[tellerIdStr]) {
-        const date = new Date(report.date);
+        // Parse the date string to get day of week
+        const date = new Date(report.date + 'T00:00:00Z');
         const dayOfWeek = date.getDay();
         
         // Map day of week to day name (1=Mon, 2=Tue, etc.)
