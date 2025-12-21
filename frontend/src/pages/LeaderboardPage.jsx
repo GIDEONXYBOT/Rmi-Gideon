@@ -453,6 +453,8 @@ const LeaderboardPage = () => {
                       opacity: 0.95;
                       text-shadow: 0 0 8px rgba(255, 215, 0, 0.3);
                       filter: drop-shadow(2px 2px 5px rgba(0, 0, 0, 0.6));
+                      animation: none !important;
+                      transform: none !important;
                     }
                   `}</style>
                   
