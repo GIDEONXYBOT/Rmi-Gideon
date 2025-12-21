@@ -383,7 +383,7 @@ const LeaderboardPage = () => {
                         opacity: 1;
                       }
                       100% {
-                        transform: translateY(calc(100% - 120px)) translateX(-80px) rotateX(900deg) rotateZ(${Math.random() * 360}deg) rotateY(${Math.random() * 360}deg);
+                        transform: translateY(calc(100% - 0px)) translateX(-80px) rotateX(900deg) rotateZ(${Math.random() * 360}deg) rotateY(${Math.random() * 360}deg);
                         opacity: 1;
                       }
                     }
@@ -393,7 +393,7 @@ const LeaderboardPage = () => {
                         opacity: 1;
                       }
                       100% {
-                        transform: translateY(calc(100% - 120px)) translateX(-10px) rotateX(900deg) rotateZ(${Math.random() * 360}deg) rotateY(${Math.random() * 360}deg);
+                        transform: translateY(calc(100% - 0px)) translateX(-10px) rotateX(900deg) rotateZ(${Math.random() * 360}deg) rotateY(${Math.random() * 360}deg);
                         opacity: 1;
                       }
                     }
@@ -403,7 +403,7 @@ const LeaderboardPage = () => {
                         opacity: 1;
                       }
                       100% {
-                        transform: translateY(calc(100% - 120px)) translateX(40px) rotateX(900deg) rotateZ(${Math.random() * 360}deg) rotateY(${Math.random() * 360}deg);
+                        transform: translateY(calc(100% - 0px)) translateX(40px) rotateX(900deg) rotateZ(${Math.random() * 360}deg) rotateY(${Math.random() * 360}deg);
                         opacity: 1;
                       }
                     }
@@ -413,7 +413,7 @@ const LeaderboardPage = () => {
                         opacity: 1;
                       }
                       100% {
-                        transform: translateY(calc(100% - 120px)) translateX(80px) rotateX(900deg) rotateZ(${Math.random() * 360}deg) rotateY(${Math.random() * 360}deg);
+                        transform: translateY(calc(100% - 0px)) translateX(80px) rotateX(900deg) rotateZ(${Math.random() * 360}deg) rotateY(${Math.random() * 360}deg);
                         opacity: 1;
                       }
                     }
@@ -440,10 +440,10 @@ const LeaderboardPage = () => {
                     }
                     .coins-pile {
                       position: absolute;
-                      bottom: 20px;
+                      bottom: 0;
                       left: 50%;
                       width: 300px;
-                      height: 140px;
+                      height: 160px;
                       margin-left: -150px;
                       display: block;
                     }
@@ -475,19 +475,15 @@ const LeaderboardPage = () => {
                     );
                   })}
                   
-                  {/* Accumulated coins at bottom - Heap formation */}
+                  {/* Accumulated coins at bottom - Stack upward randomly */}
                   <div className="coins-pile">
                     {coins.map((coin, index) => {
                       if (!coin.animationStarted) return null;
                       
-                      // Create heap formation - cone/pyramid shape
-                      const row = Math.floor(index / 8);
-                      const posInRow = index % 8;
-                      const heapWidth = Math.max(1, 8 - row * 1.5);
-                      const offset = (8 - heapWidth) / 2;
-                      
-                      const x = ((posInRow - offset) / heapWidth) * 260 + 20;
-                      const y = Math.max(0, 130 - row * 28);
+                      // Stack coins upward from bottom with random positions
+                      const randomX = Math.random() * 260; // Random horizontal position within pile
+                      const randomY = Math.floor(Math.random() * 5) * 32; // Stack in layers (0, 32, 64, 96, 128px)
+                      const randomLeft = Math.random() * 300 - 150; // Spread across container
                       const rotate = Math.random() * 45 - 22.5;
                       const tilt = Math.random() * 80 - 40;
                       
@@ -496,8 +492,8 @@ const LeaderboardPage = () => {
                           key={`settled-${coin.id}`} 
                           className="coin-settled"
                           style={{
-                            left: `${x}px`,
-                            bottom: `${y}px`,
+                            left: `${randomX}px`,
+                            bottom: `${randomY}px`,
                             transform: `rotate(${rotate}deg) rotateX(${tilt}deg) perspective(600px)`,
                             zIndex: index,
                             position: 'absolute'
