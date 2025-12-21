@@ -377,89 +377,134 @@ const LeaderboardPage = () => {
                 {/* Falling Coins Animation Container - Behind Content */}
                 <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-lg" style={{ zIndex: 5 }}>
                   <style>{`
-                    @keyframes fallCoin {
+                    @keyframes fallCoin1 {
                       0% {
-                        transform: translateY(-60px) translateX(0px) rotateX(0deg) rotateZ(0deg);
-                        opacity: 1;
-                      }
-                      50% {
-                        transform: translateY(50%) translateX(${Math.random() * 100 - 50}px) rotateX(180deg) rotateZ(180deg);
+                        transform: translateY(-100px) translateX(-120px) rotateX(0deg) rotateZ(0deg) rotateY(0deg);
                         opacity: 1;
                       }
                       100% {
-                        transform: translateY(calc(100% - 100px)) translateX(${Math.random() * 100 - 50}px) rotateX(720deg) rotateZ(${Math.random() * 360}deg);
+                        transform: translateY(calc(100% - 120px)) translateX(-80px) rotateX(900deg) rotateZ(${Math.random() * 360}deg) rotateY(${Math.random() * 360}deg);
+                        opacity: 1;
+                      }
+                    }
+                    @keyframes fallCoin2 {
+                      0% {
+                        transform: translateY(-100px) translateX(-40px) rotateX(0deg) rotateZ(0deg) rotateY(0deg);
+                        opacity: 1;
+                      }
+                      100% {
+                        transform: translateY(calc(100% - 120px)) translateX(-10px) rotateX(900deg) rotateZ(${Math.random() * 360}deg) rotateY(${Math.random() * 360}deg);
+                        opacity: 1;
+                      }
+                    }
+                    @keyframes fallCoin3 {
+                      0% {
+                        transform: translateY(-100px) translateX(40px) rotateX(0deg) rotateZ(0deg) rotateY(0deg);
+                        opacity: 1;
+                      }
+                      100% {
+                        transform: translateY(calc(100% - 120px)) translateX(40px) rotateX(900deg) rotateZ(${Math.random() * 360}deg) rotateY(${Math.random() * 360}deg);
+                        opacity: 1;
+                      }
+                    }
+                    @keyframes fallCoin4 {
+                      0% {
+                        transform: translateY(-100px) translateX(120px) rotateX(0deg) rotateZ(0deg) rotateY(0deg);
+                        opacity: 1;
+                      }
+                      100% {
+                        transform: translateY(calc(100% - 120px)) translateX(80px) rotateX(900deg) rotateZ(${Math.random() * 360}deg) rotateY(${Math.random() * 360}deg);
                         opacity: 1;
                       }
                     }
                     .falling-coin {
                       position: absolute;
-                      font-size: 3rem;
+                      font-size: 2.8rem;
                       left: 50%;
-                      margin-left: -1.5rem;
+                      margin-left: -1.4rem;
                       top: 0;
-                      text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+                      text-shadow: 0 0 12px rgba(255, 215, 0, 0.6);
+                      filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4));
                     }
-                    .falling-coin.animating {
-                      animation: fallCoin 2s ease-in forwards;
+                    .falling-coin.coin-1 {
+                      animation: fallCoin1 1.8s ease-in forwards;
+                    }
+                    .falling-coin.coin-2 {
+                      animation: fallCoin2 1.8s ease-in forwards;
+                    }
+                    .falling-coin.coin-3 {
+                      animation: fallCoin3 1.8s ease-in forwards;
+                    }
+                    .falling-coin.coin-4 {
+                      animation: fallCoin4 1.8s ease-in forwards;
                     }
                     .coins-pile {
                       position: absolute;
-                      bottom: 0;
-                      left: 0;
-                      right: 0;
-                      height: 120px;
+                      bottom: 20px;
+                      left: 50%;
+                      width: 300px;
+                      height: 140px;
+                      margin-left: -150px;
                       display: block;
                     }
                     .coin-settled {
                       position: absolute;
-                      font-size: 3rem;
-                      opacity: 0.9;
-                      bottom: 0;
-                      text-shadow: 0 0 8px rgba(255, 215, 0, 0.4);
-                      filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.5));
+                      font-size: 2.8rem;
+                      opacity: 0.95;
+                      text-shadow: 0 0 8px rgba(255, 215, 0, 0.3);
+                      filter: drop-shadow(2px 2px 5px rgba(0, 0, 0, 0.6));
                     }
                   `}</style>
                   
-                  {/* Animating coins */}
-                  {coins.map((coin) => (
-                    !coin.animationStarted && (
-                      <div
-                        key={coin.id}
-                        className="falling-coin animating"
-                        style={{
-                          animationDuration: `${1.8 + Math.random() * 0.8}s`,
-                          '--random-x': `${Math.random() * 80 - 40}px`,
-                          '--random-rotate': `${Math.random() * 360}deg`
-                        }}
-                      >
-                        🪙
-                      </div>
-                    )
-                  ))}
+                  {/* Animating coins - spread out falling */}
+                  {coins.map((coin, index) => {
+                    const coinPattern = index % 4;
+                    return (
+                      !coin.animationStarted && (
+                        <div
+                          key={coin.id}
+                          className={`falling-coin coin-${(coinPattern % 4) + 1}`}
+                          style={{
+                            animationDelay: `${(index % 4) * 0.15}s`,
+                            zIndex: 20
+                          }}
+                        >
+                          🪙
+                        </div>
+                      )
+                    );
+                  })}
                   
-                  {/* Accumulated coins at bottom - Stacked like in pot */}
+                  {/* Accumulated coins at bottom - Heap formation */}
                   <div className="coins-pile">
                     {coins.map((coin, index) => {
-                      const baseBottom = (index % 3) * 15;
-                      const randomLeft = Math.random() * 80 + 10;
-                      const randomRotate = Math.random() * 180 - 90;
-                      const randomTilt = Math.random() * 60 - 30;
+                      if (!coin.animationStarted) return null;
+                      
+                      // Create heap formation - cone/pyramid shape
+                      const row = Math.floor(index / 8);
+                      const posInRow = index % 8;
+                      const heapWidth = Math.max(1, 8 - row * 1.5);
+                      const offset = (8 - heapWidth) / 2;
+                      
+                      const x = ((posInRow - offset) / heapWidth) * 260 + 20;
+                      const y = Math.max(0, 130 - row * 28);
+                      const rotate = Math.random() * 45 - 22.5;
+                      const tilt = Math.random() * 80 - 40;
                       
                       return (
-                        coin.animationStarted && (
-                          <div 
-                            key={`settled-${coin.id}`} 
-                            className="coin-settled"
-                            style={{
-                              left: `${randomLeft}%`,
-                              bottom: `${baseBottom}px`,
-                              transform: `rotate(${randomRotate}deg) rotateX(${randomTilt}deg) perspective(1000px)`,
-                              zIndex: index
-                            }}
-                          >
-                            🪙
-                          </div>
-                        )
+                        <div 
+                          key={`settled-${coin.id}`} 
+                          className="coin-settled"
+                          style={{
+                            left: `${x}px`,
+                            bottom: `${y}px`,
+                            transform: `rotate(${rotate}deg) rotateX(${tilt}deg) perspective(600px)`,
+                            zIndex: index,
+                            position: 'absolute'
+                          }}
+                        >
+                          🪙
+                        </div>
                       );
                     })}
                   </div>
