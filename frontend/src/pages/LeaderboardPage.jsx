@@ -511,34 +511,96 @@ const LeaderboardPage = () => {
                 </div>
 
                 {/* Rooster Fighting Visualization */}
-                <div className="relative z-10 mb-8 flex justify-center items-center h-32">
+                <div className="relative z-10 mb-8 flex justify-center items-center h-40">
                   <style>{`
-                    @keyframes roosterLeft {
-                      0%, 100% { transform: translateX(0) scaleX(-1); }
-                      50% { transform: translateX(30px) scaleX(-1) rotateZ(-5deg); }
+                    @keyframes roosterLeftFight {
+                      0% { 
+                        transform: translateX(-80px) translateY(0) scaleX(-1) rotateZ(0deg);
+                        opacity: 1;
+                      }
+                      15% { 
+                        transform: translateX(-40px) translateY(-20px) scaleX(-1) rotateZ(-15deg);
+                        opacity: 1;
+                      }
+                      30% { 
+                        transform: translateX(0px) translateY(0px) scaleX(-1) rotateZ(-25deg);
+                        opacity: 1;
+                      }
+                      45% { 
+                        transform: translateX(-20px) translateY(-30px) scaleX(-1) rotateZ(-20deg);
+                        opacity: 1;
+                      }
+                      60% { 
+                        transform: translateX(-60px) translateY(-15px) scaleX(-1) rotateZ(-10deg);
+                        opacity: 1;
+                      }
+                      75% { 
+                        transform: translateX(-40px) translateY(0px) scaleX(-1) rotateZ(-5deg);
+                        opacity: 1;
+                      }
+                      100% { 
+                        transform: translateX(-80px) translateY(0) scaleX(-1) rotateZ(0deg);
+                        opacity: 1;
+                      }
                     }
-                    @keyframes roosterRight {
-                      0%, 100% { transform: translateX(0); }
-                      50% { transform: translateX(-30px) rotateZ(5deg); }
+                    @keyframes roosterRightFight {
+                      0% { 
+                        transform: translateX(80px) translateY(0) rotateZ(0deg);
+                        opacity: 1;
+                      }
+                      15% { 
+                        transform: translateX(40px) translateY(-20px) rotateZ(15deg);
+                        opacity: 1;
+                      }
+                      30% { 
+                        transform: translateX(0px) translateY(0px) rotateZ(25deg);
+                        opacity: 1;
+                      }
+                      45% { 
+                        transform: translateX(20px) translateY(-30px) rotateZ(20deg);
+                        opacity: 1;
+                      }
+                      60% { 
+                        transform: translateX(60px) translateY(-15px) rotateZ(10deg);
+                        opacity: 1;
+                      }
+                      75% { 
+                        transform: translateX(40px) translateY(0px) rotateZ(5deg);
+                        opacity: 1;
+                      }
+                      100% { 
+                        transform: translateX(80px) translateY(0) rotateZ(0deg);
+                        opacity: 1;
+                      }
+                    }
+                    @keyframes wingFlap {
+                      0%, 100% { opacity: 1; }
+                      20% { opacity: 0.4; }
+                      40% { opacity: 1; }
+                      60% { opacity: 0.4; }
+                      80% { opacity: 1; }
                     }
                     .rooster-left {
-                      animation: roosterLeft 1.5s ease-in-out infinite;
-                      font-size: 5rem;
+                      animation: roosterLeftFight 2s ease-in-out infinite, wingFlap 2s ease-in-out infinite;
+                      font-size: 6rem;
+                      filter: drop-shadow(0 0 10px rgba(255, 0, 0, 0.3));
                     }
                     .rooster-right {
-                      animation: roosterRight 1.5s ease-in-out infinite;
-                      font-size: 5rem;
+                      animation: roosterRightFight 2s ease-in-out infinite, wingFlap 2s ease-in-out infinite;
+                      font-size: 6rem;
+                      filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.3));
                     }
-                    .rooster-vs {
-                      font-size: 2rem;
+                    .fight-label {
+                      font-size: 1.2rem;
                       font-weight: bold;
-                      color: #fbbf24;
-                      text-shadow: 0 0 10px rgba(251, 191, 36, 0.5);
-                      margin: 0 20px;
+                      color: #ef4444;
+                      text-shadow: 0 0 10px rgba(239, 68, 68, 0.6);
+                      position: absolute;
+                      top: 0;
                     }
                   `}</style>
+                  <div className="fight-label">⚡ LIVE FIGHT ⚡</div>
                   <div className="rooster-left">🐓</div>
-                  <div className="rooster-vs">VS</div>
                   <div className="rooster-right">🐓</div>
                 </div>
 
