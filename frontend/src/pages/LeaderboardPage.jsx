@@ -341,9 +341,43 @@ const LeaderboardPage = () => {
         <div className="p-8">
           <div className="max-w-4xl mx-auto">
             {currentDraw ? (
-              <div className="bg-gray-900 rounded-lg p-8 border border-gray-700 mb-8">
+              <div className="bg-gray-900 rounded-lg p-8 border border-gray-700 mb-8 relative overflow-hidden">
+                {/* Falling Coins Animation Container */}
+                <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-lg">
+                  <style>{`
+                    @keyframes fallCoin {
+                      0% {
+                        transform: translateY(-20px) translateX(0px) rotate(0deg);
+                        opacity: 1;
+                      }
+                      100% {
+                        transform: translateY(100vh) translateX(50px) rotate(360deg);
+                        opacity: 0;
+                      }
+                    }
+                    .falling-coin {
+                      animation: fallCoin 3s ease-in infinite;
+                      position: absolute;
+                      font-size: 2rem;
+                    }
+                  `}</style>
+                  {Array.from({ length: 10 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="falling-coin"
+                      style={{
+                        left: `${Math.random() * 100}%`,
+                        animationDelay: `${i * 0.3}s`,
+                        animationDuration: `${2 + Math.random() * 1}s`
+                      }}
+                    >
+                      💰
+                    </div>
+                  ))}
+                </div>
+
                 {/* Fight Header */}
-                <div className="text-center mb-8">
+                <div className="text-center mb-8 relative z-10">
                   <div className="text-6xl font-bold text-white mb-4">
                     CURRENT FIGHT
                   </div>
@@ -356,7 +390,7 @@ const LeaderboardPage = () => {
                 </div>
 
                 {/* Betting Options */}
-                <div className="grid grid-cols-3 gap-8 mb-8">
+                <div className="grid grid-cols-3 gap-8 mb-8 relative z-10">
                   {/* Meron (Red) */}
                   <div className="bg-red-600 hover:bg-red-500 rounded-lg p-6 text-center cursor-pointer transition-all duration-300 border-4 border-red-500 transform hover:scale-105">
                     <div className="text-3xl font-bold text-white mb-4">MERON</div>
@@ -392,7 +426,7 @@ const LeaderboardPage = () => {
                 </div>
 
                 {/* Live Stats */}
-                <div className="text-center">
+                <div className="text-center relative z-10">
                   <div className="text-sm text-gray-400 mb-2">TOTAL BETS</div>
                   <div className="text-2xl font-bold text-white">
                     ₱{currentDraw.details ? (currentDraw.details.redTotalBetAmount + currentDraw.details.blueTotalBetAmount + (currentDraw.details.drawTotalBetAmount || 0)).toLocaleString() : '0'}
