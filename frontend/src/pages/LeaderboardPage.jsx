@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { leaderboardService } from '../services/leaderboardService';
 import { useToast } from '../context/ToastContext';
 import { getSocket } from '../socket';
@@ -14,7 +14,39 @@ const LeaderboardPage = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [coins, setCoins] = useState([]);
+  const [lastTotalBets, setLastTotalBets] = useState(0);
   const { showToast } = useToast();
+
+  // Monitor total bets and generate coins when it increases
+  useEffect(() => {
+    if (currentDraw?.details) {
+      const currentTotal = currentDraw.details.redTotalBetAmount + 
+                           currentDraw.details.blueTotalBetAmount + 
+                           (currentDraw.details.drawTotalBetAmount || 0);
+      
+      if (currentTotal > lastTotalBets) {
+        // Generate new coins (add more coins as bets increase)
+        const coinIncrease = Math.min(Math.floor((currentTotal - lastTotalBets) / 1000), 15);
+        const newCoins = Array.from({ length: coinIncrease }).map((_, i) => ({
+          id: `${Date.now()}-${i}`,
+          createdAt: Date.now()
+        }));
+        setCoins(prev => [...prev, ...newCoins]);
+        setLastTotalBets(currentTotal);
+      }
+    }
+  }, [currentDraw?.details, lastTotalBets]);
+
+  // Clean up old coins after a while (keep them visible longer)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCoins(prev => 
+        prev.filter(coin => Date.now() - coin.createdAt < 8000) // Keep coins for 8 seconds
+      );
+    }, 500);
+    return () => clearInterval(interval);
+  }, []);
 
   const fetchData = async (isBackground = false) => {
     if (isBackground) {
@@ -347,31 +379,31 @@ const LeaderboardPage = () => {
                   <style>{`
                     @keyframes fallCoin {
                       0% {
-                        transform: translateY(-20px) translateX(0px) rotate(0deg);
+                        transform: translateY(-40px) rotate(0deg);
                         opacity: 1;
                       }
                       100% {
-                        transform: translateY(100vh) translateX(50px) rotate(360deg);
-                        opacity: 0;
+                        transform: translateY(100vh) rotate(360deg);
+                        opacity: 1;
                       }
                     }
                     .falling-coin {
-                      animation: fallCoin 3s ease-in infinite;
+                      animation: fallCoin 3.5s ease-in forwards;
                       position: absolute;
-                      font-size: 2rem;
+                      font-size: 2.5rem;
+                      left: 50%;
+                      margin-left: -1.25rem;
                     }
                   `}</style>
-                  {Array.from({ length: 10 }).map((_, i) => (
+                  {coins.map((coin) => (
                     <div
-                      key={i}
+                      key={coin.id}
                       className="falling-coin"
                       style={{
-                        left: `${Math.random() * 100}%`,
-                        animationDelay: `${i * 0.3}s`,
-                        animationDuration: `${2 + Math.random() * 1}s`
+                        animationDuration: `${2.5 + Math.random() * 1.5}s`
                       }}
                     >
-                      💰
+                      🪙
                     </div>
                   ))}
                 </div>
