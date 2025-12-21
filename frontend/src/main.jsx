@@ -320,7 +320,7 @@ function App() {
             <Route
               path="/admin/*"
               element={
-                <ProtectedRoute role="admin">
+                <ProtectedRoute allowedRoles={["admin", "super_admin"]}>
                   <SidebarLayout role="admin">
                     <Routes>
                       <Route index element={<Navigate to="dashboard" />} />
