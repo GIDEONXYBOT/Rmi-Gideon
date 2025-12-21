@@ -17,6 +17,45 @@ let sessionData = {
 
 // Store historical draws data
 let historicalDraws = new Map(); // Use Map to store by draw ID for easy updates
+let isHistoricalDataLoaded = false; // Flag to track if data has been loaded from DB
+
+/**
+ * Load historical draws data from database
+ */
+async function loadHistoricalDataFromDB() {
+  if (isHistoricalDataLoaded) {
+    console.log('📊 Historical data already loaded, skipping database load');
+    return;
+  }
+
+  try {
+    console.log('📊 Loading historical draws data from database...');
+
+    // Import mongoose dynamically to avoid circular dependencies
+    const mongoose = (await import('mongoose')).default;
+
+    // Connect to database if not already connected
+    if (mongoose.connection.readyState !== 1) {
+      console.log('📊 Connecting to MongoDB...');
+      await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/rmi-teller-report');
+    }
+
+    const draws = await mongoose.connection.db.collection('draws').find({}).toArray();
+    console.log(`📊 Found ${draws.length} draws in database`);
+
+    draws.forEach(draw => {
+      if (draw.id) {
+        historicalDraws.set(draw.id, draw);
+      }
+    });
+
+    isHistoricalDataLoaded = true;
+    console.log(`✅ Loaded ${historicalDraws.size} historical draws from database`);
+
+  } catch (error) {
+    console.error('❌ Error loading historical data from database:', error);
+  }
+}
 
 /**
  * GET /api/external-betting/debug
@@ -84,13 +123,32 @@ router.post('/import-historical', requireAuth, requireRole(['admin', 'super_admi
       return res.status(400).json({ error: 'Fights must be an array' });
     }
 
+    // Import mongoose dynamically to avoid circular dependencies
+    const mongoose = (await import('mongoose')).default;
+
+    // Connect to database if not already connected
+    if (mongoose.connection.readyState !== 1) {
+      await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/rmi-teller-report');
+    }
+
     let importedCount = 0;
-    fights.forEach(fight => {
+    for (const fight of fights) {
       if (!historicalDraws.has(fight.id)) {
         historicalDraws.set(fight.id, fight);
         importedCount++;
+
+        // Save to database
+        try {
+          await mongoose.connection.db.collection('draws').updateOne(
+            { id: fight.id },
+            { $set: fight },
+            { upsert: true }
+          );
+        } catch (dbError) {
+          console.error(`❌ Error saving fight ${fight.id} to database:`, dbError);
+        }
       }
-    });
+    }
 
     console.log(`📊 Imported ${importedCount} historical fights. Total historical draws: ${historicalDraws.size}`);
 
@@ -385,6 +443,10 @@ router.get('/leaderboard', async (req, res) => {
   try {
     console.log('📡 Fetching leaderboard data from GTArena with authentication...');
 
+    // Force reload historical data from database (for debugging)
+    isHistoricalDataLoaded = false;
+    await loadHistoricalDataFromDB();
+
     const client = axios.create();
 
     // Step 1: Login to get authenticated session
@@ -544,15 +606,45 @@ router.get('/leaderboard', async (req, res) => {
 
     // Accumulate historical data
     let newDrawsCount = 0;
-    draws.forEach(draw => {
+    const mongoose = (await import('mongoose')).default;
+
+    // Connect to database if not already connected
+    if (mongoose.connection.readyState !== 1) {
+      await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/rmi-teller-report');
+    }
+
+    for (const draw of draws) {
       if (!historicalDraws.has(draw.id)) {
         historicalDraws.set(draw.id, draw);
         newDrawsCount++;
+
+        // Save new draw to database
+        try {
+          await mongoose.connection.db.collection('draws').updateOne(
+            { id: draw.id },
+            { $set: draw },
+            { upsert: true }
+          );
+        } catch (dbError) {
+          console.error(`❌ Error saving draw ${draw.id} to database:`, dbError);
+        }
       } else {
         // Update existing draw with latest data
-        historicalDraws.set(draw.id, { ...historicalDraws.get(draw.id), ...draw });
+        const updatedDraw = { ...historicalDraws.get(draw.id), ...draw };
+        historicalDraws.set(draw.id, updatedDraw);
+
+        // Update in database
+        try {
+          await mongoose.connection.db.collection('draws').updateOne(
+            { id: draw.id },
+            { $set: updatedDraw },
+            { upsert: true }
+          );
+        } catch (dbError) {
+          console.error(`❌ Error updating draw ${draw.id} in database:`, dbError);
+        }
       }
-    });
+    }
 
     console.log(`📊 Accumulated ${newDrawsCount} new draws. Total historical draws: ${historicalDraws.size}`);
 
