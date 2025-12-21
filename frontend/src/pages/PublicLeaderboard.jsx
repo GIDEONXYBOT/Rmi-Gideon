@@ -2,12 +2,10 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
 const PublicLeaderboard = () => {
-  const [allDraws, setAllDraws] = useState([]);
-  const [filteredDraws, setFilteredDraws] = useState([]);
+  const [draws, setDraws] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
-  const [selectedDate, setSelectedDate] = useState(new Date('2025-12-21'));
 
   const fetchData = async () => {
     try {
@@ -16,9 +14,17 @@ const PublicLeaderboard = () => {
 
       // Fetch from production API
       const response = await axios.get('https://rmi-backend-zhdr.onrender.com/api/external-betting/leaderboard');
-      const drawsData = response.data.data || [];
+      const allDraws = response.data.data || [];
 
-      setAllDraws(drawsData);
+      // Filter to only show today's results
+      const today = new Date();
+      const todayString = today.toISOString().split('T')[0];
+      const todaysDraws = allDraws.filter(draw => {
+        const drawDate = new Date(draw.createdAt).toISOString().split('T')[0];
+        return drawDate === todayString;
+      });
+
+      setDraws(todaysDraws);
       setLastUpdated(new Date());
     } catch (err) {
       console.error('Error fetching leaderboard data:', err);
@@ -28,16 +34,6 @@ const PublicLeaderboard = () => {
     }
   };
 
-  // Filter draws based on selected date
-  useEffect(() => {
-    const selectedDateString = selectedDate.toISOString().split('T')[0];
-    const filtered = allDraws.filter(draw => {
-      const drawDate = new Date(draw.createdAt).toISOString().split('T')[0];
-      return drawDate === selectedDateString;
-    });
-    setFilteredDraws(filtered);
-  }, [allDraws, selectedDate]);
-
   useEffect(() => {
     fetchData();
 
@@ -45,21 +41,6 @@ const PublicLeaderboard = () => {
     const interval = setInterval(fetchData, 60000);
     return () => clearInterval(interval);
   }, []);
-
-  const navigateDate = (direction) => {
-    const newDate = new Date(selectedDate);
-    newDate.setDate(newDate.getDate() + direction);
-    setSelectedDate(newDate);
-  };
-
-  const formatDate = (date) => {
-    return date.toLocaleDateString('en-PH', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-PH', {
@@ -106,9 +87,9 @@ const PublicLeaderboard = () => {
   }
 
   // Calculate today's statistics
-  const totalFights = filteredDraws.length;
-  const completedFights = filteredDraws.filter(d => d.result1 && d.result1 !== 'draw').length;
-  const totalCommission = filteredDraws.reduce((total, draw) => {
+  const totalFights = draws.length;
+  const completedFights = draws.filter(d => d.result1 && d.result1 !== 'draw').length;
+  const totalCommission = draws.reduce((total, draw) => {
     if (draw.details && draw.result1 && draw.result1 !== 'draw') {
       const fightTotal = draw.details.redTotalBetAmount + draw.details.blueTotalBetAmount + (draw.details.drawTotalBetAmount || 0);
       return total + (fightTotal * 0.055);
@@ -123,7 +104,7 @@ const PublicLeaderboard = () => {
         <div className="max-w-6xl mx-auto px-6 py-8">
           <div className="text-center">
             <h1 className="text-4xl font-bold text-white mb-2">RMI Chicken Fight Results</h1>
-            <p className="text-blue-200 text-lg">{formatDate(selectedDate)}</p>
+            <p className="text-blue-200 text-lg">Today's Live Fight Results</p>
           </div>
 
           {/* Today's Stats */}
@@ -150,39 +131,16 @@ const PublicLeaderboard = () => {
         </div>
       </div>
 
-      {/* Date Navigation */}
-      <div className="bg-gray-800 border-b border-gray-700">
-        <div className="max-w-6xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-center space-x-4">
-            <button
-              onClick={() => navigateDate(-1)}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors"
-            >
-              ← Previous Day
-            </button>
-            <div className="text-white text-lg font-semibold">
-              {formatDate(selectedDate)}
-            </div>
-            <button
-              onClick={() => navigateDate(1)}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors"
-            >
-              Next Day →
-            </button>
-          </div>
-        </div>
-      </div>
-
       {/* Fight Results */}
       <div className="max-w-6xl mx-auto px-6 py-8">
         <div className="grid gap-4">
-          {filteredDraws.length === 0 ? (
+          {draws.length === 0 ? (
             <div className="bg-gray-800 rounded-lg p-8 text-center">
-              <p className="text-gray-400 text-lg">No fights completed on {formatDate(selectedDate)}.</p>
-              <p className="text-gray-500 text-sm mt-2">Try selecting a different date.</p>
+              <p className="text-gray-400 text-lg">No fights completed today yet.</p>
+              <p className="text-gray-500 text-sm mt-2">Check back later for live results!</p>
             </div>
           ) : (
-            filteredDraws.map((draw) => (
+            draws.map((draw) => (
               <div key={draw.id} className="bg-gray-800 rounded-lg p-6 border border-gray-700 hover:border-gray-600 transition-colors">
                 <div className="flex justify-between items-center mb-4">
                   <div className="flex items-center space-x-4">
@@ -242,8 +200,8 @@ const PublicLeaderboard = () => {
       {/* Footer */}
       <div className="bg-gray-800 border-t border-gray-700 mt-12">
         <div className="max-w-6xl mx-auto px-6 py-6 text-center text-gray-400 text-sm">
-          <p>RMI Teller Report System - Chicken Fight Results</p>
-          <p className="mt-1">Use navigation buttons to view results for different dates</p>
+          <p>RMI Teller Report System - Today's Chicken Fight Results</p>
+          <p className="mt-1">Data updates automatically every minute</p>
         </div>
       </div>
     </div>
