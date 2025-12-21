@@ -374,46 +374,49 @@ const LeaderboardPage = () => {
           <div className="max-w-4xl mx-auto">
             {currentDraw ? (
               <div className="bg-gray-900 rounded-lg p-8 border border-gray-700 mb-8 relative overflow-hidden">
-                {/* Falling Coins Animation Container */}
-                <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-lg flex flex-col justify-between">
+                {/* Falling Coins Animation Container - Behind Content */}
+                <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-lg" style={{ zIndex: 5 }}>
                   <style>{`
                     @keyframes fallCoin {
                       0% {
-                        transform: translateY(-40px) rotate(0deg);
+                        transform: translateY(-60px) translateX(0px) rotateX(0deg) rotateZ(0deg);
                         opacity: 1;
                       }
-                      90% {
-                        transform: translateY(calc(100% - 80px)) rotate(360deg);
+                      50% {
+                        transform: translateY(50%) translateX(${Math.random() * 100 - 50}px) rotateX(180deg) rotateZ(180deg);
                         opacity: 1;
                       }
                       100% {
-                        transform: translateY(calc(100% - 80px)) rotate(360deg);
+                        transform: translateY(calc(100% - 100px)) translateX(${Math.random() * 100 - 50}px) rotateX(720deg) rotateZ(${Math.random() * 360}deg);
                         opacity: 1;
                       }
                     }
                     .falling-coin {
                       position: absolute;
-                      font-size: 2.5rem;
+                      font-size: 3rem;
                       left: 50%;
-                      margin-left: -1.25rem;
+                      margin-left: -1.5rem;
                       top: 0;
+                      text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
                     }
                     .falling-coin.animating {
-                      animation: fallCoin 3.5s ease-in forwards;
+                      animation: fallCoin 2s ease-in forwards;
                     }
                     .coins-pile {
                       position: absolute;
                       bottom: 0;
                       left: 0;
                       right: 0;
-                      height: 80px;
+                      height: 120px;
                       display: block;
                     }
                     .coin-settled {
                       position: absolute;
-                      font-size: 2.5rem;
-                      opacity: 1;
-                      bottom: 10px;
+                      font-size: 3rem;
+                      opacity: 0.9;
+                      bottom: 0;
+                      text-shadow: 0 0 8px rgba(255, 215, 0, 0.4);
+                      filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.5));
                     }
                   `}</style>
                   
@@ -424,8 +427,9 @@ const LeaderboardPage = () => {
                         key={coin.id}
                         className="falling-coin animating"
                         style={{
-                          animationDuration: `${2.5 + Math.random() * 1.5}s`,
-                          zIndex: 20
+                          animationDuration: `${1.8 + Math.random() * 0.8}s`,
+                          '--random-x': `${Math.random() * 80 - 40}px`,
+                          '--random-rotate': `${Math.random() * 360}deg`
                         }}
                       >
                         🪙
@@ -433,22 +437,31 @@ const LeaderboardPage = () => {
                     )
                   ))}
                   
-                  {/* Accumulated coins at bottom */}
-                  <div className="coins-pile" style={{ zIndex: 15 }}>
-                    {coins.map((coin) => (
-                      coin.animationStarted && (
-                        <div 
-                          key={`settled-${coin.id}`} 
-                          className="coin-settled"
-                          style={{
-                            left: `${Math.random() * 85}%`,
-                            transform: `rotate(${Math.random() * 360}deg)`
-                          }}
-                        >
-                          🪙
-                        </div>
-                      )
-                    ))}
+                  {/* Accumulated coins at bottom - Stacked like in pot */}
+                  <div className="coins-pile">
+                    {coins.map((coin, index) => {
+                      const baseBottom = (index % 3) * 15;
+                      const randomLeft = Math.random() * 80 + 10;
+                      const randomRotate = Math.random() * 180 - 90;
+                      const randomTilt = Math.random() * 60 - 30;
+                      
+                      return (
+                        coin.animationStarted && (
+                          <div 
+                            key={`settled-${coin.id}`} 
+                            className="coin-settled"
+                            style={{
+                              left: `${randomLeft}%`,
+                              bottom: `${baseBottom}px`,
+                              transform: `rotate(${randomRotate}deg) rotateX(${randomTilt}deg) perspective(1000px)`,
+                              zIndex: index
+                            }}
+                          >
+                            🪙
+                          </div>
+                        )
+                      );
+                    })}
                   </div>
                 </div>
 
