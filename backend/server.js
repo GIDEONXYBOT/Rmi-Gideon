@@ -223,7 +223,7 @@ import mediaRoutes from "./routes/media.js"; // /api/media (feed uploads)
 import chickenFightRoutes from "./routes/chicken-fight.js"; // 🐔 /api/chicken-fight
 import chickenFightRegistrationRoutes from "./routes/chicken-fight-registration.js"; // 🐔 /api/chicken-fight-registration
 import drawsRoutes from "./routes/draws.js"; // 📊 /api/draws
-import tellerOvertimeReportRoutes from "./routes/tellerOvertimeReport.js"; // 📊 /api/teller-overtime-report
+import tellerSalaryCalculationRoutes from "./routes/tellerSalaryCalculation.js"; // 📊 /api/teller-salary-calculation
 import { initChickenFightSocket } from "./socket/chickenFightSocket.js"; // 🐔 Socket.IO handlers
 import { initLeaderboardSocket } from "./socket/leaderboardSocket.js"; // 📊 Leaderboard Socket.IO handlers
 
@@ -246,7 +246,7 @@ app.use("/api/chat", chatRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/admin", adminTellerOverviewRoutes); // add Teller Overview api
 app.use("/api/menu-permissions", menuPermissionsRoutes); // used by frontend sidebar
-app.use("/api/teller-overtime-report", tellerOvertimeReportRoutes); // 📊 Teller overtime and salary report
+app.use("/api/teller-salary-calculation", tellerSalaryCalculationRoutes); // 📊 Teller salary calculation with overtime
 // app.use("/api/cashflow", cashflowRoutes);
 // app.use("/api/reports", reportRoutes); // Re-enabled
 // app.use("/api/scheduler", schedulerRoutes);

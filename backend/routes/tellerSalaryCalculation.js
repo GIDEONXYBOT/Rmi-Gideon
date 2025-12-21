@@ -6,8 +6,8 @@ const Teller = require('../models/Teller');
 const auth = require('../middleware/auth');
 
 /**
- * GET /api/teller-overtime-report
- * Fetch teller overtime and base salary for a given week
+ * GET /api/teller-salary-calculation
+ * Fetch teller salary calculation with overtime and base salary for a given week
  * Only accessible to superadmin and supervisors
  */
 router.get('/', auth, async (req, res) => {
@@ -111,8 +111,8 @@ router.get('/', auth, async (req, res) => {
       count: result.length
     });
   } catch (err) {
-    console.error('Error fetching teller overtime report:', err);
-    res.status(500).json({ message: 'Failed to fetch overtime report', error: err.message });
+    console.error('Error fetching teller salary calculation:', err);
+    res.status(500).json({ message: 'Failed to fetch salary calculation', error: err.message });
   }
 });
 

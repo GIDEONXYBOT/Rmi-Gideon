@@ -170,7 +170,7 @@ import UsersList from "./pages/UsersList.jsx";
 import UserProfile from "./pages/UserProfile.jsx";
 import MyProfile from "./pages/MyProfile.jsx";
 import PublicLeaderboard from "./pages/PublicLeaderboard.jsx";
-import TellerOvertimeReport from "./pages/TellerOvertimeReport.jsx";
+import TellerSalaryCalculation from "./pages/TellerSalaryCalculation.jsx";
 
 // Supervisor Pages
 import SupervisorHistory from "./pages/SupervisorHistory.jsx";
@@ -329,7 +329,7 @@ function App() {
                       <Route path="teller-reports" element={<TellerReports userRole="admin" />} />
                       <Route path="teller-reports/viewer" element={<TellerReportsViewer userRole="admin" />} />
                       <Route path="teller-management" element={<TellerManagement userRole="admin" />} />
-                      <Route path="teller-overtime-report" element={<TellerOvertimeReport />} />
+                      <Route path="teller-salary-calculation" element={<TellerSalaryCalculation />} />
                       <Route path="teller-overview" element={<AdminTellerOverview />} />
                       <Route path="report" element={<AdminReport />} />
                       <Route path="cashflow" element={<AdminCashflow />} />
@@ -398,7 +398,7 @@ function App() {
                       <Route path="teller-reports" element={<TellerReports userRole="supervisor" />} />
                       <Route path="teller-reports/viewer" element={<TellerReportsViewer userRole="supervisor" />} />
                       <Route path="teller-management" element={<TellerManagement userRole="supervisor" />} />
-                      <Route path="teller-overtime-report" element={<TellerOvertimeReport />} />
+                      <Route path="teller-salary-calculation" element={<TellerSalaryCalculation />} />
                       <Route path="staff-performance" element={<SupervisorStaffPerformance />} />
                       <Route path="payroll" element={<Payroll />} />
                       <Route path="my-shift" element={<MyShift />} />
