@@ -23,12 +23,7 @@ let isHistoricalDataLoaded = false; // Flag to track if data has been loaded fro
  * Load historical draws data from database
  */
 async function loadHistoricalDataFromDB() {
-  console.log('🔄 loadHistoricalDataFromDB called');
-  
-  if (isHistoricalDataLoaded) {
-    console.log('📊 Historical data already loaded, skipping database load');
-    return;
-  }
+  if (isHistoricalDataLoaded) return; // Already loaded
 
   try {
     console.log('📊 Loading historical draws data from database...');
@@ -36,20 +31,12 @@ async function loadHistoricalDataFromDB() {
     // Import mongoose dynamically to avoid circular dependencies
     const mongoose = (await import('mongoose')).default;
 
-    console.log('📊 Checking mongoose connection state:', mongoose.connection.readyState);
-    
     // Connect to database if not already connected
     if (mongoose.connection.readyState !== 1) {
-      console.log('📊 Connecting to MongoDB...');
       await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/rmi-teller-report');
-      console.log('📊 MongoDB connection established');
     }
 
-    const count = await mongoose.connection.db.collection('draws').countDocuments();
-    console.log(`📊 Found ${count} documents in draws collection`);
-    
     const draws = await mongoose.connection.db.collection('draws').find({}).toArray();
-    console.log(`📊 Retrieved ${draws.length} draws from database`);
 
     draws.forEach(draw => {
       if (draw.id) {
@@ -62,7 +49,6 @@ async function loadHistoricalDataFromDB() {
 
   } catch (error) {
     console.error('❌ Error loading historical data from database:', error);
-    throw error; // Re-throw to see the error
   }
 }
 
@@ -121,33 +107,10 @@ router.get('/debug', requireAuth, requireRole(['admin', 'super_admin']), async (
 });
 
 /**
- * GET /api/external-betting/debug-db
- * Debug endpoint to check database content
- */
-router.get('/debug-db', async (req, res) => {
-  try {
-    const mongoose = (await import('mongoose')).default;
-    if (mongoose.connection.readyState !== 1) {
-      await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/rmi-teller-report');
-    }
-    
-    const count = await mongoose.connection.db.collection('draws').countDocuments();
-    const sample = await mongoose.connection.db.collection('draws').find({}).limit(3).toArray();
-    
-    res.json({
-      totalDraws: count,
-      sample: sample.map(d => ({ id: d.id, sequence: d.batch?.fightSequence }))
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-/**
  * POST /api/external-betting/import-historical
  * Import historical fight data (admin only)
  */
-router.post('/import-historical', async (req, res) => { // Temporarily removed auth for production import
+router.post('/import-historical', requireAuth, requireRole(['admin', 'super_admin']), async (req, res) => {
   try {
     const { fights } = req.body;
 
@@ -475,14 +438,8 @@ router.get('/leaderboard', async (req, res) => {
   try {
     console.log('📡 Fetching leaderboard data from GTArena with authentication...');
 
-    // Force reload historical data from database (for debugging)
-    isHistoricalDataLoaded = false;
-    try {
-      await loadHistoricalDataFromDB();
-    } catch (dbError) {
-      console.error('❌ Failed to load historical data:', dbError);
-      // Continue anyway, don't fail the request
-    }
+    // Load historical data from database first
+    await loadHistoricalDataFromDB();
 
     const client = axios.create();
 
