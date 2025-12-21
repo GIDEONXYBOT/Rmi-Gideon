@@ -25,6 +25,7 @@ export default function TellerSalaryCalculation() {
     { key: 'sun', label: 'Sun' }
   ];
   const baseSalaryAmount = 450;
+  const baseWeeklySum = baseSalaryAmount * dayLabels.length;
   const sumOver = (overObj = {}) =>
     dayLabels.reduce((sum, { key }) => sum + (overObj[key] || 0), 0);
   const formatCurrency = (value) => `₱${value.toFixed(2)}`;
@@ -323,10 +324,10 @@ export default function TellerSalaryCalculation() {
                         Total Compensation
                       </div>
                         <div className="text-2xl font-bold text-indigo-600">
-                          ₱{(baseSalary + totalOver).toFixed(2)}
+                          ₱{(baseWeeklySum + totalOver).toFixed(2)}
                         </div>
                         <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-1">
-                          Base (₱{baseSalary.toFixed(2)}) + Over (₱{totalOver.toFixed(2)})
+                          Base (₱{baseWeeklySum.toFixed(2)}) + Over (₱{totalOver.toFixed(2)})
                         </p>
                     </div>
                     <div className="mt-4 border-t border-dashed border-gray-400 pt-3 text-xs text-gray-500 dark:text-gray-400">
@@ -355,8 +356,8 @@ export default function TellerSalaryCalculation() {
             </div>
             
             <div className={`rounded-xl p-6 ${dark ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
-              <p className={`text-sm ${dark ? 'text-gray-400' : 'text-gray-600'} mb-2`}>Base Salary (Each)</p>
-              <p className="text-3xl font-bold text-green-600">₱450</p>
+              <p className={`text-sm ${dark ? 'text-gray-400' : 'text-gray-600'} mb-2`}>Weekly Base Salary (Each)</p>
+              <p className="text-3xl font-bold text-green-600">₱{baseWeeklySum.toFixed(2)}</p>
             </div>
 
             <div className={`rounded-xl p-6 ${dark ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
