@@ -126,6 +126,32 @@ const PublicLeaderboard = () => {
 
       {/* Fight Results */}
       <div className="max-w-6xl mx-auto px-6 py-8">
+        {/* Fight Numbers Grid Pattern */}
+        {draws.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold text-white mb-6">Today's Fight Numbers</h2>
+            <div className="bg-gray-800 rounded-lg p-8 border border-gray-700">
+              <div className="grid grid-cols-7 gap-3 justify-center max-w-2xl">
+                {draws.slice(0, 16).map((draw, idx) => (
+                  <div
+                    key={draw.id}
+                    className="flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br from-blue-600 to-blue-800 border-2 border-blue-400 shadow-lg hover:shadow-blue-500/50 transition-all hover:scale-110 cursor-pointer"
+                  >
+                    <span className="text-white font-bold text-lg">
+                      {draw.batch?.fightSequence || draw.id}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              {draws.length > 16 && (
+                <div className="text-center text-gray-400 text-sm mt-6">
+                  Showing first 16 fights (Total: {draws.length})
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="grid gap-4">
           {draws.length === 0 ? (
             <div className="bg-gray-800 rounded-lg p-8 text-center">
