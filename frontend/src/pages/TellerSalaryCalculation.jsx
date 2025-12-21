@@ -200,24 +200,24 @@ export default function TellerSalaryCalculation() {
                       </div>
                     </div>
 
-                    {/* Daily Overtime */}
+                    {/* Daily Over */}
                     <div className="mb-4">
                       <h4 className={`text-sm font-semibold mb-3 ${dark ? 'text-gray-300' : 'text-gray-700'}`}>
-                        Daily Overtime (Hours)
+                        Daily Over (Cash)
                       </h4>
                       <div className="space-y-2">
                         {['mon', 'tue', 'wed', 'thu', 'fri'].map((day) => {
                           const label = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-                          const hours = dailyOT[day] || 0;
+                          const overAmount = dailyOT[day] || 0;
                           return (
                             <div key={day} className="flex justify-between items-center">
                               <span className={`text-sm ${dark ? 'text-gray-400' : 'text-gray-600'}`}>
                                 {label[['mon', 'tue', 'wed', 'thu', 'fri'].indexOf(day)]}
                               </span>
                               <span className={`font-semibold ${
-                                hours > 0 ? 'text-orange-600' : dark ? 'text-gray-500' : 'text-gray-400'
+                                overAmount > 0 ? 'text-green-600' : overAmount < 0 ? 'text-red-600' : dark ? 'text-gray-500' : 'text-gray-400'
                               }`}>
-                                {hours.toFixed(1)} hrs
+                                ₱{overAmount.toFixed(2)}
                               </span>
                             </div>
                           );
@@ -225,28 +225,28 @@ export default function TellerSalaryCalculation() {
                       </div>
                     </div>
 
-                    {/* Weekly Total */}
+                    {/* Weekly Total Over */}
                     <div className={`pt-3 border-t ${dark ? 'border-gray-700' : 'border-gray-200'}`}>
                       <div className="flex justify-between items-center">
                         <span className={`font-semibold ${dark ? 'text-gray-300' : 'text-gray-700'}`}>
-                          Weekly OT Total
+                          Weekly Over Total
                         </span>
-                        <span className="text-xl font-bold text-green-600">
-                          {totalOT.toFixed(1)} hrs
+                        <span className={`text-xl font-bold ${totalOT > 0 ? 'text-green-600' : totalOT < 0 ? 'text-red-600' : 'text-gray-400'}`}>
+                          ₱{totalOT.toFixed(2)}
                         </span>
                       </div>
                     </div>
 
-                    {/* Total Salary Calculation */}
+                    {/* Total Compensation */}
                     <div className={`mt-4 p-3 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-700`}>
                       <div className="text-xs font-semibold text-indigo-700 dark:text-indigo-300 mb-2">
-                        Estimated Weekly Pay
+                        Total Compensation
                       </div>
                       <div className="text-2xl font-bold text-indigo-600">
-                        ₱{(baseSalary + (totalOT * 87.5)).toFixed(2)}
+                        ₱{(baseSalary + totalOT).toFixed(2)}
                       </div>
                       <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-1">
-                        Base + ({totalOT.toFixed(1)} hrs × ₱87.50/hr)
+                        Base (₱{baseSalary.toFixed(2)}) + Over (₱{totalOT.toFixed(2)})
                       </p>
                     </div>
                   </div>
@@ -270,24 +270,22 @@ export default function TellerSalaryCalculation() {
             </div>
 
             <div className={`rounded-xl p-6 ${dark ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
-              <p className={`text-sm ${dark ? 'text-gray-400' : 'text-gray-600'} mb-2`}>Total Weekly OT Hours</p>
-              <p className="text-3xl font-bold text-orange-600">
-                {tellers.reduce((sum, t) => {
-                  const total = (t.overtime?.mon || 0) + (t.overtime?.tue || 0) + (t.overtime?.wed || 0) + (t.overtime?.thu || 0) + (t.overtime?.fri || 0);
+              <p className={`text-sm ${dark ? 'text-gray-400' : 'text-gray-600'} mb-2`}>Total Weekly Over</p>
+              <p className="text-3xl font-bold text-green-600">
+                ₱{tellers.reduce((sum, t) => {
+                  const total = (t.over?.mon || 0) + (t.over?.tue || 0) + (t.over?.wed || 0) + (t.over?.thu || 0) + (t.over?.fri || 0);
                   return sum + total;
-                }, 0)}h
+                }, 0).toFixed(2)}
               </p>
             </div>
 
             <div className={`rounded-xl p-6 ${dark ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
-              <p className={`text-sm ${dark ? 'text-gray-400' : 'text-gray-600'} mb-2`}>Avg Weekly OT</p>
+              <p className={`text-sm ${dark ? 'text-gray-400' : 'text-gray-600'} mb-2`}>Avg Weekly Over</p>
               <p className="text-3xl font-bold text-purple-600">
-                {tellers.length > 0 ? Math.round(
-                  tellers.reduce((sum, t) => {
-                    const total = (t.overtime?.mon || 0) + (t.overtime?.tue || 0) + (t.overtime?.wed || 0) + (t.overtime?.thu || 0) + (t.overtime?.fri || 0);
-                    return sum + total;
-                  }, 0) / tellers.length
-                ) : 0}h
+                ₱{(tellers.length > 0 ? tellers.reduce((sum, t) => {
+                  const total = (t.over?.mon || 0) + (t.over?.tue || 0) + (t.over?.wed || 0) + (t.over?.thu || 0) + (t.over?.fri || 0);
+                  return sum + total;
+                }, 0) / tellers.length : 0).toFixed(2)}
               </p>
             </div>
           </div>

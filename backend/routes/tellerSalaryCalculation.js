@@ -58,13 +58,13 @@ router.get('/', requireAuth, async (req, res) => {
       return res.json({ tellers: [], message: 'No tellers found' });
     }
 
-    // Fetch payroll records for the week
-    const payrollRecords = await Payroll.find({
-      ...filter,
-      user_id: { $in: tellerIds }
+    // Fetch teller reports for the week to get 'over' amounts
+    const tellerReports = await TellerReport.find({
+      date: { $gte: start, $lte: end },
+      tellerId: { $in: tellerIds }
     }).lean();
 
-    // Group by teller and calculate overtime per day
+    // Group by teller and calculate over amounts per day
     const tellerMap = {};
 
     tellers.forEach(teller => {
@@ -72,7 +72,7 @@ router.get('/', requireAuth, async (req, res) => {
         id: teller._id,
         name: teller.name || 'Unknown',
         baseSalary: teller.baseSalary || 0,
-        overtime: {
+        over: {
           mon: 0,
           tue: 0,
           wed: 0,
@@ -82,11 +82,11 @@ router.get('/', requireAuth, async (req, res) => {
       };
     });
 
-    // Process payroll records
-    payrollRecords.forEach(record => {
-      const tellerIdStr = record.user_id?.toString();
+    // Process teller reports
+    tellerReports.forEach(report => {
+      const tellerIdStr = report.tellerId?.toString();
       if (tellerMap[tellerIdStr]) {
-        const date = new Date(record.date);
+        const date = new Date(report.date);
         const dayOfWeek = date.getDay();
         
         // Map day of week to day name (1=Mon, 2=Tue, etc.)
@@ -101,8 +101,8 @@ router.get('/', requireAuth, async (req, res) => {
         }
 
         if (dayKey) {
-          // Add overtime hours (assuming 'overtimeHours' field in payroll)
-          tellerMap[tellerIdStr].overtime[dayKey] += (record.overtimeHours || 0);
+          // Add over amount from teller report
+          tellerMap[tellerIdStr].over[dayKey] += (report.over || 0);
         }
       }
     });
