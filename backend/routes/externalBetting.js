@@ -23,6 +23,8 @@ let isHistoricalDataLoaded = false; // Flag to track if data has been loaded fro
  * Load historical draws data from database
  */
 async function loadHistoricalDataFromDB() {
+  console.log('🔄 loadHistoricalDataFromDB called');
+  
   if (isHistoricalDataLoaded) {
     console.log('📊 Historical data already loaded, skipping database load');
     return;
@@ -34,14 +36,20 @@ async function loadHistoricalDataFromDB() {
     // Import mongoose dynamically to avoid circular dependencies
     const mongoose = (await import('mongoose')).default;
 
+    console.log('📊 Checking mongoose connection state:', mongoose.connection.readyState);
+    
     // Connect to database if not already connected
     if (mongoose.connection.readyState !== 1) {
       console.log('📊 Connecting to MongoDB...');
       await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/rmi-teller-report');
+      console.log('📊 MongoDB connection established');
     }
 
+    const count = await mongoose.connection.db.collection('draws').countDocuments();
+    console.log(`📊 Found ${count} documents in draws collection`);
+    
     const draws = await mongoose.connection.db.collection('draws').find({}).toArray();
-    console.log(`📊 Found ${draws.length} draws in database`);
+    console.log(`📊 Retrieved ${draws.length} draws from database`);
 
     draws.forEach(draw => {
       if (draw.id) {
@@ -54,6 +62,7 @@ async function loadHistoricalDataFromDB() {
 
   } catch (error) {
     console.error('❌ Error loading historical data from database:', error);
+    throw error; // Re-throw to see the error
   }
 }
 
@@ -468,7 +477,12 @@ router.get('/leaderboard', async (req, res) => {
 
     // Force reload historical data from database (for debugging)
     isHistoricalDataLoaded = false;
-    await loadHistoricalDataFromDB();
+    try {
+      await loadHistoricalDataFromDB();
+    } catch (dbError) {
+      console.error('❌ Failed to load historical data:', dbError);
+      // Continue anyway, don't fail the request
+    }
 
     const client = axios.create();
 
