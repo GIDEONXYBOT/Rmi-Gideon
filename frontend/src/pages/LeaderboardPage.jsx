@@ -403,18 +403,17 @@ const LeaderboardPage = () => {
                     }
                     .coins-pile {
                       position: absolute;
-                      bottom: 10px;
+                      bottom: 0;
                       left: 0;
                       right: 0;
-                      display: flex;
-                      flex-wrap: wrap;
-                      justify-content: center;
-                      gap: 8px;
-                      padding: 0 20px;
+                      height: 80px;
+                      display: block;
                     }
                     .coin-settled {
+                      position: absolute;
                       font-size: 2.5rem;
                       opacity: 1;
+                      bottom: 10px;
                     }
                   `}</style>
                   
@@ -438,7 +437,14 @@ const LeaderboardPage = () => {
                   <div className="coins-pile" style={{ zIndex: 15 }}>
                     {coins.map((coin) => (
                       coin.animationStarted && (
-                        <div key={`settled-${coin.id}`} className="coin-settled">
+                        <div 
+                          key={`settled-${coin.id}`} 
+                          className="coin-settled"
+                          style={{
+                            left: `${Math.random() * 85}%`,
+                            transform: `rotate(${Math.random() * 360}deg)`
+                          }}
+                        >
                           🪙
                         </div>
                       )
