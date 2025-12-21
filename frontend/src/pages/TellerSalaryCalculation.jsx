@@ -51,12 +51,15 @@ export default function TellerSalaryCalculation() {
 <head>
   <title>${teller.name} - Teller Report</title>
   <style>
-    body { font-family: 'Helvetica', Arial, sans-serif; padding: 12px; margin: 0; width: 280px; }
-    h2 { margin: 0 0 4px; font-size: 18px; }
-    p { margin: 2px 0; font-size: 12px; }
-    .row { display: flex; justify-content: space-between; margin: 4px 0; font-size: 13px; }
-    .divider { border-top: 1px dashed #111; margin: 10px 0; }
-    .signature { margin-top: 14px; font-size: 11px; }
+    @media print {
+      @page { size: 58mm auto; margin: 4mm; }
+    }
+    body { font-family: 'Helvetica', Arial, sans-serif; padding: 12px; margin: 0; width: 220px; }
+    h2 { margin: 0 0 4px; font-size: 16px; }
+    p { margin: 2px 0; font-size: 11px; }
+    .row { display: flex; justify-content: space-between; margin: 3px 0; font-size: 12px; }
+    .divider { border-top: 1px dashed #111; margin: 8px 0; }
+    .signature { margin-top: 14px; font-size: 10px; }
     .signature-line { border-top: 1px solid #000; margin-top: 10px; padding-top: 4px; }
   </style>
 </head>
@@ -72,6 +75,13 @@ export default function TellerSalaryCalculation() {
     <p>Prepared by: __________________________</p>
     <p class="signature-line">Signature</p>
   </div>
+  <script>
+    window.onload = () => {
+      setTimeout(() => {
+        window.print();
+      }, 250);
+    };
+  </script>
 </body>
 </html>`;
 
