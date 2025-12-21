@@ -1,7 +1,7 @@
 import express from 'express';
 import Payroll from '../models/Payroll.js';
-import Employee from '../models/Employee.js';
-import Teller from '../models/Teller.js';
+import User from '../models/User.js';
+import TellerReport from '../models/TellerReport.js';
 import { requireAuth } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -38,16 +38,20 @@ router.get('/', requireAuth, async (req, res) => {
       date: { $gte: start, $lte: end }
     };
 
-    // If supervisor, filter by their tellers
-    let supervisorFilter = {};
+    // If supervisor, filter by their assigned tellers
+    let tellerFilter = {};
     if (isSupervisor) {
-      supervisorFilter = { supervisor: req.user.id };
+      tellerFilter = { supervisor_id: req.user.id };
     } else if (supervisorId && isSuperAdmin) {
-      supervisorFilter = { supervisor: supervisorId };
+      tellerFilter = { supervisor_id: supervisorId };
     }
 
-    // Fetch tellers based on filter
-    const tellers = await Teller.find(supervisorFilter).lean();
+    // Fetch users who are tellers based on filter
+    const tellers = await User.find({
+      role: 'teller',
+      ...tellerFilter
+    }).lean();
+    
     const tellerIds = tellers.map(t => t._id);
 
     if (tellerIds.length === 0) {
@@ -57,7 +61,7 @@ router.get('/', requireAuth, async (req, res) => {
     // Fetch payroll records for the week
     const payrollRecords = await Payroll.find({
       ...filter,
-      tellerId: { $in: tellerIds }
+      user_id: { $in: tellerIds }
     }).lean();
 
     // Group by teller and calculate overtime per day
@@ -80,7 +84,7 @@ router.get('/', requireAuth, async (req, res) => {
 
     // Process payroll records
     payrollRecords.forEach(record => {
-      const tellerIdStr = record.tellerId?.toString();
+      const tellerIdStr = record.user_id?.toString();
       if (tellerMap[tellerIdStr]) {
         const date = new Date(record.date);
         const dayOfWeek = date.getDay();
