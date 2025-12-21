@@ -438,9 +438,6 @@ router.get('/leaderboard', async (req, res) => {
   try {
     console.log('📡 Fetching leaderboard data (today only)...');
 
-    // Load historical data from database first
-    await loadHistoricalDataFromDB();
-
     const client = axios.create();
 
     // Step 1: Login to get authenticated session
@@ -552,11 +549,16 @@ router.get('/leaderboard', async (req, res) => {
 
     console.log(`✅ Successfully parsed ${newDraws.length} draws from GTArena`);
 
-    // Update database with new draws
+    // Update database with new draws - today only
     const mongoose = (await import('mongoose')).default;
     if (mongoose.connection.readyState !== 1) {
       await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/rmi-teller-report');
     }
+
+    const now = new Date();
+    const manilaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+    const todayStart = new Date(manilaTime.getFullYear(), manilaTime.getMonth(), manilaTime.getDate(), 0, 0, 0);
+    const todayEnd = new Date(manilaTime.getFullYear(), manilaTime.getMonth(), manilaTime.getDate(), 23, 59, 59);
 
     for (const draw of newDraws) {
       if (draw.id) {
@@ -578,29 +580,22 @@ router.get('/leaderboard', async (req, res) => {
       }
     }
 
-    // Convert Map to array (includes both new and historical)
-    const allDraws = Array.from(historicalDraws.values());
-    allDraws.sort((a, b) => (a.batch?.fightSequence || 0) - (b.batch?.fightSequence || 0));
+    // Query TODAY's data ONLY from database - not historical
+    const todaysDraws = await mongoose.connection.db.collection('draws').find({
+      createdAt: {
+        $gte: todayStart,
+        $lte: todayEnd
+      }
+    }).sort({ 'batch.fightSequence': -1 }).toArray();
 
-    // Filter to today's results only
-    const now = new Date();
-    const manilaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
-    const todayStart = new Date(manilaTime.getFullYear(), manilaTime.getMonth(), manilaTime.getDate(), 0, 0, 0);
-    const todayEnd = new Date(manilaTime.getFullYear(), manilaTime.getMonth(), manilaTime.getDate(), 23, 59, 59);
-    
-    const todaysDraws = allDraws.filter(draw => {
-      const drawDate = new Date(draw.createdAt || new Date());
-      return drawDate >= todayStart && drawDate <= todayEnd;
-    });
-
-    console.log(`📊 Filtered to today's fights: ${todaysDraws.length} out of ${allDraws.length} total draws`);
+    console.log(`📊 Found ${todaysDraws.length} fights for today in database`);
 
     // Emit leaderboard update
     const io = req.app.io;
     if (io) {
       emitLeaderboardUpdate(io, {
         draws: todaysDraws,
-        currentDraw: todaysDraws[todaysDraws.length - 1] || null,
+        currentDraw: todaysDraws[0] || null,
         totalDraws: todaysDraws.length
       });
     }
@@ -610,9 +605,9 @@ router.get('/leaderboard', async (req, res) => {
       success: true,
       data: todaysDraws,
       totalDraws: todaysDraws.length,
-      allHistoricalDraws: allDraws.length,
       fetchedAt: new Date().toISOString(),
-      message: `Returning ${todaysDraws.length} fights from today`
+      message: `Returning ${todaysDraws.length} fights from today`,
+      source: 'today_only'
     });
 
   } catch (err) {
