@@ -242,12 +242,12 @@ export default function TellerSalaryCalculation() {
                       <div className="text-xs font-semibold text-indigo-700 dark:text-indigo-300 mb-2">
                         Total Compensation
                       </div>
-                      <div className="text-2xl font-bold text-indigo-600">
-                        ₱{(baseSalary + totalOT).toFixed(2)}
-                      </div>
-                      <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-1">
-                        Base (₱{baseSalary.toFixed(2)}) + Over (₱{totalOT.toFixed(2)})
-                      </p>
+                        <div className="text-2xl font-bold text-indigo-600">
+                          ₱{(baseSalary + totalOver).toFixed(2)}
+                        </div>
+                        <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-1">
+                          Base (₱{baseSalary.toFixed(2)}) + Over (₱{totalOver.toFixed(2)})
+                        </p>
                     </div>
                   </div>
                 </div>
