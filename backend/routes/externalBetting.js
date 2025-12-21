@@ -438,33 +438,164 @@ router.get('/leaderboard', async (req, res) => {
   try {
     console.log('📡 Fetching leaderboard data (today only)...');
 
-    // Import mongoose to query database
-    const mongoose = (await import('mongoose')).default;
+    // Load historical data from database first
+    await loadHistoricalDataFromDB();
 
-    // Connect to database if not already connected
+    const client = axios.create();
+
+    // Step 1: Login to get authenticated session
+    const loginUrl = 'https://rmi-gideon.gtarena.ph/login';
+    console.log(`🔐 Attempting login to ${loginUrl}`);
+    const loginResponse = await client.post(loginUrl,
+      `username=${sessionData.username}&password=${sessionData.password}`,
+      {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        },
+        validateStatus: () => true
+      }
+    );
+    console.log(`📊 Login response status: ${loginResponse.status}`);
+
+    // Get cookies from login response
+    const cookies = loginResponse.headers['set-cookie']?.join('; ') || '';
+    console.log(`🍪 Cookies length: ${cookies.length}`);
+
+    // Try to fetch current data from GTArena
+    let html = '';
+    const potentialUrls = [
+      'https://rmi-gideon.gtarena.ph/leaderboard',
+      'https://rmi-gideon.gtarena.ph/reports/event/page'
+    ];
+
+    for (const url of potentialUrls) {
+      try {
+        console.log(`🔍 Trying URL: ${url}`);
+        const response = await client.get(url, {
+          headers: {
+            'Cookie': cookies,
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          },
+          timeout: 15000,
+          validateStatus: () => true
+        });
+
+        if (response.status === 200 && response.data) {
+          html = response.data;
+          console.log(`✅ Successfully fetched data from: ${url}`);
+          break;
+        }
+      } catch (error) {
+        console.log(`❌ Failed to fetch from ${url}: ${error.message}`);
+        continue;
+      }
+    }
+
+    let newDraws = [];
+    
+    if (html) {
+      // Parse the response
+      if (html.trim().startsWith('{') || html.trim().startsWith('[')) {
+        console.log('📄 Response appears to be JSON');
+        try {
+          const jsonData = JSON.parse(html);
+          newDraws = jsonData.draws || jsonData.data || jsonData;
+          if (!Array.isArray(newDraws)) {
+            newDraws = [newDraws];
+          }
+        } catch (error) {
+          console.error('❌ Failed to parse JSON:', error.message);
+        }
+      } else {
+        // HTML response - parse data-page attribute
+        console.log('📄 Response appears to be HTML');
+        const dataMatch = html.match(/data-page="([^"]*)"/);
+        if (!dataMatch) {
+          const altMatch = html.match(/data-page='([^']*)'/);
+          if (altMatch) {
+            const encodedData = altMatch[1];
+            const decodedData = encodedData
+              .replace(/&quot;/g, '"')
+              .replace(/&amp;/g, '&')
+              .replace(/&lt;/g, '<')
+              .replace(/&gt;/g, '>')
+              .replace(/&#39;/g, "'")
+              .replace(/&apos;/g, "'");
+            try {
+              const pageData = JSON.parse(decodedData);
+              newDraws = pageData?.props?.draws || [];
+            } catch (error) {
+              console.error('❌ Failed to parse data-page:', error.message);
+            }
+          }
+        } else {
+          const encodedData = dataMatch[1];
+          const decodedData = encodedData
+            .replace(/&quot;/g, '"')
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&#39;/g, "'")
+            .replace(/&apos;/g, "'");
+          try {
+            const pageData = JSON.parse(decodedData);
+            newDraws = pageData?.props?.draws || [];
+          } catch (error) {
+            console.error('❌ Failed to parse data-page:', error.message);
+          }
+        }
+      }
+    }
+
+    console.log(`✅ Successfully parsed ${newDraws.length} draws from GTArena`);
+
+    // Update database with new draws
+    const mongoose = (await import('mongoose')).default;
     if (mongoose.connection.readyState !== 1) {
       await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/rmi-teller-report');
     }
 
-    // Get today's date boundaries in Manila timezone
+    for (const draw of newDraws) {
+      if (draw.id) {
+        // Add createdAt timestamp if missing
+        const drawWithTimestamp = {
+          ...draw,
+          createdAt: draw.createdAt || new Date()
+        };
+        
+        try {
+          await mongoose.connection.db.collection('draws').updateOne(
+            { id: draw.id },
+            { $set: drawWithTimestamp },
+            { upsert: true }
+          );
+        } catch (dbError) {
+          console.error(`❌ Error saving draw ${draw.id}:`, dbError);
+        }
+      }
+    }
+
+    // Convert Map to array (includes both new and historical)
+    const allDraws = Array.from(historicalDraws.values());
+    allDraws.sort((a, b) => (a.batch?.fightSequence || 0) - (b.batch?.fightSequence || 0));
+
+    // Filter to today's results only
     const now = new Date();
     const manilaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
     const todayStart = new Date(manilaTime.getFullYear(), manilaTime.getMonth(), manilaTime.getDate(), 0, 0, 0);
     const todayEnd = new Date(manilaTime.getFullYear(), manilaTime.getMonth(), manilaTime.getDate(), 23, 59, 59);
+    
+    const todaysDraws = allDraws.filter(draw => {
+      const drawDate = new Date(draw.createdAt || new Date());
+      return drawDate >= todayStart && drawDate <= todayEnd;
+    });
 
-    console.log(`📅 Querying for fights between ${todayStart} and ${todayEnd}`);
+    console.log(`📊 Filtered to today's fights: ${todaysDraws.length} out of ${allDraws.length} total draws`);
 
-    // Query database for today's fights only
-    const todaysDraws = await mongoose.connection.db.collection('draws').find({
-      createdAt: {
-        $gte: todayStart,
-        $lte: todayEnd
-      }
-    }).sort({ 'batch.fightSequence': 1 }).toArray();
-
-    console.log(`✅ Found ${todaysDraws.length} fights for today in database`);
-
-    // Emit leaderboard update to connected clients
+    // Emit leaderboard update
     const io = req.app.io;
     if (io) {
       emitLeaderboardUpdate(io, {
@@ -479,9 +610,9 @@ router.get('/leaderboard', async (req, res) => {
       success: true,
       data: todaysDraws,
       totalDraws: todaysDraws.length,
+      allHistoricalDraws: allDraws.length,
       fetchedAt: new Date().toISOString(),
-      message: `Returning ${todaysDraws.length} fights from today`,
-      source: 'database'
+      message: `Returning ${todaysDraws.length} fights from today`
     });
 
   } catch (err) {
