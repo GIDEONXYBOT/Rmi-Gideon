@@ -653,23 +653,43 @@ router.get('/leaderboard', async (req, res) => {
 
     console.log(`📊 Historical draw sequence range: ${allDraws[0]?.batch?.fightSequence || 'N/A'} to ${allDraws[allDraws.length - 1]?.batch?.fightSequence || 'N/A'}`);
 
+    // Filter to today's results only by default (unless ?all=1 is passed)
+    let returnData = allDraws;
+    const includeAll = req.query.all === '1';
+    
+    if (!includeAll) {
+      // Get today's date in Manila timezone
+      const now = new Date();
+      const manilaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+      const todayStart = new Date(manilaTime.getFullYear(), manilaTime.getMonth(), manilaTime.getDate(), 0, 0, 0);
+      const todayEnd = new Date(manilaTime.getFullYear(), manilaTime.getMonth(), manilaTime.getDate(), 23, 59, 59);
+      
+      returnData = allDraws.filter(draw => {
+        const drawCreatedAt = new Date(draw.createdAt);
+        return drawCreatedAt >= todayStart && drawCreatedAt <= todayEnd;
+      });
+      
+      console.log(`📊 Filtered to today's fights: ${returnData.length} out of ${allDraws.length} total draws`);
+    }
+
     // Emit leaderboard update to connected clients
     const io = req.app.io;
     if (io) {
       emitLeaderboardUpdate(io, {
-        draws: allDraws,
-        currentDraw: allDraws[allDraws.length - 1] || null, // Most recent draw
-        totalDraws: allDraws.length
+        draws: returnData,
+        currentDraw: returnData[returnData.length - 1] || null, // Most recent draw
+        totalDraws: returnData.length
       });
     }
 
-    // Return accumulated historical data
+    // Return today's data by default
     res.json({
       success: true,
-      data: allDraws,
-      totalDraws: allDraws.length,
+      data: returnData,
+      totalDraws: returnData.length,
+      allHistoricalDraws: allDraws.length,
       fetchedAt: new Date().toISOString(),
-      message: `Returning ${allDraws.length} accumulated historical draws`
+      message: `Returning ${returnData.length} fights from today`
     });
 
   } catch (err) {

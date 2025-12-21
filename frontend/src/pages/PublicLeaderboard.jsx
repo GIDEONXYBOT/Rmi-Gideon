@@ -12,18 +12,11 @@ const PublicLeaderboard = () => {
       setLoading(true);
       setError(null);
 
-      // Fetch from production API
+      // Fetch from production API - only returns today's data by default
       const response = await axios.get('https://rmi-backend-zhdr.onrender.com/api/external-betting/leaderboard');
-      const allDraws = response.data.data || [];
+      const todaysDraws = response.data.data || [];
 
-      // Filter to only show today's results
-      const today = new Date();
-      const todayString = today.toISOString().split('T')[0];
-      const todaysDraws = allDraws.filter(draw => {
-        const drawDate = new Date(draw.createdAt).toISOString().split('T')[0];
-        return drawDate === todayString;
-      });
-
+      console.log(`Loaded ${todaysDraws.length} fights for today from backend`);
       setDraws(todaysDraws);
       setLastUpdated(new Date());
     } catch (err) {
