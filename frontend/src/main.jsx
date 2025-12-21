@@ -169,6 +169,7 @@ import FeedPage from "./pages/FeedPage.jsx";
 import UsersList from "./pages/UsersList.jsx";
 import UserProfile from "./pages/UserProfile.jsx";
 import MyProfile from "./pages/MyProfile.jsx";
+import PublicLeaderboard from "./pages/PublicLeaderboard.jsx";
 
 // Supervisor Pages
 import SupervisorHistory from "./pages/SupervisorHistory.jsx";
@@ -261,6 +262,8 @@ function App() {
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/mobile-debug" element={<MobileDebugPage />} />
             <Route path="/connectivity-test" element={<ConnectivityTest />} />
+            {/* Public Leaderboard - accessible without authentication */}
+            <Route path="/leaderboard" element={<PublicLeaderboard />} />
             {/* Small auth wrapper — only requires a token (component defined below) */}
 
             {/* Universal upload page — open to any logged-in user */}
