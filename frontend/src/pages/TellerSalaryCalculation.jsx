@@ -15,8 +15,8 @@ export default function TellerSalaryCalculation() {
   const [selectedWeek, setSelectedWeek] = useState(new Date().toISOString().split('T')[0]);
   const [weekData, setWeekData] = useState({});
 
-  // Check if user is superadmin or supervisor
-  const isSuperAdminOrSupervisor = user?.role === 'superadmin' || user?.role === 'supervisor';
+  // Check if user is super_admin or supervisor
+  const isSuperAdminOrSupervisor = user?.role === 'super_admin' || user?.role === 'supervisor';
 
   useEffect(() => {
     if (!isSuperAdminOrSupervisor) {
