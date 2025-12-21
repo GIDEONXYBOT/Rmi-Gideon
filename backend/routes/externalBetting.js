@@ -560,12 +560,14 @@ router.get('/leaderboard', async (req, res) => {
     const todayStart = new Date(manilaTime.getFullYear(), manilaTime.getMonth(), manilaTime.getDate(), 0, 0, 0);
     const todayEnd = new Date(manilaTime.getFullYear(), manilaTime.getMonth(), manilaTime.getDate(), 23, 59, 59);
 
+    console.log(`📅 Looking for fights between ${todayStart.toISOString()} and ${todayEnd.toISOString()}`);
+
     for (const draw of newDraws) {
       if (draw.id) {
-        // Add createdAt timestamp if missing
+        // Add TODAY's timestamp to all new draws
         const drawWithTimestamp = {
           ...draw,
-          createdAt: draw.createdAt || new Date()
+          createdAt: new Date() // Always use TODAY's date
         };
         
         try {
@@ -580,7 +582,9 @@ router.get('/leaderboard', async (req, res) => {
       }
     }
 
-    // Query TODAY's data from database - sorted by fightSequence descending (newest first)
+    console.log(`✅ Successfully saved/updated ${newDraws.length} draws with today's date`);
+
+    // Query TODAY's data ONLY from database - sorted by fightSequence descending (newest first)
     let todaysDraws = await mongoose.connection.db.collection('draws').find({
       createdAt: {
         $gte: todayStart,
@@ -590,14 +594,9 @@ router.get('/leaderboard', async (req, res) => {
 
     console.log(`📊 Found ${todaysDraws.length} fights for today in database`);
 
-    // If no fights for today in DB, fetch all and return latest (fallback for data consistency)
+    // If no fights for today in DB, log it but still return what we found (empty or old data)
     if (todaysDraws.length === 0) {
-      console.log('⚠️ No fights found for today, fetching latest from all time...');
-      todaysDraws = await mongoose.connection.db.collection('draws').find({})
-        .sort({ 'batch.fightSequence': -1 })
-        .limit(100)
-        .toArray();
-      console.log(`📊 Fallback: Got ${todaysDraws.length} latest fights from all time`);
+      console.log('⚠️ No fights found for today - GTArena might not have any data yet');
     }
 
     // Emit leaderboard update
@@ -610,14 +609,15 @@ router.get('/leaderboard', async (req, res) => {
       });
     }
 
-    // Return data sorted newest first
+    // Return TODAY's data only
     res.json({
       success: true,
       data: todaysDraws,
       totalDraws: todaysDraws.length,
       fetchedAt: new Date().toISOString(),
-      message: `Returning ${todaysDraws.length} fights`,
-      source: 'database'
+      message: `Returning ${todaysDraws.length} fights from today (${todayStart.toLocaleDateString()})`,
+      source: 'database',
+      dateRange: { start: todayStart.toISOString(), end: todayEnd.toISOString() }
     });
 
   } catch (err) {
