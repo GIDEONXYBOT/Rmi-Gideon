@@ -510,6 +510,7 @@ function App() {
                       <Route path="teller-reports" element={<TellerReports userRole="super_admin" />} />
                       <Route path="teller-reports/viewer" element={<TellerReportsViewer userRole="super_admin" />} />
                       <Route path="teller-management" element={<TellerManagement userRole="super_admin" />} />
+                      <Route path="teller-salary-calculation" element={<TellerSalaryCalculation />} />
                       <Route path="teller-overview" element={<AdminTellerOverview />} />
                       <Route path="report" element={<AdminReport />} />
                       <Route path="cashflow" element={<AdminCashflow />} />
