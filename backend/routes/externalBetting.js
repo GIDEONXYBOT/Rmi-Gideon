@@ -580,8 +580,8 @@ router.get('/leaderboard', async (req, res) => {
       }
     }
 
-    // Query TODAY's data ONLY from database - not historical
-    const todaysDraws = await mongoose.connection.db.collection('draws').find({
+    // Query TODAY's data from database - sorted by fightSequence descending (newest first)
+    let todaysDraws = await mongoose.connection.db.collection('draws').find({
       createdAt: {
         $gte: todayStart,
         $lte: todayEnd
@@ -589,6 +589,16 @@ router.get('/leaderboard', async (req, res) => {
     }).sort({ 'batch.fightSequence': -1 }).toArray();
 
     console.log(`📊 Found ${todaysDraws.length} fights for today in database`);
+
+    // If no fights for today in DB, fetch all and return latest (fallback for data consistency)
+    if (todaysDraws.length === 0) {
+      console.log('⚠️ No fights found for today, fetching latest from all time...');
+      todaysDraws = await mongoose.connection.db.collection('draws').find({})
+        .sort({ 'batch.fightSequence': -1 })
+        .limit(100)
+        .toArray();
+      console.log(`📊 Fallback: Got ${todaysDraws.length} latest fights from all time`);
+    }
 
     // Emit leaderboard update
     const io = req.app.io;
@@ -600,14 +610,14 @@ router.get('/leaderboard', async (req, res) => {
       });
     }
 
-    // Return today's data
+    // Return data sorted newest first
     res.json({
       success: true,
       data: todaysDraws,
       totalDraws: todaysDraws.length,
       fetchedAt: new Date().toISOString(),
-      message: `Returning ${todaysDraws.length} fights from today`,
-      source: 'today_only'
+      message: `Returning ${todaysDraws.length} fights`,
+      source: 'database'
     });
 
   } catch (err) {
