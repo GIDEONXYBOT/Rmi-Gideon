@@ -1,16 +1,17 @@
-const express = require('express');
+import express from 'express';
+import Payroll from '../models/Payroll.js';
+import Employee from '../models/Employee.js';
+import Teller from '../models/Teller.js';
+import { requireAuth } from '../middleware/auth.js';
+
 const router = express.Router();
-const Payroll = require('../models/Payroll');
-const Employee = require('../models/Employee');
-const Teller = require('../models/Teller');
-const auth = require('../middleware/auth');
 
 /**
  * GET /api/teller-salary-calculation
  * Fetch teller salary calculation with overtime and base salary for a given week
  * Only accessible to superadmin and supervisors
  */
-router.get('/', auth, async (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
   try {
     // Check user role
     const userRole = req.user?.role;
@@ -116,4 +117,4 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;
