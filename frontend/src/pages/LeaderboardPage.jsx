@@ -510,6 +510,38 @@ const LeaderboardPage = () => {
                   </div>
                 </div>
 
+                {/* Rooster Fighting Visualization */}
+                <div className="relative z-10 mb-8 flex justify-center items-center h-32">
+                  <style>{`
+                    @keyframes roosterLeft {
+                      0%, 100% { transform: translateX(0) scaleX(-1); }
+                      50% { transform: translateX(30px) scaleX(-1) rotateZ(-5deg); }
+                    }
+                    @keyframes roosterRight {
+                      0%, 100% { transform: translateX(0); }
+                      50% { transform: translateX(-30px) rotateZ(5deg); }
+                    }
+                    .rooster-left {
+                      animation: roosterLeft 1.5s ease-in-out infinite;
+                      font-size: 5rem;
+                    }
+                    .rooster-right {
+                      animation: roosterRight 1.5s ease-in-out infinite;
+                      font-size: 5rem;
+                    }
+                    .rooster-vs {
+                      font-size: 2rem;
+                      font-weight: bold;
+                      color: #fbbf24;
+                      text-shadow: 0 0 10px rgba(251, 191, 36, 0.5);
+                      margin: 0 20px;
+                    }
+                  `}</style>
+                  <div className="rooster-left">🐓</div>
+                  <div className="rooster-vs">VS</div>
+                  <div className="rooster-right">🐓</div>
+                </div>
+
                 {/* Fight Header */}
                 <div className="text-center mb-8 relative z-10">
                   <div className="text-6xl font-bold text-white mb-4">
