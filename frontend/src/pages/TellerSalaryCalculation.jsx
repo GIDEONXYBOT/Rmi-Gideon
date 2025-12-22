@@ -21,7 +21,10 @@ export default function TellerSalaryCalculation() {
   const [autoPrintEnabled, setAutoPrintEnabled] = useState(
     localStorage.getItem('autoPrintEnabled') === 'true'
   );
-  const [noBSalarDays, setNoBSalaryDays] = useState({});
+  const [noBSalarDays, setNoBSalaryDays] = useState(() => {
+    const saved = localStorage.getItem('noBSalarDays');
+    return saved ? JSON.parse(saved) : {};
+  });
   const dayLabels = [
     { key: 'mon', label: 'Mon' },
     { key: 'tue', label: 'Tue' },
@@ -187,6 +190,11 @@ export default function TellerSalaryCalculation() {
 
   // Check if user is super_admin or supervisor
   const isSuperAdminOrSupervisor = user?.role === 'super_admin' || user?.role === 'supervisor';
+
+  // Persist base salary toggle state to localStorage
+  useEffect(() => {
+    localStorage.setItem('noBSalarDays', JSON.stringify(noBSalarDays));
+  }, [noBSalarDays]);
 
   useEffect(() => {
     if (!isSuperAdminOrSupervisor) {
