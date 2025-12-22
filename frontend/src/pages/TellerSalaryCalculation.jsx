@@ -21,6 +21,7 @@ export default function TellerSalaryCalculation() {
   const [autoPrintEnabled, setAutoPrintEnabled] = useState(
     localStorage.getItem('autoPrintEnabled') === 'true'
   );
+  const [noBSalarDays, setNoBSalaryDays] = useState({});
   const dayLabels = [
     { key: 'mon', label: 'Mon' },
     { key: 'tue', label: 'Tue' },
@@ -42,14 +43,33 @@ export default function TellerSalaryCalculation() {
     return 'Week overview';
   };
 
+  // Toggle base salary for a specific teller/day
+  const toggleBaseSalaryDay = (tellerId, dayKey) => {
+    const key = `${tellerId}-${dayKey}`;
+    setNoBSalaryDays(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
   const buildPrintHtml = (teller, dailyOver) => {
     const weekLabel = getWeekRangeLabel();
+    
+    // Calculate base salary considering excluded days
+    let totalBaseSalary = 0;
     const printableRows = dayLabels
       .map(({ key, label }) => {
         const overAmount = dailyOver[key] || 0;
-        return `<div class="row"><span>${label}</span><span>${formatCurrency(overAmount)}</span><span>${formatCurrency(baseSalaryAmount)}</span></div>`;
+        const noBSalaryKey = `${teller._id}-${key}`;
+        const isExcluded = noBSalarDays[noBSalaryKey] || false;
+        const baseSalaryForDay = isExcluded ? 0 : baseSalaryAmount;
+        totalBaseSalary += baseSalaryForDay;
+        return `<div class="row"><span>${label}</span><span>${formatCurrency(overAmount)}</span><span>${formatCurrency(baseSalaryForDay)}</span></div>`;
       })
       .join('');
+
+    const totalOver = sumOver(dailyOver);
+    const totalCompensationPrint = totalBaseSalary + totalOver;
 
     const html = `<!doctype html>
 <html>
@@ -66,6 +86,7 @@ export default function TellerSalaryCalculation() {
     .divider { border-top: 1px dashed #111; margin: 8px 0; }
     .signature { margin-top: 14px; font-size: 10px; }
     .signature-line { border-top: 1px solid #000; margin-top: 10px; padding-top: 4px; }
+    .total { font-weight: bold; border-top: 1px solid #000; padding-top: 4px; margin-top: 4px; }
   </style>
 </head>
 <body>
@@ -75,7 +96,9 @@ export default function TellerSalaryCalculation() {
   <div class="divider"></div>
   ${printableRows}
   <div class="divider"></div>
-  <div class="row"><strong>Total</strong><strong>${formatCurrency(sumOver(dailyOver))}</strong><strong>${formatCurrency(baseSalaryAmount)}</strong></div>
+  <div class="row"><strong>Over Total</strong><strong>${formatCurrency(totalOver)}</strong></div>
+  <div class="row"><strong>Base Total</strong><strong>${formatCurrency(totalBaseSalary)}</strong></div>
+  <div class="row total"><strong>TOTAL COMP.</strong><strong>${formatCurrency(totalCompensationPrint)}</strong></div>
   <div class="signature">
     <p>Prepared by: __________________________</p>
     <p class="signature-line">Signature</p>
@@ -410,6 +433,14 @@ export default function TellerSalaryCalculation() {
               const dailyOver = teller.over || {};
               const totalOver = sumOver(dailyOver);
               const baseSalary = baseSalaryAmount;
+              
+              // Calculate actual base salary based on included days
+              const includedDaysCount = dayLabels.filter(({ key }) => {
+                const noBSalaryKey = `${teller._id}-${key}`;
+                return !noBSalarDays[noBSalaryKey];
+              }).length;
+              const adjustedBaseWeeklySum = baseSalaryAmount * includedDaysCount;
+              const totalCompensation = adjustedBaseWeeklySum + totalOver;
 
               return (
                 <div
@@ -453,24 +484,49 @@ export default function TellerSalaryCalculation() {
                     {/* Daily Over */}
                     <div className="mb-4">
                       <h4 className={`text-sm font-semibold mb-3 ${dark ? 'text-gray-300' : 'text-gray-700'}`}>
-                        Daily Over (Cash)
+                        Daily Over (Cash) - Click to toggle base salary per day
                       </h4>
-                      <div className="grid grid-cols-3 gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400 border-b pb-2">
+                      <div className="grid grid-cols-4 gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400 border-b pb-2">
                         <span>Day</span>
                         <span>Over</span>
                         <span>Base Salary</span>
+                        <span className="text-center">Include?</span>
                       </div>
-                      <div className="grid grid-cols-3 gap-2 text-sm mt-3">
+                      <div className="space-y-2 mt-3">
                         {dayLabels.map(({ key, label }) => {
                           const overAmount = dailyOver[key] || 0;
+                          const tellerId = teller._id;
+                          const noBSalaryKey = `${tellerId}-${key}`;
+                          const isExcluded = noBSalarDays[noBSalaryKey] || false;
+                          const baseSalaryForDay = isExcluded ? 0 : baseSalaryAmount;
+                          
                           return (
-                            <Fragment key={key}>
-                              <div className={`text-sm ${dark ? 'text-gray-400' : 'text-gray-600'}`}>{label}</div>
+                            <div key={key} className={`grid grid-cols-4 gap-2 items-center p-2 rounded ${
+                              isExcluded 
+                                ? dark ? 'bg-gray-700' : 'bg-gray-100' 
+                                : dark ? 'bg-gray-800' : 'bg-white'
+                            } border ${isExcluded ? 'border-orange-300' : dark ? 'border-gray-700' : 'border-gray-200'}`}>
+                              <div className={`text-sm font-medium ${dark ? 'text-gray-300' : 'text-gray-700'}`}>{label}</div>
                               <div className={`text-sm font-semibold ${
                                 overAmount > 0 ? 'text-green-600' : overAmount < 0 ? 'text-red-600' : dark ? 'text-gray-500' : 'text-gray-400'
                               }`}>₱{overAmount.toFixed(2)}</div>
-                              <div className={`text-sm ${dark ? 'text-gray-300' : 'text-gray-600'}`}>₱{baseSalaryAmount.toFixed(2)}</div>
-                            </Fragment>
+                              <div className={`text-sm font-semibold ${isExcluded ? 'text-orange-500 line-through' : dark ? 'text-green-400' : 'text-green-600'}`}>
+                                ₱{baseSalaryForDay.toFixed(2)}
+                              </div>
+                              <button
+                                onClick={() => toggleBaseSalaryDay(tellerId, key)}
+                                className={`px-2 py-1 rounded text-xs font-semibold transition ${
+                                  isExcluded
+                                    ? 'bg-orange-500 text-white hover:bg-orange-600'
+                                    : dark
+                                    ? 'bg-green-600 text-white hover:bg-green-700'
+                                    : 'bg-green-500 text-white hover:bg-green-600'
+                                }`}
+                                title={isExcluded ? 'Click to include base salary' : 'Click to exclude base salary'}
+                              >
+                                {isExcluded ? 'NO' : 'YES'}
+                              </button>
+                            </div>
                           );
                         })}
                       </div>
@@ -494,10 +550,10 @@ export default function TellerSalaryCalculation() {
                         Total Compensation
                       </div>
                         <div className="text-2xl font-bold text-indigo-600">
-                          ₱{(baseWeeklySum + totalOver).toFixed(2)}
+                          ₱{totalCompensation.toFixed(2)}
                         </div>
                         <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-1">
-                          Base (₱{baseWeeklySum.toFixed(2)}) + Over (₱{totalOver.toFixed(2)})
+                          Base ({includedDaysCount} days × ₱{baseSalaryAmount}) ₱{adjustedBaseWeeklySum.toFixed(2)} + Over ₱{totalOver.toFixed(2)}
                         </p>
                     </div>
                     <div className="mt-4 border-t border-dashed border-gray-400 pt-3 text-xs text-gray-500 dark:text-gray-400">
