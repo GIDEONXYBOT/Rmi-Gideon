@@ -218,7 +218,6 @@ if (autoUpdater && !isDev) {
 }
 
 // Auto-updater setup
-let mainWindow = null;
 const setupUpdater = (window) => {
   if (!autoUpdater) {
     console.log('❌ electron-updater not available');
