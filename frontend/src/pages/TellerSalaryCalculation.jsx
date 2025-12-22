@@ -60,7 +60,7 @@ export default function TellerSalaryCalculation() {
     const printableRows = dayLabels
       .map(({ key, label }) => {
         const overAmount = dailyOver[key] || 0;
-        const noBSalaryKey = `${teller._id}-${key}`;
+        const noBSalaryKey = `${teller.id}-${key}`;
         const isIncluded = noBSalarDays[noBSalaryKey];
         const baseSalaryForDay = isIncluded ? baseSalaryAmount : 0;
         totalBaseSalary += baseSalaryForDay;
@@ -436,7 +436,7 @@ export default function TellerSalaryCalculation() {
               
               // Calculate actual base salary based on included days
               const includedDaysCount = dayLabels.filter(({ key }) => {
-                const noBSalaryKey = `${teller._id}-${key}`;
+                const noBSalaryKey = `${teller.id}-${key}`;
                 return noBSalarDays[noBSalaryKey];
               }).length;
               const adjustedBaseWeeklySum = baseSalaryAmount * includedDaysCount;
@@ -495,7 +495,7 @@ export default function TellerSalaryCalculation() {
                       <div className="space-y-2 mt-3">
                         {dayLabels.map(({ key, label }) => {
                           const overAmount = dailyOver[key] || 0;
-                          const tellerId = teller._id;
+                          const tellerId = teller.id;
                           const noBSalaryKey = `${tellerId}-${key}`;
                           const isIncluded = noBSalarDays[noBSalaryKey];
                           const baseSalaryForDay = isIncluded ? baseSalaryAmount : 0;
