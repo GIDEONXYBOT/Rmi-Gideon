@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
 let autoUpdater = null;
+let mainWindow = null;  // Global mainWindow variable
 try {
   const updater = require('electron-updater');
   autoUpdater = updater.autoUpdater;
@@ -13,7 +14,7 @@ const isDev = process.env.NODE_ENV !== 'production';
 
 const createWindow = () => {
   try {
-    const mainWindow = new BrowserWindow({
+    mainWindow = new BrowserWindow({
       width: 1200,
       height: 820,
       minWidth: 940,
@@ -28,11 +29,27 @@ const createWindow = () => {
     });
 
     mainWindow.once('ready-to-show', () => {
+      console.log('✅ Window ready to show');
       mainWindow.show();
+      mainWindow.focus();
       // Open DevTools in development for debugging
       if (isDev) {
         mainWindow.webContents.openDevTools();
       }
+    });
+
+    // Fallback: force show if ready-to-show doesn't fire within 3 seconds
+    const showTimeout = setTimeout(() => {
+      if (mainWindow && !mainWindow.isVisible()) {
+        console.log('⚠️ Forcing window show (ready-to-show timeout)');
+        mainWindow.show();
+        mainWindow.focus();
+      }
+    }, 3000);
+
+    // Clear timeout when window is finally shown
+    mainWindow.once('show', () => {
+      clearTimeout(showTimeout);
     });
 
     // Handle window closed
