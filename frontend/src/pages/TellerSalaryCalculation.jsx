@@ -522,7 +522,7 @@ export default function TellerSalaryCalculation() {
     }
     fetchTellerSalaryData();
     fetchAvailablePrinters();
-  }, [selectedWeek]);
+  }, [selectedWeek, isSuperAdminOrSupervisor]);
 
   const fetchTellerSalaryData = async () => {
     try {
