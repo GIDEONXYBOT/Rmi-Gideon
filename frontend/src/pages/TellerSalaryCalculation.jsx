@@ -3,7 +3,7 @@ import axios from 'axios';
 import { SettingsContext } from '../context/SettingsContext';
 import { useToast } from '../context/ToastContext';
 import { getApiUrl } from '../utils/apiConfig';
-import { Loader2, ChevronLeft, ChevronRight, Calendar, Printer } from 'lucide-react';
+import { Loader2, ChevronLeft, ChevronRight, Calendar, Printer, HardDrive, Settings2 } from 'lucide-react';
 
 export default function TellerSalaryCalculation() {
   const { user, settings } = useContext(SettingsContext);
@@ -15,6 +15,12 @@ export default function TellerSalaryCalculation() {
   const [selectedWeek, setSelectedWeek] = useState(new Date().toISOString().split('T')[0]);
   const [weekStart, setWeekStart] = useState(null);
   const [weekEnd, setWeekEnd] = useState(null);
+  const [availablePrinters, setAvailablePrinters] = useState([]);
+  const [selectedPrinter, setSelectedPrinter] = useState(null);
+  const [showPrinterSettings, setShowPrinterSettings] = useState(false);
+  const [autoPrintEnabled, setAutoPrintEnabled] = useState(
+    localStorage.getItem('autoPrintEnabled') === 'true'
+  );
   const dayLabels = [
     { key: 'mon', label: 'Mon' },
     { key: 'tue', label: 'Tue' },
@@ -36,8 +42,7 @@ export default function TellerSalaryCalculation() {
     return 'Week overview';
   };
 
-  const handlePrint = (teller) => {
-    const dailyOver = teller.over || {};
+  const buildPrintHtml = (teller, dailyOver) => {
     const weekLabel = getWeekRangeLabel();
     const printableRows = dayLabels
       .map(({ key, label }) => {
@@ -85,6 +90,10 @@ export default function TellerSalaryCalculation() {
 </body>
 </html>`;
 
+    return html;
+  };
+
+  const previewPrintInBrowser = (html) => {
     const printWindow = window.open('', '_blank', 'width=340,height=640');
     if (!printWindow) return;
     printWindow.document.write(html);
@@ -92,6 +101,65 @@ export default function TellerSalaryCalculation() {
     printWindow.focus();
     printWindow.print();
     printWindow.close();
+  };
+
+  const handlePrint = (teller) => {
+    const dailyOver = teller.over || {};
+    const html = buildPrintHtml(teller, dailyOver);
+    if (window?.electronAPI?.printHTML) {
+      window.electronAPI.printHTML(html, selectedPrinter);
+      showToast({ type: 'success', message: `Printing to ${selectedPrinter?.name || 'default printer'}...` });
+      return;
+    }
+    previewPrintInBrowser(html);
+  };
+
+  const fetchAvailablePrinters = async () => {
+    if (!window?.electronAPI?.getAvailablePrinters) {
+      console.warn('Electron API not available for getting printers');
+      return;
+    }
+    try {
+      const printers = await window.electronAPI.getAvailablePrinters();
+      setAvailablePrinters(printers || []);
+      
+      // Restore previously selected printer if available
+      const savedPrinterName = localStorage.getItem('selectedPrinterName');
+      if (savedPrinterName) {
+        const savedPrinter = printers.find(p => p.name === savedPrinterName);
+        if (savedPrinter) {
+          setSelectedPrinter(savedPrinter);
+        } else if (printers.length > 0) {
+          setSelectedPrinter(printers[0]);
+        }
+      } else if (printers.length > 0) {
+        // Auto-select thermal printer if found
+        const thermalPrinter = printers.find(p => 
+          p.name.toLowerCase().includes('58') || 
+          p.name.toLowerCase().includes('thermal') || 
+          p.name.toLowerCase().includes('receipt') ||
+          p.name.toLowerCase().includes('xprinter')
+        );
+        setSelectedPrinter(thermalPrinter || printers[0]);
+      }
+    } catch (err) {
+      console.error('Error fetching printers:', err);
+    }
+  };
+
+  const handleSelectPrinter = (printer) => {
+    setSelectedPrinter(printer);
+    localStorage.setItem('selectedPrinterName', printer.name);
+    showToast({ type: 'success', message: `Printer set to: ${printer.name}` });
+  };
+
+  const toggleAutoPrint = (enabled) => {
+    setAutoPrintEnabled(enabled);
+    localStorage.setItem('autoPrintEnabled', enabled.toString());
+    showToast({ 
+      type: 'info', 
+      message: enabled ? 'Auto-print enabled' : 'Auto-print disabled' 
+    });
   };
 
   // Check if user is super_admin or supervisor
@@ -103,6 +171,7 @@ export default function TellerSalaryCalculation() {
       return;
     }
     fetchTellerSalaryData();
+    fetchAvailablePrinters();
   }, [selectedWeek]);
 
   const fetchTellerSalaryData = async () => {
@@ -236,7 +305,90 @@ export default function TellerSalaryCalculation() {
                 </>
               )}
             </div>
+
+            {/* Printer Settings Button */}
+            <button
+              onClick={() => setShowPrinterSettings(!showPrinterSettings)}
+              className={`p-2 rounded-lg transition flex items-center gap-2 text-sm font-semibold ${
+                showPrinterSettings
+                  ? 'bg-indigo-600 text-white'
+                  : dark
+                  ? 'hover:bg-gray-700 text-gray-300'
+                  : 'hover:bg-gray-200 text-gray-700'
+              }`}
+              title="Printer settings"
+            >
+              <Settings2 size={18} />
+              {selectedPrinter && <span className="hidden sm:inline">{selectedPrinter.name}</span>}
+            </button>
           </div>
+
+          {/* Printer Settings Panel */}
+          {showPrinterSettings && (
+            <div className={`mt-4 p-4 rounded-lg border-2 border-indigo-600 ${dark ? 'bg-gray-700' : 'bg-indigo-50'}`}>
+              <h3 className={`font-semibold mb-3 ${dark ? 'text-white' : 'text-gray-900'}`}>
+                <HardDrive size={18} className="inline mr-2" />
+                USB Printer Settings
+              </h3>
+              
+              {availablePrinters.length === 0 ? (
+                <div className={`text-sm p-2 rounded ${dark ? 'bg-gray-600 text-gray-300' : 'bg-white text-gray-600'}`}>
+                  No printers found. Please connect a USB printer.
+                </div>
+              ) : (
+                <div className="space-y-2 mb-4">
+                  {availablePrinters.map((printer) => (
+                    <button
+                      key={printer.name}
+                      onClick={() => handleSelectPrinter(printer)}
+                      className={`w-full p-3 rounded-lg text-left transition flex items-center gap-3 ${
+                        selectedPrinter?.name === printer.name
+                          ? 'bg-indigo-600 text-white'
+                          : dark
+                          ? 'bg-gray-600 hover:bg-gray-500 text-gray-100'
+                          : 'bg-white hover:bg-gray-100 text-gray-900 border'
+                      }`}
+                    >
+                      <HardDrive size={16} />
+                      <div>
+                        <div className="font-semibold text-sm">{printer.name}</div>
+                        {printer.isDefault && (
+                          <div className="text-xs opacity-70">(Default Printer)</div>
+                        )}
+                      </div>
+                      {selectedPrinter?.name === printer.name && (
+                        <div className="ml-auto">✓</div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div className={`p-3 rounded-lg border ${dark ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-200'} mt-3`}>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={autoPrintEnabled}
+                    onChange={(e) => toggleAutoPrint(e.target.checked)}
+                    className="rounded"
+                  />
+                  <span className={`text-sm font-medium ${dark ? 'text-gray-100' : 'text-gray-900'}`}>
+                    Auto-print when button clicked
+                  </span>
+                </label>
+                <p className={`text-xs mt-2 ${dark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  When enabled, clicking print will directly send to the selected printer without showing a preview.
+                </p>
+              </div>
+
+              <button
+                onClick={() => setShowPrinterSettings(false)}
+                className="w-full mt-3 px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition text-sm"
+              >
+                Close Settings
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Teller Cards Grid */}
