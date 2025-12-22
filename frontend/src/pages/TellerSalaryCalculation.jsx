@@ -3,7 +3,7 @@ import axios from 'axios';
 import { SettingsContext } from '../context/SettingsContext';
 import { useToast } from '../context/ToastContext';
 import { getApiUrl } from '../utils/apiConfig';
-import { Loader2, ChevronLeft, ChevronRight, Calendar, Printer, HardDrive, Settings2, CheckSquare, Square } from 'lucide-react';
+import { Loader2, ChevronLeft, ChevronRight, Calendar, Printer, HardDrive, Settings2, CheckSquare, Square, Copy } from 'lucide-react';
 
 export default function TellerSalaryCalculation() {
   const { user, settings } = useContext(SettingsContext);
@@ -217,6 +217,50 @@ export default function TellerSalaryCalculation() {
     printWindow.focus();
     printWindow.print();
     printWindow.close();
+  };
+
+  const copyReportToClipboard = (teller) => {
+    const dailyOver = teller.over || {};
+    const weekLabel = getWeekRangeLabel();
+    
+    // Calculate base salary considering excluded days
+    let totalBaseSalary = 0;
+    const reportLines = [
+      `RMI TELLER REPORT`,
+      `==================`,
+      `Teller: ${teller.name}`,
+      `ID: ${teller.id}`,
+      `Period: ${weekLabel}`,
+      ``,
+      `Day         Over Amount      Base Salary`,
+      `---         -----------      -----------`
+    ];
+    
+    dayLabels.forEach(({ key, label }) => {
+      const overAmount = dailyOver[key] || 0;
+      const noBSalaryKey = `${teller.id}-${key}`;
+      const isIncluded = noBSalarDays[noBSalaryKey];
+      const baseSalaryForDay = isIncluded ? baseSalaryAmount : 0;
+      totalBaseSalary += baseSalaryForDay;
+      
+      const dayLine = `${label.padEnd(11)}${formatCurrency(overAmount).padStart(15)}${formatCurrency(baseSalaryForDay).padStart(16)}`;
+      reportLines.push(dayLine);
+    });
+    
+    const totalOver = sumOver(dailyOver);
+    const totalCompensationPrint = totalBaseSalary + totalOver;
+    
+    reportLines.push(`---         -----------      -----------`);
+    reportLines.push(`OVER Total${formatCurrency(totalOver).padStart(30)}`);
+    reportLines.push(`BASE Total${formatCurrency(totalBaseSalary).padStart(30)}`);
+    reportLines.push(`TOTAL COMP${formatCurrency(totalCompensationPrint).padStart(30)}`);
+    
+    const reportText = reportLines.join('\n');
+    navigator.clipboard.writeText(reportText).then(() => {
+      showToast({ type: 'success', message: 'Report copied to clipboard!' });
+    }).catch(() => {
+      showToast({ type: 'error', message: 'Failed to copy report' });
+    });
   };
 
   const handlePrint = (teller) => {
@@ -794,6 +838,15 @@ export default function TellerSalaryCalculation() {
                       >
                         <Printer size={14} />
                         Print
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => copyReportToClipboard(teller)}
+                        className="inline-flex items-center gap-1 px-3 py-1 bg-white/20 hover:bg-white/30 rounded-full text-white text-xs font-semibold transition flex-shrink-0"
+                        title="Copy report to clipboard"
+                      >
+                        <Copy size={14} />
+                        Copy
                       </button>
                     </div>
                   </div>

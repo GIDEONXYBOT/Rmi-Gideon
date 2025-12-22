@@ -319,6 +319,16 @@ const createMenu = () => {
         },
         { type: 'separator' },
         {
+          label: 'Developer Tools',
+          accelerator: 'F12',
+          click: () => {
+            if (mainWindow) {
+              mainWindow.webContents.toggleDevTools();
+            }
+          }
+        },
+        { type: 'separator' },
+        {
           label: 'About RMI Teller Report',
           click: () => {
             dialog.showMessageBox(mainWindow, {
