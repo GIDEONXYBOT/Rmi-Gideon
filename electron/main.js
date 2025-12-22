@@ -59,14 +59,13 @@ const createWindow = () => {
     mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
       console.error('❌ Failed to load:', errorCode, errorDescription);
     });
+
+    // Setup updater for this window
+    setupUpdater(mainWindow);
   } catch (err) {
     console.error('❌ Error creating window:', err);
     process.exit(1);
   }
-};
-
-  // Setup updater for this window
-  setupUpdater(mainWindow);
 };
 
 const printHtml = async (html, selectedPrinter) => {
