@@ -3,7 +3,7 @@ import axios from 'axios';
 import { SettingsContext } from '../context/SettingsContext';
 import { useToast } from '../context/ToastContext';
 import { getApiUrl } from '../utils/apiConfig';
-import { Loader2, ChevronLeft, ChevronRight, Calendar, Printer, HardDrive, Settings2 } from 'lucide-react';
+import { Loader2, ChevronLeft, ChevronRight, Calendar, Printer, HardDrive, Settings2, CheckSquare, Square } from 'lucide-react';
 
 export default function TellerSalaryCalculation() {
   const { user, settings } = useContext(SettingsContext);
@@ -25,6 +25,7 @@ export default function TellerSalaryCalculation() {
     const saved = localStorage.getItem('noBSalarDays');
     return saved ? JSON.parse(saved) : {};
   });
+  const [selectedTellers, setSelectedTellers] = useState({});
   const dayLabels = [
     { key: 'mon', label: 'Mon' },
     { key: 'tue', label: 'Tue' },
@@ -53,6 +54,28 @@ export default function TellerSalaryCalculation() {
       ...prev,
       [key]: !prev[key]
     }));
+  };
+
+  // Toggle teller selection for batch printing
+  const toggleTellerSelection = (tellerId) => {
+    setSelectedTellers(prev => ({
+      ...prev,
+      [tellerId]: !prev[tellerId]
+    }));
+  };
+
+  // Select/Deselect all tellers
+  const toggleSelectAll = () => {
+    const allSelected = tellers.length > 0 && Object.keys(selectedTellers).length === tellers.length;
+    if (allSelected) {
+      setSelectedTellers({});
+    } else {
+      const newSelection = {};
+      tellers.forEach(t => {
+        newSelection[t.id] = true;
+      });
+      setSelectedTellers(newSelection);
+    }
   };
 
   const buildPrintHtml = (teller, dailyOver) => {
@@ -138,6 +161,191 @@ export default function TellerSalaryCalculation() {
       return;
     }
     previewPrintInBrowser(html);
+  };
+
+  // Build A4 batch print HTML for 6 cards per page
+  const buildA4BatchPrintHtml = () => {
+    const selectedTellersList = tellers.filter(t => selectedTellers[t.id]);
+    if (selectedTellersList.length === 0) {
+      showToast({ type: 'error', message: 'Please select at least one teller to print' });
+      return null;
+    }
+
+    const weekLabel = getWeekRangeLabel();
+    
+    const cardHtml = selectedTellersList.map(teller => {
+      const dailyOver = teller.over || {};
+      let totalBaseSalary = 0;
+      const rowsHtml = dayLabels
+        .map(({ key, label }) => {
+          const overAmount = dailyOver[key] || 0;
+          const noBSalaryKey = `${teller.id}-${key}`;
+          const isIncluded = noBSalarDays[noBSalaryKey];
+          const baseSalaryForDay = isIncluded ? baseSalaryAmount : 0;
+          totalBaseSalary += baseSalaryForDay;
+          return `<tr><td>${label}</td><td>₱${overAmount.toFixed(2)}</td><td>₱${baseSalaryForDay.toFixed(2)}</td></tr>`;
+        })
+        .join('');
+      
+      const totalOver = sumOver(dailyOver);
+      const totalComp = totalBaseSalary + totalOver;
+
+      return `
+        <div class="card">
+          <div class="card-header">
+            <h4>${teller.name}</h4>
+            <p>ID: ${teller.id}</p>
+          </div>
+          <div class="card-body">
+            <table class="daily-table">
+              <thead>
+                <tr><th>Day</th><th>Over</th><th>Base</th></tr>
+              </thead>
+              <tbody>
+                ${rowsHtml}
+              </tbody>
+            </table>
+            <div class="totals">
+              <div class="total-row"><span>Over Total:</span> <strong>₱${totalOver.toFixed(2)}</strong></div>
+              <div class="total-row"><span>Base Total:</span> <strong>₱${totalBaseSalary.toFixed(2)}</strong></div>
+              <div class="total-comp"><span>TOTAL:</span> <strong>₱${totalComp.toFixed(2)}</strong></div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <title>Teller Reports - ${weekLabel}</title>
+  <style>
+    @media print {
+      @page { size: A4; margin: 0.5cm; }
+      body { margin: 0; padding: 0.5cm; }
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f5f5f5;
+      padding: 10px;
+    }
+    .page-title {
+      text-align: center;
+      margin-bottom: 15px;
+      font-size: 14px;
+      font-weight: bold;
+      padding: 10px;
+      border-bottom: 2px solid #333;
+    }
+    .cards-container {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      page-break-inside: avoid;
+    }
+    .card {
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background: white;
+      padding: 10px;
+      page-break-inside: avoid;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .card-header {
+      border-bottom: 2px solid #4f46e5;
+      padding-bottom: 5px;
+      margin-bottom: 8px;
+    }
+    .card-header h4 {
+      font-size: 13px;
+      margin: 0;
+      color: #1f2937;
+    }
+    .card-header p {
+      font-size: 10px;
+      color: #6b7280;
+      margin: 2px 0 0 0;
+    }
+    .card-body {
+      font-size: 10px;
+    }
+    .daily-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 8px;
+    }
+    .daily-table th, .daily-table td {
+      border: 1px solid #e5e7eb;
+      padding: 3px;
+      text-align: right;
+      font-size: 9px;
+    }
+    .daily-table th {
+      background: #f3f4f6;
+      font-weight: 600;
+      text-align: center;
+    }
+    .daily-table td:first-child, .daily-table th:first-child {
+      text-align: left;
+    }
+    .totals {
+      border-top: 1px solid #e5e7eb;
+      padding-top: 5px;
+    }
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 9px;
+      margin-bottom: 3px;
+    }
+    .total-comp {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      font-weight: bold;
+      padding-top: 3px;
+      border-top: 1px solid #d1d5db;
+      margin-top: 3px;
+      color: #4f46e5;
+    }
+    @media print {
+      .cards-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+      .card { padding: 8px; }
+      body { background: white; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-title">Teller Salary Calculation - ${weekLabel}</div>
+  <div class="cards-container">
+    ${cardHtml}
+  </div>
+  <script>
+    window.onload = () => {
+      setTimeout(() => {
+        window.print();
+      }, 250);
+    };
+  </script>
+</body>
+</html>`;
+
+    return html;
+  };
+
+  const handleBatchPrint = () => {
+    const html = buildA4BatchPrintHtml();
+    if (!html) return;
+    
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showToast({ type: 'error', message: 'Failed to open print window' });
+      return;
+    }
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.focus();
   };
 
   const fetchAvailablePrinters = async () => {
@@ -360,6 +568,18 @@ export default function TellerSalaryCalculation() {
               <Settings2 size={18} />
               {selectedPrinter && <span className="hidden sm:inline">{selectedPrinter.name}</span>}
             </button>
+
+            {/* Batch Print Button */}
+            {tellers.length > 0 && Object.keys(selectedTellers).length > 0 && (
+              <button
+                onClick={handleBatchPrint}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition"
+                title="Print selected tellers on A4 paper (6 per page)"
+              >
+                <Printer size={18} />
+                <span>Print A4 ({Object.keys(selectedTellers).length})</span>
+              </button>
+            )}
           </div>
 
           {/* Printer Settings Panel */}
@@ -431,7 +651,31 @@ export default function TellerSalaryCalculation() {
         </div>
 
         {/* Teller Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div>
+          {tellers.length > 0 && (
+            <div className="mb-4 flex gap-2">
+              <button
+                onClick={toggleSelectAll}
+                className={`px-4 py-2 rounded-lg font-semibold transition ${
+                  tellers.length > 0 && Object.keys(selectedTellers).length === tellers.length
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                    : dark
+                    ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                    : 'bg-gray-200 hover:bg-gray-300 text-gray-900'
+                }`}
+              >
+                {tellers.length > 0 && Object.keys(selectedTellers).length === tellers.length
+                  ? 'Deselect All'
+                  : 'Select All'}
+              </button>
+              {Object.keys(selectedTellers).length > 0 && (
+                <span className={`px-4 py-2 rounded-lg font-semibold ${dark ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-900'}`}>
+                  {Object.keys(selectedTellers).length} selected
+                </span>
+              )}
+            </div>
+          )}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {tellers.length === 0 ? (
             <div className={`col-span-full p-8 rounded-lg text-center ${dark ? 'bg-gray-800 text-gray-400' : 'bg-white text-gray-500'}`}>
               <p>No tellers found for this week</p>
@@ -459,7 +703,19 @@ export default function TellerSalaryCalculation() {
                 >
                   {/* Card Header */}
                   <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 p-4">
-                    <div className="flex justify-between items-start">
+                    <div className="flex justify-between items-start gap-2">
+                      <button
+                        type="button"
+                        onClick={() => toggleTellerSelection(teller.id)}
+                        className="flex-shrink-0 mt-0.5 text-white hover:opacity-80 transition"
+                        title="Select for batch print"
+                      >
+                        {selectedTellers[teller.id] ? (
+                          <CheckSquare size={20} />
+                        ) : (
+                          <Square size={20} />
+                        )}
+                      </button>
                       <div>
                         <h3 className="text-lg font-bold text-white">{teller.name}</h3>
                         <p className="text-indigo-100 text-sm">Teller ID: {teller.id}</p>
@@ -467,7 +723,7 @@ export default function TellerSalaryCalculation() {
                       <button
                         type="button"
                         onClick={() => handlePrint(teller)}
-                        className="inline-flex items-center gap-1 px-3 py-1 bg-white/20 hover:bg-white/30 rounded-full text-white text-xs font-semibold transition"
+                        className="inline-flex items-center gap-1 px-3 py-1 bg-white/20 hover:bg-white/30 rounded-full text-white text-xs font-semibold transition flex-shrink-0"
                       >
                         <Printer size={14} />
                         Print
@@ -579,6 +835,7 @@ export default function TellerSalaryCalculation() {
               );
             })
           )}
+          </div>
         </div>
 
         {/* Summary Stats */}
