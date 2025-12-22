@@ -3,8 +3,12 @@ import Payroll from '../models/Payroll.js';
 import User from '../models/User.js';
 import TellerReport from '../models/TellerReport.js';
 import { requireAuth } from '../middleware/auth.js';
+import SystemSettings from '../models/SystemSettings.js';
 
 const router = express.Router();
+
+// Default threshold for flagging "over" amounts (in currency units)
+const DEFAULT_OVER_THRESHOLD = 500;
 
 /**
  * GET /api/teller-salary-calculation
@@ -22,7 +26,7 @@ router.get('/', requireAuth, async (req, res) => {
       return res.status(403).json({ message: 'Access denied. Only superadmin and supervisors can view this report.' });
     }
 
-    const { weekStart, weekEnd, supervisorId } = req.query;
+    const { weekStart, weekEnd, supervisorId, flagThreshold } = req.query;
 
     if (!weekStart || !weekEnd) {
       return res.status(400).json({ message: 'weekStart and weekEnd are required' });
@@ -61,8 +65,21 @@ router.get('/', requireAuth, async (req, res) => {
       tellerId: { $in: tellerIds }
     }).lean();
 
+    // Get threshold for flagging over amounts
+    let overThreshold = DEFAULT_OVER_THRESHOLD;
+    if (flagThreshold) {
+      overThreshold = Number(flagThreshold);
+    } else {
+      // Try to get from system settings
+      const settings = await SystemSettings.findOne().lean();
+      if (settings?.overAmountThreshold) {
+        overThreshold = settings.overAmountThreshold;
+      }
+    }
+
     // Group by teller and calculate over amounts per day
     const tellerMap = {};
+    const flaggedReports = []; // Auto-detected reports with over amounts
 
     tellers.forEach(teller => {
       tellerMap[teller._id.toString()] = {
@@ -74,8 +91,12 @@ router.get('/', requireAuth, async (req, res) => {
           tue: 0,
           wed: 0,
           thu: 0,
-          fri: 0
-        }
+          fri: 0,
+          sat: 0,
+          sun: 0
+        },
+        overAmounts: [], // Track actual over amounts per day
+        hasExcessiveOver: false // Flag if any day exceeds threshold
       };
     });
 
@@ -95,12 +116,46 @@ router.get('/', requireAuth, async (req, res) => {
           case 3: dayKey = 'wed'; break;
           case 4: dayKey = 'thu'; break;
           case 5: dayKey = 'fri'; break;
+          case 6: dayKey = 'sat'; break;
+          case 0: dayKey = 'sun'; break;
           default: break;
         }
 
         if (dayKey) {
+          const overAmount = report.over || 0;
           // Add over amount from teller report
-          tellerMap[tellerIdStr].over[dayKey] += (report.over || 0);
+          tellerMap[tellerIdStr].over[dayKey] += overAmount;
+          
+          // Track all over amounts for detection
+          if (overAmount > 0) {
+            tellerMap[tellerIdStr].overAmounts.push({
+              date: report.date,
+              day: dayKey,
+              amount: overAmount,
+              isExcessive: overAmount > overThreshold,
+              report: {
+                id: report._id,
+                systemBalance: report.systemBalance,
+                cashOnHand: report.cashOnHand
+              }
+            });
+            
+            // Auto-detect: flag if over amount exceeds threshold
+            if (overAmount > overThreshold) {
+              tellerMap[tellerIdStr].hasExcessiveOver = true;
+              flaggedReports.push({
+                tellerId: report.tellerId,
+                tellerName: report.tellerName,
+                date: report.date,
+                overAmount: overAmount,
+                threshold: overThreshold,
+                excessAmount: overAmount - overThreshold,
+                reportId: report._id,
+                systemBalance: report.systemBalance,
+                cashOnHand: report.cashOnHand
+              });
+            }
+          }
         }
       }
     });
@@ -111,7 +166,15 @@ router.get('/', requireAuth, async (req, res) => {
       tellers: result,
       weekStart,
       weekEnd,
-      count: result.length
+      count: result.length,
+      overThreshold,
+      flaggedReports, // Auto-detected excessive over amounts
+      flaggedCount: flaggedReports.length,
+      summary: {
+        totalTellers: result.length,
+        tellersWithOver: result.filter(t => Object.values(t.over).some(v => v > 0)).length,
+        tellersWithExcessiveOver: result.filter(t => t.hasExcessiveOver).length
+      }
     });
   } catch (err) {
     console.error('Error fetching teller salary calculation:', err);
@@ -119,4 +182,199 @@ router.get('/', requireAuth, async (req, res) => {
   }
 });
 
-export default router;
+/**
+ * GET /api/teller-salary-calculation/flagged-reports/:date
+ * Get reports with excessive over amounts for a specific date or date range
+ * Auto-detection endpoint
+ */
+router.get('/flagged-reports/:dateOrRange', requireAuth, async (req, res) => {
+  try {
+    const userRole = req.user?.role;
+    const isSuperAdmin = userRole === 'super_admin' || userRole === 'superadmin' || req.user?.username === 'admin';
+    const isSupervisor = userRole === 'supervisor';
+
+    if (!isSuperAdmin && !isSupervisor) {
+      return res.status(403).json({ message: 'Access denied. Only superadmin and supervisors can view flagged reports.' });
+    }
+
+    const { dateOrRange } = req.params;
+    const { threshold, supervisorId } = req.query;
+
+    // Get threshold
+    let overThreshold = DEFAULT_OVER_THRESHOLD;
+    if (threshold) {
+      overThreshold = Number(threshold);
+    } else {
+      const settings = await SystemSettings.findOne().lean();
+      if (settings?.overAmountThreshold) {
+        overThreshold = settings.overAmountThreshold;
+      }
+    }
+
+    // Parse date range (format: YYYY-MM-DD or YYYY-MM-DD:YYYY-MM-DD)
+    let startDate, endDate;
+    if (dateOrRange.includes(':')) {
+      [startDate, endDate] = dateOrRange.split(':');
+    } else {
+      startDate = dateOrRange;
+      endDate = dateOrRange;
+    }
+
+    // Build query
+    const query = {
+      date: { $gte: startDate, $lte: endDate },
+      over: { $gt: overThreshold }
+    };
+
+    // Filter by supervisor if provided
+    if (supervisorId && isSuperAdmin) {
+      query.supervisorId = supervisorId;
+    } else if (isSupervisor) {
+      query.supervisorId = req.user.id;
+    }
+
+    // Find flagged reports
+    const flaggedReports = await TellerReport.find(query)
+      .populate('tellerId', 'name username baseSalary')
+      .populate('supervisorId', 'name username')
+      .sort({ date: -1, over: -1 })
+      .lean();
+
+    // Format response with excess amounts
+    const formattedReports = flaggedReports.map(report => ({
+      reportId: report._id,
+      date: report.date,
+      tellerName: report.tellerName || report.tellerId?.name,
+      teller: {
+        id: report.tellerId?._id,
+        name: report.tellerId?.name,
+        username: report.tellerId?.username,
+        baseSalary: report.tellerId?.baseSalary
+      },
+      supervisor: {
+        id: report.supervisorId?._id,
+        name: report.supervisorId?.name,
+        username: report.supervisorId?.username
+      },
+      overAmount: report.over,
+      threshold: overThreshold,
+      excessAmount: report.over - overThreshold,
+      systemBalance: report.systemBalance,
+      cashOnHand: report.cashOnHand,
+      short: report.short,
+      isAutoFlagged: true
+    }));
+
+    res.json({
+      success: true,
+      dateRange: {
+        start: startDate,
+        end: endDate
+      },
+      threshold: overThreshold,
+      flaggedCount: formattedReports.length,
+      reports: formattedReports,
+      summary: {
+        totalExcessAmount: formattedReports.reduce((sum, r) => sum + r.excessAmount, 0),
+        averageExcess: formattedReports.length > 0 
+          ? formattedReports.reduce((sum, r) => sum + r.excessAmount, 0) / formattedReports.length
+          : 0,
+        highestExcess: formattedReports.length > 0
+          ? Math.max(...formattedReports.map(r => r.excessAmount))
+          : 0
+      }
+    });
+
+  } catch (err) {
+    console.error('Error fetching flagged reports:', err);
+    res.status(500).json({ message: 'Failed to fetch flagged reports', error: err.message });
+  }
+});
+
+/**
+ * GET /api/teller-salary-calculation/over-summary/:date
+ * Get summary of all over amounts for a date, with auto-detection of high amounts
+ */
+router.get('/over-summary/:date', requireAuth, async (req, res) => {
+  try {
+    const userRole = req.user?.role;
+    const isSuperAdmin = userRole === 'super_admin' || userRole === 'superadmin' || req.user?.username === 'admin';
+    const isSupervisor = userRole === 'supervisor';
+
+    if (!isSuperAdmin && !isSupervisor) {
+      return res.status(403).json({ message: 'Access denied.' });
+    }
+
+    const { date } = req.params;
+    const { supervisorId } = req.query;
+
+    // Get threshold
+    const settings = await SystemSettings.findOne().lean();
+    const overThreshold = settings?.overAmountThreshold || DEFAULT_OVER_THRESHOLD;
+
+    // Build query
+    const query = {
+      date: date,
+      over: { $gt: 0 }
+    };
+
+    if (supervisorId && isSuperAdmin) {
+      query.supervisorId = supervisorId;
+    } else if (isSupervisor) {
+      query.supervisorId = req.user.id;
+    }
+
+    // Find all reports with over amounts
+    const reports = await TellerReport.find(query)
+      .populate('tellerId', 'name username baseSalary')
+      .sort({ over: -1 })
+      .lean();
+
+    // Categorize reports
+    const withinNormal = [];
+    const flaggedAsHigh = [];
+
+    reports.forEach(report => {
+      const entry = {
+        reportId: report._id,
+        tellerName: report.tellerName || report.tellerId?.name,
+        teller: {
+          id: report.tellerId?._id,
+          name: report.tellerId?.name,
+          username: report.tellerId?.username
+        },
+        overAmount: report.over,
+        systemBalance: report.systemBalance,
+        cashOnHand: report.cashOnHand
+      };
+
+      if (report.over > overThreshold) {
+        entry.excessAmount = report.over - overThreshold;
+        entry.isAutoFlagged = true;
+        flaggedAsHigh.push(entry);
+      } else {
+        withinNormal.push(entry);
+      }
+    });
+
+    res.json({
+      success: true,
+      date,
+      threshold: overThreshold,
+      summary: {
+        totalReports: reports.length,
+        withNormalOver: withinNormal.length,
+        withHighOver: flaggedAsHigh.length,
+        totalOverAmount: reports.reduce((sum, r) => sum + r.over, 0),
+        totalExcess: flaggedAsHigh.reduce((sum, r) => sum + (r.over - overThreshold), 0)
+      },
+      reportsNormal: withinNormal,
+      reportsFlagged: flaggedAsHigh
+    });
+
+  } catch (err) {
+    console.error('Error fetching over summary:', err);
+    res.status(500).json({ message: 'Failed to fetch over summary', error: err.message });
+  }
+});
+
