@@ -16,6 +16,6 @@ win:
   icon: build/icon.png
 publish:
   provider: github
-  owner: gideonbot
-  repo: rmi-teller-report
+  owner: GIDEONXYBOT
+  repo: Rmi-Gideon
 electronVersion: 26.6.10

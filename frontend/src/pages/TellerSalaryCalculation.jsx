@@ -90,7 +90,11 @@ export default function TellerSalaryCalculation() {
         const isIncluded = noBSalarDays[noBSalaryKey];
         const baseSalaryForDay = isIncluded ? baseSalaryAmount : 0;
         totalBaseSalary += baseSalaryForDay;
-        return `<div class="row"><span>${label}</span><span>${formatCurrency(overAmount)}</span><span>${formatCurrency(baseSalaryForDay)}</span></div>`;
+        return `<div class="row">
+  <span class="col-day">${label}</span>
+  <span class="col-over">${formatCurrency(overAmount)}</span>
+  <span class="col-base">${formatCurrency(baseSalaryForDay)}</span>
+</div>`;
       })
       .join('');
 
@@ -105,29 +109,92 @@ export default function TellerSalaryCalculation() {
     @media print {
       @page { size: 58mm auto; margin: 4mm; }
     }
-    body { font-family: 'Helvetica', Arial, sans-serif; padding: 12px; margin: 0; width: 220px; }
-    h2 { margin: 0 0 4px; font-size: 16px; }
-    p { margin: 2px 0; font-size: 11px; }
-    .row { display: flex; justify-content: space-between; margin: 3px 0; font-size: 12px; }
-    .divider { border-top: 1px dashed #111; margin: 8px 0; }
-    .signature { margin-top: 14px; font-size: 10px; }
-    .signature-line { border-top: 1px solid #000; margin-top: 10px; padding-top: 4px; }
-    .total { font-weight: bold; border-top: 1px solid #000; padding-top: 4px; margin-top: 4px; }
+    * { box-sizing: border-box; }
+    body { 
+      font-family: 'Courier New', monospace; 
+      padding: 8px; 
+      margin: 0; 
+      width: 220px; 
+      font-size: 11px;
+      line-height: 1.3;
+    }
+    h2 { 
+      margin: 0 0 2px; 
+      font-size: 14px; 
+      font-weight: bold;
+      text-align: center;
+    }
+    p { 
+      margin: 1px 0; 
+      font-size: 10px; 
+      text-align: center;
+    }
+    .row { 
+      display: flex; 
+      justify-content: space-between; 
+      margin: 2px 0; 
+      font-size: 11px;
+      font-family: 'Courier New', monospace;
+    }
+    .col-day { flex: 0 0 30px; }
+    .col-over { flex: 1; text-align: right; padding-right: 8px; }
+    .col-base { flex: 0 0 60px; text-align: right; }
+    .divider { 
+      border-top: 1px solid #000; 
+      margin: 4px 0; 
+    }
+    .section-divider {
+      border-top: 1px dashed #000;
+      margin: 6px 0;
+    }
+    .signature { 
+      margin-top: 12px; 
+      font-size: 9px; 
+    }
+    .signature-line { 
+      border-top: 1px solid #000; 
+      margin-top: 8px; 
+      padding-top: 2px;
+      height: 20px;
+    }
+    .total-row {
+      font-weight: bold;
+      border-top: 1px solid #000;
+      padding-top: 2px;
+      margin-top: 4px;
+    }
   </style>
 </head>
 <body>
   <h2>${teller.name}</h2>
-  <p>Teller ID: ${teller.id}</p>
+  <p>ID: ${teller.id}</p>
   <p>${weekLabel}</p>
-  <div class="divider"></div>
+  <div class="section-divider"></div>
+  <div style="font-size: 10px; display: flex; justify-content: space-between; margin-bottom: 2px;">
+    <span style="flex: 0 0 30px;">Day</span>
+    <span style="flex: 1; text-align: right; padding-right: 8px;">Over</span>
+    <span style="flex: 0 0 60px; text-align: right;">Base</span>
+  </div>
   ${printableRows}
   <div class="divider"></div>
-  <div class="row"><strong>Over Total</strong><strong>${formatCurrency(totalOver)}</strong></div>
-  <div class="row"><strong>Base Total</strong><strong>${formatCurrency(totalBaseSalary)}</strong></div>
-  <div class="row total"><strong>TOTAL COMP.</strong><strong>${formatCurrency(totalCompensationPrint)}</strong></div>
+  <div class="row">
+    <span class="col-day" style="font-weight: bold;">OVER:</span>
+    <span class="col-over"></span>
+    <span class="col-base" style="font-weight: bold;">${formatCurrency(totalOver)}</span>
+  </div>
+  <div class="row">
+    <span class="col-day" style="font-weight: bold;">BASE:</span>
+    <span class="col-over"></span>
+    <span class="col-base" style="font-weight: bold;">${formatCurrency(totalBaseSalary)}</span>
+  </div>
+  <div class="row total-row">
+    <span class="col-day" style="font-weight: bold;">TOTAL:</span>
+    <span class="col-over"></span>
+    <span class="col-base" style="font-weight: bold;">${formatCurrency(totalCompensationPrint)}</span>
+  </div>
   <div class="signature">
-    <p>Prepared by: __________________________</p>
-    <p class="signature-line">Signature</p>
+    <p>Prepared by: _________________________</p>
+    <div class="signature-line"></div>
   </div>
   <script>
     window.onload = () => {

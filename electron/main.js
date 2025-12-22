@@ -106,23 +106,26 @@ const printHtml = async (html, selectedPrinter) => {
         deviceName = selectedPrinter.name;
         console.log(`🖨️  Using selected printer: ${deviceName}`);
       } else {
-        // Try to find 58mm thermal printer (common names: "58mm", "Thermal", "Receipt")
+        // Try to find 58mm thermal printer (common names: "58mm", "Thermal", "Receipt", etc.)
+        const thermalKeywords = ['58', 'thermal', 'receipt', 'tsc', 'xprinter', 'deli', 'esc', 'pos', 'label'];
         let thermalPrinter = printers.find(p => 
-          p.name.toLowerCase().includes('58') || 
-          p.name.toLowerCase().includes('thermal') || 
-          p.name.toLowerCase().includes('receipt') ||
-          p.name.toLowerCase().includes('tsc') ||
-          p.name.toLowerCase().includes('xprinter')
+          thermalKeywords.some(keyword => p.name.toLowerCase().includes(keyword))
         );
         
         // Fallback: use default printer if available
         if (!thermalPrinter) {
-          console.warn('⚠️  No 58mm thermal printer found, using default printer');
+          console.warn('⚠️  No thermal printer found, using default printer');
           thermalPrinter = printers.find(p => p.isDefault);
         }
         
+        // Last resort: use first printer
+        if (!thermalPrinter && printers.length > 0) {
+          console.warn('⚠️  Using first available printer');
+          thermalPrinter = printers[0];
+        }
+        
         deviceName = thermalPrinter?.name || '';
-        console.log(`🖨️  Printing to: ${deviceName || '(default printer)'}`);
+        console.log(`🖨️  Printing to: ${deviceName || '(system default)'}`);
       }
 
       printWindow.webContents.print(
@@ -130,7 +133,10 @@ const printHtml = async (html, selectedPrinter) => {
           silent: true,
           printBackground: true,
           deviceName: deviceName,
-          pageSize: 'A6' // 58mm width approximation
+          pageSize: 'A6', // 58mm width approximation
+          margins: {
+            marginType: 'none'
+          }
         },
         (success, failureReason) => {
           if (success) {
@@ -149,7 +155,8 @@ const printHtml = async (html, selectedPrinter) => {
         {
           silent: true,
           printBackground: true,
-          deviceName: ''
+          deviceName: '',
+          pageSize: 'A6'
         },
         (success, failureReason) => {
           printWindow.close();
