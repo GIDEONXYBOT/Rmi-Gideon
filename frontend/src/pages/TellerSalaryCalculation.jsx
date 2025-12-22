@@ -180,7 +180,7 @@ export default function TellerSalaryCalculation() {
       const token = localStorage.getItem('token');
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-      // Get the week start (Monday)
+      // Get the week start (Monday) - using local time, not UTC
       const date = new Date(selectedWeek);
       const dayOfWeek = date.getDay();
       const diffToMonday = date.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
@@ -191,12 +191,20 @@ export default function TellerSalaryCalculation() {
       setWeekStart(start);
       setWeekEnd(end);
 
+      // Format dates as YYYY-MM-DD using local time (not UTC)
+      const formatLocalDate = (d) => {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+
       const response = await axios.get(
         `${getApiUrl()}/api/teller-salary-calculation`,
         {
           params: {
-            weekStart: start.toISOString().split('T')[0],
-            weekEnd: end.toISOString().split('T')[0],
+            weekStart: formatLocalDate(start),
+            weekEnd: formatLocalDate(end),
             supervisorId: user?.role === 'supervisor' ? user?.id : undefined
           },
           headers

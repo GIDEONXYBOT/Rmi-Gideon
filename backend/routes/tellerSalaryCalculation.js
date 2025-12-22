@@ -104,8 +104,9 @@ router.get('/', requireAuth, async (req, res) => {
     tellerReports.forEach(report => {
       const tellerIdStr = report.tellerId?.toString();
       if (tellerMap[tellerIdStr]) {
-        // Parse the date string to get day of week
-        const date = new Date(report.date + 'T00:00:00Z');
+        // Parse the date string to get day of week (without timezone conversion)
+        const dateParts = report.date.split('-');
+        const date = new Date(dateParts[0], parseInt(dateParts[1]) - 1, dateParts[2]);
         const dayOfWeek = date.getDay();
         
         // Map day of week to day name (1=Mon, 2=Tue, etc.)
@@ -378,3 +379,48 @@ router.get('/over-summary/:date', requireAuth, async (req, res) => {
   }
 });
 
+/**
+ * GET /api/teller-salary-calculation/debug/reports
+ * Debug endpoint to see all reports for a date range
+ */
+router.get('/debug/reports', requireAuth, async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+
+    if (!startDate || !endDate) {
+      return res.status(400).json({ message: 'startDate and endDate required (YYYY-MM-DD format)' });
+    }
+
+    // Find all reports in date range
+    const reports = await TellerReport.find({
+      date: { $gte: startDate, $lte: endDate }
+    })
+      .populate('tellerId', 'name username')
+      .sort({ date: 1, tellerId: 1 })
+      .lean();
+
+    // Group by date to see what we have
+    const byDate = {};
+    reports.forEach(r => {
+      if (!byDate[r.date]) byDate[r.date] = [];
+      byDate[r.date].push({
+        teller: r.tellerId?.name || 'Unknown',
+        over: r.over,
+        short: r.short
+      });
+    });
+
+    res.json({
+      dateRange: { startDate, endDate },
+      totalReports: reports.length,
+      reportsByDate: byDate,
+      allReports: reports
+    });
+
+  } catch (err) {
+    console.error('Error in debug endpoint:', err);
+    res.status(500).json({ message: 'Debug failed', error: err.message });
+  }
+});
+
+export default router;

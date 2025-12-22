@@ -19,7 +19,15 @@ export function getApiUrl() {
   const hostname = window.location.hostname;
   const protocol = window.location.protocol;
   
-  // Map production domains to their respective backends
+  // Check for environment variable FIRST (works with Cloudflare/Vercel env vars)
+  // Set VITE_API_URL before building for online deployment
+  const envUrl = import.meta.env.VITE_API_URL;
+  if (envUrl) {
+    console.log('✅ Using env variable API URL:', envUrl);
+    return envUrl;
+  }
+  
+  // Map production domains to their respective backends (fallback)
   const domainMap = {
     'rmi.gideonbot.xyz': 'https://rmi-backend-zhdr.onrender.com',
     'www.rmi.gideonbot.xyz': 'https://rmi-backend-zhdr.onrender.com',
@@ -29,13 +37,6 @@ export function getApiUrl() {
   if (domainMap[hostname]) {
     console.log('✅ Using mapped domain:', domainMap[hostname]);
     return domainMap[hostname];
-  }
-
-  // Check for environment variable (works with Cloudflare/Vercel env vars)
-  const envUrl = import.meta.env.VITE_API_URL;
-  if (envUrl) {
-    console.log('✅ Using env variable API URL:', envUrl);
-    return envUrl;
   }
 
   // Check for localhost or 127.0.0.1 (development)

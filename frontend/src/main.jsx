@@ -1,6 +1,6 @@
 import React, { useContext } from "react";
 import ReactDOM from "react-dom/client";
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { HashRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { PageWrapper } from './components/PageWrapper.jsx';
 import "./index.css";
 import axios from "axios";
@@ -252,7 +252,7 @@ function App() {
       <SettingsProvider>
         <ToastProvider>
           <ChickenFightProvider>
-            <BrowserRouter>
+            <HashRouter>
               <PageWrapper>
                 <Routes>
             {/* Redirect root to login */}
@@ -578,7 +578,7 @@ function App() {
             <Route path="*" element={<NotFound />} />
                 </Routes>
               </PageWrapper>
-            </BrowserRouter>
+            </HashRouter>
           </ChickenFightProvider>
         </ToastProvider>
       </SettingsProvider>

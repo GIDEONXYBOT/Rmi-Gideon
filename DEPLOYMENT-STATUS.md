@@ -1,6 +1,24 @@
 # 🚀 Chicken Fight System - Deployment Status
 
-## Latest Deployment (Dec 9, 2025)
+## LATEST: Teller Salary Calculation Enhancements (Dec 22, 2025)
+
+### Fixes Applied:
+✅ **Saturday/Sunday Data Display** - Fixed timezone issue in date parsing
+✅ **Auto-Detection Feature** - Flags excessive over amounts (default ₱500)
+✅ **Weekend Calculations** - Now correctly shows sat/sun over amounts
+✅ **Debug Endpoint** - Added `/api/teller-salary-calculation/debug/reports`
+
+### Desktop App Built:
+✅ `RMI Teller Report Setup 1.0.0.exe` (74.3 MB) - Ready to distribute
+
+### Pending:
+⚠️ Web Domain Deploy - Render.com showing `npm start` exit code 1
+- Need to check Render logs for specific error
+- Likely database connection or env variable issue
+
+---
+
+## Previous Deployment (Dec 9, 2025)
 
 ### Commit: 117664b
 **Message:** UI: Enhance dark mode theme and improve UI for chicken fight pages with better statistics cards and history viewer
@@ -26,7 +44,7 @@
 
 ### Backend (Render.com)
 - **URL:** `https://rmi-backend-zhdr.onrender.com`
-- **Status:** Active
+- **Status:** Active (but needs redeploy for latest fixes)
 - **Features:**
   - All 6 chicken-fight-registration endpoints active
   - Delete entry endpoint implemented (soft delete)
@@ -48,6 +66,12 @@
 - `PUT /api/chicken-fight-registration/registrations/:id/withdraw` - Reverse payment
 - `PUT /api/chicken-fight-registration/registrations/:id/insurance` - Toggle insurance
 - `GET /api/chicken-fight-registration/registrations-stats` - Get statistics
+
+### Teller Salary Calculation (NEW)
+- `GET /api/teller-salary-calculation` - Weekly salary with auto-flagged over amounts
+- `GET /api/teller-salary-calculation/flagged-reports/:dateOrRange` - Get flagged excessive overs
+- `GET /api/teller-salary-calculation/over-summary/:date` - Daily over analysis
+- `GET /api/teller-salary-calculation/debug/reports` - Debug endpoint for report inspection
 
 ---
 
