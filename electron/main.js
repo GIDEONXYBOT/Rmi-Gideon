@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
 let autoUpdater = null;
 try {
   const updater = require('electron-updater');
@@ -33,6 +33,9 @@ const createWindow = () => {
   } else {
     mainWindow.loadURL('https://rmi.gideonbot.xyz/#/admin/dashboard');
   }
+
+  // Setup updater for this window
+  setupUpdater(mainWindow);
 };
 
 const printHtml = async (html, selectedPrinter) => {
@@ -167,7 +170,123 @@ if (autoUpdater && !isDev) {
   });
 }
 
-app.whenReady().then(createWindow);
+// Auto-updater setup
+let mainWindow = null;
+const setupUpdater = (window) => {
+  if (!autoUpdater) {
+    console.log('❌ electron-updater not available');
+    return;
+  }
+
+  // Check for updates automatically every 10 minutes
+  setInterval(() => {
+    autoUpdater.checkForUpdates();
+  }, 10 * 60 * 1000);
+
+  autoUpdater.on('checking-for-update', () => {
+    console.log('🔍 Checking for updates...');
+    window.webContents.send('update-status', { status: 'checking' });
+  });
+
+  autoUpdater.on('update-available', (info) => {
+    console.log('📦 Update available:', info.version);
+    window.webContents.send('update-status', { status: 'available', version: info.version });
+  });
+
+  autoUpdater.on('update-not-available', () => {
+    console.log('✅ App is up to date');
+    window.webContents.send('update-status', { status: 'not-available' });
+  });
+
+  autoUpdater.on('error', (err) => {
+    console.error('❌ Update error:', err);
+    window.webContents.send('update-status', { status: 'error', error: err.message });
+  });
+
+  autoUpdater.on('download-progress', (progressObj) => {
+    console.log(`📥 Download progress: ${Math.round(progressObj.percent)}%`);
+    window.webContents.send('update-status', { 
+      status: 'downloading', 
+      percent: Math.round(progressObj.percent) 
+    });
+  });
+
+  autoUpdater.on('update-downloaded', (info) => {
+    console.log('✅ Update downloaded, ready to install');
+    window.webContents.send('update-status', { status: 'ready', version: info.version });
+  });
+};
+
+// IPC handlers for updates
+ipcMain.handle('check-for-update', async () => {
+  if (!autoUpdater) return { success: false, message: 'Updater not available' };
+  try {
+    const result = await autoUpdater.checkForUpdates();
+    return { success: true, updateAvailable: result.updateInfo !== null };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('install-update', async () => {
+  if (!autoUpdater) return { success: false };
+  try {
+    autoUpdater.quitAndInstall();
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+// Create application menu with Help menu
+const createMenu = () => {
+  const template = [
+    {
+      label: 'File',
+      submenu: [
+        {
+          label: 'Exit',
+          accelerator: 'CmdOrCtrl+Q',
+          click: () => {
+            app.quit();
+          }
+        }
+      ]
+    },
+    {
+      label: 'Help',
+      submenu: [
+        {
+          label: 'Check for Updates',
+          click: () => {
+            if (mainWindow) {
+              mainWindow.webContents.send('trigger-update-check');
+            }
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'About RMI Teller Report',
+          click: () => {
+            dialog.showMessageBox(mainWindow, {
+              type: 'info',
+              title: 'About RMI Teller Report',
+              message: 'RMI Teller Report',
+              detail: `Version: ${app.getVersion()}\n\nManage and calculate teller salaries efficiently.`
+            });
+          }
+        }
+      ]
+    }
+  ];
+
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
+};
+
+app.whenReady().then(() => {
+  createMenu();
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {

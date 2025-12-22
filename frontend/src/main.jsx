@@ -2,6 +2,7 @@ import React, { useContext } from "react";
 import ReactDOM from "react-dom/client";
 import { HashRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { PageWrapper } from './components/PageWrapper.jsx';
+import UpdateStatus from './components/UpdateStatus.jsx';
 import "./index.css";
 import axios from "axios";
 
@@ -254,6 +255,7 @@ function App() {
           <ChickenFightProvider>
             <HashRouter>
               <PageWrapper>
+                <UpdateStatus />
                 <Routes>
             {/* Redirect root to login */}
             <Route path="/" element={<Navigate to="/login" />} />
