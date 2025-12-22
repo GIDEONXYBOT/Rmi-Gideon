@@ -61,8 +61,8 @@ export default function TellerSalaryCalculation() {
       .map(({ key, label }) => {
         const overAmount = dailyOver[key] || 0;
         const noBSalaryKey = `${teller._id}-${key}`;
-        const isExcluded = noBSalarDays[noBSalaryKey] || false;
-        const baseSalaryForDay = isExcluded ? 0 : baseSalaryAmount;
+        const isIncluded = noBSalarDays[noBSalaryKey];
+        const baseSalaryForDay = isIncluded ? baseSalaryAmount : 0;
         totalBaseSalary += baseSalaryForDay;
         return `<div class="row"><span>${label}</span><span>${formatCurrency(overAmount)}</span><span>${formatCurrency(baseSalaryForDay)}</span></div>`;
       })
@@ -437,7 +437,7 @@ export default function TellerSalaryCalculation() {
               // Calculate actual base salary based on included days
               const includedDaysCount = dayLabels.filter(({ key }) => {
                 const noBSalaryKey = `${teller._id}-${key}`;
-                return !noBSalarDays[noBSalaryKey];
+                return noBSalarDays[noBSalaryKey];
               }).length;
               const adjustedBaseWeeklySum = baseSalaryAmount * includedDaysCount;
               const totalCompensation = adjustedBaseWeeklySum + totalOver;
@@ -497,34 +497,34 @@ export default function TellerSalaryCalculation() {
                           const overAmount = dailyOver[key] || 0;
                           const tellerId = teller._id;
                           const noBSalaryKey = `${tellerId}-${key}`;
-                          const isExcluded = noBSalarDays[noBSalaryKey] || false;
-                          const baseSalaryForDay = isExcluded ? 0 : baseSalaryAmount;
+                          const isIncluded = noBSalarDays[noBSalaryKey];
+                          const baseSalaryForDay = isIncluded ? baseSalaryAmount : 0;
                           
                           return (
                             <div key={key} className={`grid grid-cols-4 gap-2 items-center p-2 rounded ${
-                              isExcluded 
-                                ? dark ? 'bg-gray-700' : 'bg-gray-100' 
-                                : dark ? 'bg-gray-800' : 'bg-white'
-                            } border ${isExcluded ? 'border-orange-300' : dark ? 'border-gray-700' : 'border-gray-200'}`}>
+                              !isIncluded 
+                                ? dark ? 'bg-gray-800' : 'bg-white' 
+                                : dark ? 'bg-green-900/20' : 'bg-green-50'
+                            } border ${!isIncluded ? dark ? 'border-gray-700' : 'border-gray-200' : 'border-green-300'}`}>
                               <div className={`text-sm font-medium ${dark ? 'text-gray-300' : 'text-gray-700'}`}>{label}</div>
                               <div className={`text-sm font-semibold ${
                                 overAmount > 0 ? 'text-green-600' : overAmount < 0 ? 'text-red-600' : dark ? 'text-gray-500' : 'text-gray-400'
                               }`}>₱{overAmount.toFixed(2)}</div>
-                              <div className={`text-sm font-semibold ${isExcluded ? 'text-orange-500 line-through' : dark ? 'text-green-400' : 'text-green-600'}`}>
+                              <div className={`text-sm font-semibold ${isIncluded ? 'text-green-600' : dark ? 'text-gray-500' : 'text-gray-400 line-through'}`}>
                                 ₱{baseSalaryForDay.toFixed(2)}
                               </div>
                               <button
                                 onClick={() => toggleBaseSalaryDay(tellerId, key)}
                                 className={`px-2 py-1 rounded text-xs font-semibold transition ${
-                                  isExcluded
-                                    ? 'bg-orange-500 text-white hover:bg-orange-600'
-                                    : dark
+                                  isIncluded
                                     ? 'bg-green-600 text-white hover:bg-green-700'
-                                    : 'bg-green-500 text-white hover:bg-green-600'
+                                    : dark
+                                    ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                    : 'bg-gray-300 text-gray-600 hover:bg-gray-400'
                                 }`}
-                                title={isExcluded ? 'Click to include base salary' : 'Click to exclude base salary'}
+                                title={isIncluded ? 'Click to exclude base salary' : 'Click to include base salary'}
                               >
-                                {isExcluded ? 'NO' : 'YES'}
+                                {isIncluded ? 'YES' : 'NO'}
                               </button>
                             </div>
                           );
