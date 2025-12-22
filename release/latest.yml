@@ -1,8 +1,8 @@
 version: 1.0.0
 files:
   - url: RMI-Teller-Report-Setup-1.0.0.exe
-    sha512: XuaBI/45SpJKgSl1RI73DQrvG7BYnoiuRIFNYbXlYCiEg0ZxCE9oS3FA59Xs5i5tQ3OXGxnNeQWx1DSFo+gpBQ==
-    size: 74324977
+    sha512: yRa8QxeK7RB2YAdaX1KJVnDsB5B5K4UxereQlckSQ1ax/Rb2VNLrYhs8diyytnCNqfUAc67PhXqSbXmDrfjjVw==
+    size: 74325015
 path: RMI-Teller-Report-Setup-1.0.0.exe
-sha512: XuaBI/45SpJKgSl1RI73DQrvG7BYnoiuRIFNYbXlYCiEg0ZxCE9oS3FA59Xs5i5tQ3OXGxnNeQWx1DSFo+gpBQ==
-releaseDate: '2025-12-22T06:20:17.710Z'
+sha512: yRa8QxeK7RB2YAdaX1KJVnDsB5B5K4UxereQlckSQ1ax/Rb2VNLrYhs8diyytnCNqfUAc67PhXqSbXmDrfjjVw==
+releaseDate: '2025-12-22T06:56:46.893Z'
