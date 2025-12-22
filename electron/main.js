@@ -12,27 +12,58 @@ const fs = require('fs');
 const isDev = process.env.NODE_ENV !== 'production';
 
 const createWindow = () => {
-  const mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 820,
-    minWidth: 940,
-    minHeight: 680,
-    show: false,
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false
+  try {
+    const mainWindow = new BrowserWindow({
+      width: 1200,
+      height: 820,
+      minWidth: 940,
+      minHeight: 680,
+      show: false,
+      webPreferences: {
+        preload: path.join(__dirname, 'preload.js'),
+        contextIsolation: true,
+        nodeIntegration: false,
+        enableRemoteModule: false
+      }
+    });
+
+    mainWindow.once('ready-to-show', () => {
+      mainWindow.show();
+      // Open DevTools in development for debugging
+      if (isDev) {
+        mainWindow.webContents.openDevTools();
+      }
+    });
+
+    // Handle window closed
+    mainWindow.on('closed', () => {
+      console.log('Main window closed');
+    });
+
+    // Handle any errors during page load
+    mainWindow.webContents.on('crashed', () => {
+      console.error('❌ App crashed!');
+      dialog.showErrorBox('Error', 'Application crashed. Please restart.');
+    });
+
+    const distPath = path.join(__dirname, '..', 'frontend', 'dist', 'index.html');
+    if (fs.existsSync(distPath)) {
+      console.log('📂 Loading from local dist:', distPath);
+      mainWindow.loadFile(distPath, { hash: 'admin/dashboard' });
+    } else {
+      console.log('🌐 Loading from remote URL');
+      mainWindow.loadURL('https://rmi.gideonbot.xyz/#/admin/dashboard');
     }
-  });
 
-  mainWindow.once('ready-to-show', () => mainWindow.show());
-
-  const distPath = path.join(__dirname, '..', 'frontend', 'dist', 'index.html');
-  if (fs.existsSync(distPath)) {
-    mainWindow.loadFile(distPath, { hash: 'admin/dashboard' });
-  } else {
-    mainWindow.loadURL('https://rmi.gideonbot.xyz/#/admin/dashboard');
+    // Log any errors
+    mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+      console.error('❌ Failed to load:', errorCode, errorDescription);
+    });
+  } catch (err) {
+    console.error('❌ Error creating window:', err);
+    process.exit(1);
   }
+};
 
   // Setup updater for this window
   setupUpdater(mainWindow);
@@ -285,7 +316,12 @@ const createMenu = () => {
 };
 
 app.whenReady().then(() => {
+  console.log('🚀 App ready, creating window...');
   createMenu();
+  createWindow();
+}).catch(err => {
+  console.error('❌ App error:', err);
+  process.exit(1);
 });
 
 app.on('window-all-closed', () => {
