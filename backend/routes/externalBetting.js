@@ -895,7 +895,44 @@ export async function fetchChickenFightBettingData() {
   }
 }
 
-// Export the function for use in other modules
-export { fetchBettingDataFromGTArena };
+/**
+ * Proxy endpoint for GTA betting event report
+ * Fetches from external API: http://122.3.203.8/api/m/secure/report/event
+ * with X-TOKEN authentication
+ */
+router.get('/api/gta-event-report-proxy', async (req, res) => {
+  try {
+    const externalUrl = 'http://122.3.203.8/api/m/secure/report/event';
+    const xToken = 'af9735e1c7857a07f0b078df36842ace';
+
+    console.log('🔄 Fetching GTA event report from external API...');
+
+    const response = await axios.get(externalUrl, {
+      headers: {
+        'X-TOKEN': xToken,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      timeout: 10000
+    });
+
+    console.log('✅ GTA event report fetched successfully');
+
+    // Return success response
+    res.json({
+      success: true,
+      data: response.data
+    });
+
+  } catch (error) {
+    console.error('❌ Error fetching GTA event report:', error.message);
+
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to fetch GTA event report',
+      message: 'Failed to fetch betting event data from external API'
+    });
+  }
+});
 
 export default router;
