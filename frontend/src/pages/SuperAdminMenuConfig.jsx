@@ -77,6 +77,7 @@ const AVAILABLE_MENU_ITEMS = [
   { id: "leaderboard", label: "External Leaderboard", icon: <BarChart3 size={16} />, allowedRoles: ["super_admin", "admin"] },
   { id: "gta-leaderboard", label: "GTA Leaderboards", icon: <BarChart3 size={16} />, allowedRoles: ["super_admin", "admin"] },
   { id: "betting-event-reports", label: "Betting Event Reports", icon: <BarChart3 size={16} />, allowedRoles: ["super_admin", "admin"] },
+  { id: "gta-betting-event-report", label: "GTA Betting Event Report", icon: <BarChart3 size={16} />, allowedRoles: ["super_admin", "admin"] },
   { id: "workplace-schedule", label: "Workplace Schedule", icon: <Calendar size={16} />, allowedRoles: ["super_admin", "admin"] },
   { id: "gta-teller-management", label: "GTA Teller Management", icon: <Users size={16} />, allowedRoles: ["super_admin", "admin"] },
   { id: "teller-mappings", label: "Teller Mappings", icon: <Link size={16} />, allowedRoles: ["super_admin"] },
