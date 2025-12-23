@@ -185,42 +185,54 @@ const LeaderboardPage = () => {
     }
   };
 
-  // Use ref to cache fight times persistently
-  const fightTimesRef = useRef({});
+  // Use localStorage to persistently cache fight times
+  const getFightTimeFromStorage = (drawId) => {
+    try {
+      const stored = localStorage.getItem(`fight-time-${drawId}`);
+      return stored ? JSON.parse(stored) : null;
+    } catch (e) {
+      return null;
+    }
+  };
 
-  // Update fight times cache only when draw data changes
+  const setFightTimeInStorage = (drawId, time) => {
+    try {
+      localStorage.setItem(`fight-time-${drawId}`, JSON.stringify(time));
+    } catch (e) {
+      console.warn('Failed to store fight time:', e);
+    }
+  };
+
+  // Update fight times cache only when new draws appear
   useEffect(() => {
-    // Reset and rebuild the cache on each update
-    const newTimes = {};
+    let nextFightIndex = 0;
     
-    draws.forEach((draw, index) => {
+    draws.forEach((draw) => {
       if (draw.id) {
-        let timeToDisplay;
+        // Check if this fight time is already cached
+        let cachedTime = getFightTimeFromStorage(draw.id);
         
-        // Try to use createdAt if available from the API
-        if (draw.createdAt) {
-          timeToDisplay = formatDate(draw.createdAt);
-        } else {
-          // Generate time based on index position
-          // Fights are listed in descending order (newest first)
-          const now = new Date();
-          const minutesPerFight = 2.5; // 2.5 minutes between fights
+        if (!cachedTime) {
+          // New fight - generate and store its time
+          let timeToDisplay;
           
-          // Time = now - (current index * minutes per fight)
-          const minutesAgo = index * minutesPerFight;
-          const adjustedTime = new Date(now.getTime() - (minutesAgo * 60 * 1000));
-          timeToDisplay = formatDate(adjustedTime.toISOString());
+          if (draw.createdAt) {
+            timeToDisplay = formatDate(draw.createdAt);
+          } else {
+            // Generate time based on this being the Nth new fight
+            const now = new Date();
+            const minutesPerFight = 2.5;
+            const minutesAgo = nextFightIndex * minutesPerFight;
+            const adjustedTime = new Date(now.getTime() - (minutesAgo * 60 * 1000));
+            timeToDisplay = formatDate(adjustedTime.toISOString());
+          }
+          
+          setFightTimeInStorage(draw.id, timeToDisplay);
+          nextFightIndex++;
         }
-        
-        newTimes[draw.id] = timeToDisplay;
       }
     });
-    
-    // Update the ref with new times
-    fightTimesRef.current = newTimes;
-    console.log('🕐 Generated fight times:', Object.keys(newTimes).length, 'fights');
-    
-  }, [draws]);
+  }, [draws.map(d => d.id).join(',')]);
 
   const getCurrentTime = () => {
     const now = new Date();
@@ -370,7 +382,7 @@ const LeaderboardPage = () => {
                 </div>
               </div>
               <div className="text-xs text-gray-500 mb-1">
-                {fightTimesRef.current[draw.id] || formatDate(draw.createdAt)}
+                {getFightTimeFromStorage(draw.id) || formatDate(draw.createdAt) || 'N/A'}
               </div>
               <div className="flex justify-between text-xs text-gray-400">
                 <span>Total: ₱{draw.details ? (draw.details.redTotalBetAmount + draw.details.blueTotalBetAmount + (draw.details.drawTotalBetAmount || 0)).toLocaleString() : '0'}</span>
