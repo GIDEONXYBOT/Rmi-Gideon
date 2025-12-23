@@ -6,7 +6,8 @@ const router = express.Router();
 // GET /api/gta-betting-events - Proxy to external GTA dashboard
 router.get('/', async (req, res) => {
   try {
-    const externalUrl = 'http://122.3.203.8/dashboard';
+    // Use the correct API endpoint that works with X-TOKEN authentication
+    const externalUrl = 'https://rmi-gideon.gtarena.ph/api/m/secure/report/event';
     const token = 'af9735e1c7857a07f0b078df36842ace';
 
     console.log(`📊 Fetching GTA betting events from ${externalUrl}`);
@@ -36,8 +37,10 @@ router.get('/', async (req, res) => {
       });
     }
 
-    console.log(`✅ GTA betting events fetched successfully: ${Array.isArray(response.data) ? response.data.length : 'unknown'} records`);
-    res.json(response.data);
+    // The API returns data in response.data.data, so extract it
+    const eventData = response.data?.data || response.data;
+    console.log(`✅ GTA betting events fetched successfully: ${Array.isArray(eventData) ? eventData.length : 'unknown'} records`);
+    res.json(eventData);
   } catch (error) {
     console.error('❌ Error fetching GTA betting events:', error.message);
     console.error('Error details:', {
