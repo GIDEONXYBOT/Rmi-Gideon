@@ -190,12 +190,25 @@ const LeaderboardPage = () => {
 
   // Update fight times cache only when draw data changes
   useEffect(() => {
-    draws.forEach(draw => {
-      if (draw.id && draw.createdAt && !fightTimesRef.current[draw.id]) {
-        fightTimesRef.current[draw.id] = formatDate(draw.createdAt);
+    draws.forEach((draw, index) => {
+      if (draw.id && !fightTimesRef.current[draw.id]) {
+        let timeToDisplay;
+        
+        // Try to use createdAt if available from the API
+        if (draw.createdAt) {
+          timeToDisplay = formatDate(draw.createdAt);
+        } else {
+          // If no createdAt, use lastUpdated time and subtract seconds based on position
+          // Each fight is roughly 2-3 minutes apart, so subtract ~150 seconds per fight
+          const baseTime = lastUpdated ? new Date(lastUpdated) : new Date();
+          const adjustedTime = new Date(baseTime.getTime() - (index * 150000)); // 150 seconds per fight
+          timeToDisplay = formatDate(adjustedTime.toISOString());
+        }
+        
+        fightTimesRef.current[draw.id] = timeToDisplay;
       }
     });
-  }, [draws]);
+  }, [draws, lastUpdated]);
 
   const getCurrentTime = () => {
     const now = new Date();
