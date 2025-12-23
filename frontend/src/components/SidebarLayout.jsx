@@ -382,6 +382,7 @@ export default function SidebarLayout({ role, children }) {
     'financial-summary': { to: r => `/${r}/financial-summary`, icon: <TrendingUp size={18} />, text: 'Financial Summary', roles: ['admin','super_admin'] },
     'leaderboard': { to: r => `/${r}/leaderboard`, icon: <BarChart3 size={18} />, text: 'External Leaderboard', roles: ['admin','super_admin'] },
     'gta-leaderboard': { to: r => `/${r}/gta-leaderboard`, icon: <BarChart3 size={18} />, text: 'GTA LEADERBOARDS', roles: ['admin','super_admin'] },
+    'betting-event-reports': { to: r => `/${r}/betting-event-reports`, icon: <BarChart3 size={18} />, text: 'Betting Event Reports', roles: ['admin','super_admin'] },
     upload: { to: r => `/upload`, icon: <Camera size={18} />, text: 'Upload', roles: ['admin','super_admin','supervisor','teller','declarator','supervisor_teller'] },
     feed: { to: r => `/feed`, icon: <FileText size={18} />, text: 'Feed', roles: ['admin','super_admin','supervisor','teller','declarator','supervisor_teller'] },
     // Extra items that appear in config but not previously mapped

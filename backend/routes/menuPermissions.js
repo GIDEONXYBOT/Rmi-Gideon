@@ -97,7 +97,7 @@ router.post("/initialize", requireAuth, requireRole(['super_admin']), async (req
   try {
     const defaultPermissions = [
       // Admin starts with minimal set - full control belongs to super_admin
-      { role: 'admin', menuItems: ['dashboard', 'chicken-fight-results', 'gta-leaderboard'] },
+      { role: 'admin', menuItems: ['dashboard', 'chicken-fight-results', 'gta-leaderboard', 'betting-event-reports'] },
       { role: 'supervisor', menuItems: ['dashboard', 'teller-salary-calculation', 'chicken-fight-results'] },
       { role: 'teller', menuItems: ['dashboard'] },
       { role: 'supervisor_teller', menuItems: ['dashboard'] },
@@ -128,7 +128,8 @@ router.post("/initialize", requireAuth, requireRole(['super_admin']), async (req
           "settings",
           "financial-summary",
           "chicken-fight-results",
-          "gta-leaderboard"
+          "gta-leaderboard",
+          "betting-event-reports"
         ] },
     ];
 
