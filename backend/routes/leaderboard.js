@@ -3,6 +3,15 @@ import axios from 'axios';
 
 const router = express.Router();
 
+// Test endpoint to verify route is working
+router.get('/test', (req, res) => {
+  res.json({
+    message: '✅ Leaderboard route is registered and working',
+    endpoint: '/api/leaderboard/gta',
+    status: 'ready',
+  });
+});
+
 // Proxy endpoint to fetch GTA leaderboard data from external service
 router.get('/gta', async (req, res) => {
   try {
