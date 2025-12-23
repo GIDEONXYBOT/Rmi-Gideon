@@ -2,16 +2,15 @@ import express from 'express';
 
 const router = express.Router();
 
-// GET /api/gta-betting-events - Proxy to external GTA dashboard
+// GET /api/gta-betting-events - Fetch actual betting event records from external API
 router.get('/', async (req, res) => {
   try {
-    // Use the correct API endpoint that works with X-TOKEN authentication
+    // Fetch from GTArena API with X-TOKEN to get betting event data
     const externalUrl = 'https://rmi-gideon.gtarena.ph/api/m/secure/report/event';
     const token = 'af9735e1c7857a07f0b078df36842ace';
 
-    console.log(`📊 Fetching GTA betting events from ${externalUrl}`);
+    console.log(`📊 Fetching betting event records from ${externalUrl}`);
 
-    // Use native fetch (same as working endpoints in reports.js)
     const response = await fetch(externalUrl, {
       method: 'GET',
       headers: {
@@ -23,9 +22,7 @@ router.get('/', async (req, res) => {
     });
 
     console.log(`📊 Response status: ${response.status}`);
-    console.log(`📊 Response headers:`, Object.fromEntries(response.headers));
 
-    // Check if response is successful
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`❌ External service error: ${response.status}`, errorText);
@@ -39,61 +36,43 @@ router.get('/', async (req, res) => {
     
     console.log(`📊 Full response structure:`, JSON.stringify(data, null, 2).substring(0, 500));
     
-    // Extract the actual event data from the nested structure
-    // The API returns: { data: { eventReports: [...] } } or similar
+    // Extract actual betting event records (different from staff reports)
     let eventData = [];
     
-    if (Array.isArray(data)) {
-      // Direct array
-      eventData = data;
-    } else if (Array.isArray(data.data)) {
-      // data.data is array
-      eventData = data.data;
-    } else if (data.data?.eventReports && Array.isArray(data.data.eventReports)) {
-      // data.data.eventReports is array
+    if (data.data?.eventReports && Array.isArray(data.data.eventReports)) {
+      // eventReports contains actual betting events
       eventData = data.data.eventReports;
+      console.log(`✅ Found ${eventData.length} event records in eventReports`);
     } else if (data.data?.events && Array.isArray(data.data.events)) {
-      // data.data.events is array
+      // events array
       eventData = data.data.events;
-    } else if (data.eventReports && Array.isArray(data.eventReports)) {
-      // eventReports at root
-      eventData = data.eventReports;
-    } else if (data.events && Array.isArray(data.events)) {
-      // events at root
-      eventData = data.events;
-    } else if (typeof data.data === 'object' && data.data !== null) {
-      // If data.data is an object, try to find the array inside it
-      const values = Object.values(data.data);
+      console.log(`✅ Found ${eventData.length} event records in events`);
+    } else if (data.data?.matches && Array.isArray(data.data.matches)) {
+      // matches array
+      eventData = data.data.matches;
+      console.log(`✅ Found ${eventData.length} event records in matches`);
+    } else if (Array.isArray(data.data)) {
+      // Direct array
+      eventData = data.data;
+      console.log(`✅ Found ${eventData.length} event records in data.data`);
+    } else if (Array.isArray(data)) {
+      // Root level array
+      eventData = data;
+      console.log(`✅ Found ${eventData.length} event records at root`);
+    } else {
+      // Try to find any array in the response
+      const values = Object.values(data.data || {});
       const arrayValues = values.filter(v => Array.isArray(v));
       if (arrayValues.length > 0) {
         eventData = arrayValues[0];
+        console.log(`✅ Found ${eventData.length} event records in nested array`);
       }
     }
     
-    console.log(`✅ Extracted ${Array.isArray(eventData) ? eventData.length : 0} betting events`);
+    console.log(`✅ Returning ${eventData.length} betting event records`);
     res.json(eventData || []);
   } catch (error) {
     console.error('❌ Error fetching GTA betting events:', error.message);
-    console.error('Error details:', {
-      name: error.name,
-      message: error.message
-    });
-
-    // Network errors
-    if (error.message.includes('fetch')) {
-      return res.status(503).json({
-        error: 'External GTA dashboard is unavailable',
-        details: error.message || 'Network error - service may be down'
-      });
-    }
-
-    // Timeout errors
-    if (error.name === 'AbortError' || error.message.includes('timeout')) {
-      return res.status(504).json({
-        error: 'External GTA dashboard request timeout',
-        details: 'Request took too long (>10s)'
-      });
-    }
 
     res.status(500).json({
       error: 'Failed to fetch GTA betting events',

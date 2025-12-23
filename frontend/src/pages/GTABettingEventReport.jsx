@@ -12,8 +12,8 @@ export default function GTABettingEventReport() {
       setLoading(true);
       setError(null);
       
-      // Use the existing betting-event API endpoint that's proven to work
-      const backendUrl = 'https://rmi-backend-zhdr.onrender.com/api/reports/betting-event';
+      // Fetch actual betting event records (different from staff betting data)
+      const backendUrl = 'https://rmi-backend-zhdr.onrender.com/api/gta-betting-events';
       
       const response = await fetch(backendUrl, {
         method: 'GET',
@@ -29,29 +29,19 @@ export default function GTABettingEventReport() {
         throw new Error(errorData.error || `HTTP Error: ${response.status}`);
       }
       
-      const apiResponse = await response.json();
+      let result = await response.json();
       
-      // Extract the data from the structured response
-      let result = [];
-      if (apiResponse.success && apiResponse.data) {
-        // If it has staffReports, transform it to event format
-        if (apiResponse.data.staffReports && Array.isArray(apiResponse.data.staffReports)) {
-          result = apiResponse.data.staffReports.map((item, idx) => ({
-            id: idx + 1,
-            eventName: `${item.name || item.username} - Bets`,
-            status: 'active',
-            amount: parseFloat(item.betAmount) || 0,
-            participants: 1,
-            betCount: 1,
-            username: item.username,
-            commission: parseFloat(item.commission) || 0,
-            systemBalance: parseFloat(item.systemBalance) || 0
-          }));
-        } 
-        // If it's already an array of events
-        else if (Array.isArray(apiResponse.data)) {
-          result = apiResponse.data;
-        }
+      // Transform event data to match our display format
+      if (Array.isArray(result)) {
+        result = result.map((item, idx) => ({
+          id: item.id || item.eventId || idx + 1,
+          eventName: item.name || item.eventName || item.title || `Event ${idx + 1}`,
+          status: item.status || item.state || 'pending',
+          amount: parseFloat(item.amount || item.betAmount || item.totalAmount || 0),
+          startTime: item.startTime || item.createdAt || item.date || new Date().toISOString(),
+          betCount: item.betCount || item.bets || item.participants || 0,
+          participants: item.participants || item.players || 1
+        }));
       }
       
       // If result is empty, use demo data to show UI
