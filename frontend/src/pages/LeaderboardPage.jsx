@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { leaderboardService } from '../services/leaderboardService';
 import { useToast } from '../context/ToastContext';
 import { getSocket } from '../socket';
@@ -185,6 +185,17 @@ const LeaderboardPage = () => {
     }
   };
 
+  // Memoize fight times to prevent them from changing on re-renders
+  const fightTimes = useMemo(() => {
+    const times = {};
+    draws.forEach(draw => {
+      if (draw.id && !times[draw.id]) {
+        times[draw.id] = formatDate(draw.createdAt);
+      }
+    });
+    return times;
+  }, [draws.map(d => d.id).join(',')]);
+
   const getCurrentTime = () => {
     const now = new Date();
     let hours = now.getHours();
@@ -333,7 +344,7 @@ const LeaderboardPage = () => {
                 </div>
               </div>
               <div className="text-xs text-gray-500 mb-1">
-                {formatDate(draw.createdAt)}
+                {fightTimes[draw.id] || formatDate(draw.createdAt)}
               </div>
               <div className="flex justify-between text-xs text-gray-400">
                 <span>Total: ₱{draw.details ? (draw.details.redTotalBetAmount + draw.details.blueTotalBetAmount + (draw.details.drawTotalBetAmount || 0)).toLocaleString() : '0'}</span>
