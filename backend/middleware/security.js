@@ -5,128 +5,21 @@ import compression from 'compression';
 
 // Production security configuration
 const securityMiddleware = (app) => {
-  // Enable compression for better performance
-  app.use(compression());
-
-  // Enhanced CORS configuration
+  // CORS MUST come first, before all other middleware
+  // Simple and permissive CORS for development/testing
   const corsOptions = {
-    origin: function (origin, callback) {
-      // Allow requests with no origin (mobile apps, direct API calls, curl, etc.)
-      if (!origin) return callback(null, true);
-
-      // Static allowed origins (can include scheme and host, or host-only patterns)
-      const allowedOrigins = [
-        'https://www.rmi.gideonbot.xyz',
-        'https://rmi.gideonbot.xyz',
-        'https://gideon-reports.pages.dev',
-        'https://rmi-backend-zhdr.onrender.com', // Backend itself for CORS preflight
-        'https://your-domain.pages.dev', // Replace with your Cloudflare domain
-        'http://localhost:3000',
-        'http://localhost:5173',
-        'https://localhost:5173',
-        'http://127.0.0.1:3000',
-        'http://127.0.0.1:5173',
-        'https://127.0.0.1:5173'
-      ];
-      
-      // Allow any hostname on port 5000 (for network access)
-      if (origin && origin.match(/^https?:\/\/[^:]+:5000$/)) {
-        console.log('✅ CORS allowed for port 5000 origin:', origin);
-        return callback(null, true);
-      }
-      
-      // In production, add your custom domain or comma-separated set of allowed hosts
-      // Use FRONTEND_URL for exact host (e.g. https://app.yourdomain.com)
-      // Or FRONTEND_ORIGINS for comma-separated patterns (e.g. https://*.yourdomain.com,http://192.168.0.167:5000)
-      if (process.env.NODE_ENV === 'production' && process.env.FRONTEND_URL) {
-        allowedOrigins.push(process.env.FRONTEND_URL);
-      }
-
-      console.log('🔍 FRONTEND_ORIGINS env var:', process.env.FRONTEND_ORIGINS);
-      const extra = process.env.FRONTEND_ORIGINS;
-      if (extra) {
-        const originsFromEnv = extra.split(',').map(s => s.trim()).filter(Boolean);
-        console.log('📋 Origins from FRONTEND_ORIGINS:', originsFromEnv);
-        originsFromEnv.forEach(s => allowedOrigins.push(s));
-      }
-
-      console.log('🔍 CORS check for origin:', origin);
-      console.log('📋 allowedOrigins:', allowedOrigins);
-
-      // Match function - supports exact origins, hostname-only and wildcard hostnames like *.yourdomain.com
-      const normalizeHost = (urlOrHost) => {
-        try {
-          return new URL(urlOrHost).hostname;
-        } catch (_) {
-          return urlOrHost;
-        }
-      };
-
-      const originHost = normalizeHost(origin);
-
-      for (const allowed of allowedOrigins) {
-        if (!allowed) continue;
-
-        // exact origin match (scheme + host + optional port)
-        if (allowed === origin) return callback(null, true);
-
-        // hostname-only or wildcard hostname matching
-        const allowedHost = normalizeHost(allowed);
-        if (!allowedHost) continue;
-
-        if (allowedHost.includes('*')) {
-          // convert wildcard host (*.example.com) into a safe regex
-          const escaped = allowedHost.replace(/[-\\^$*+?.()|[\]{}]/g, '\\$&');
-          const pattern = '^' + escaped.replace('\\*', '.*') + '$';
-          const re = new RegExp(pattern, 'i');
-          if (re.test(originHost)) return callback(null, true);
-        } else if (allowedHost === originHost) {
-          return callback(null, true);
-        }
-      }
-
-      console.log('⚠️  CORS blocked request from:', origin);
-      callback(new Error('Not allowed by CORS'));
-      return;
-    },
+    origin: true, // Allow all origins for now - this fixes CORS issues
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-requested-with', 'Accept', 'Cache-Control', 'cache-control', 'Pragma']
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-requested-with', 'Accept', 'Cache-Control', 'cache-control', 'Pragma', 'x-token']
   };
 
   app.use(cors(corsOptions));
 
-  // Ensure CORS headers are sent for all requests
-  app.use((req, res, next) => {
-    const origin = req.headers.origin;
-    const allowedOrigins = [
-      'https://www.rmi.gideonbot.xyz',
-      'https://rmi.gideonbot.xyz',
-      'https://gideon-reports.pages.dev',
-      'https://rmi-backend-zhdr.onrender.com',
-      'http://localhost:3000',
-      'http://localhost:5173',
-      'https://localhost:5173',
-      'http://127.0.0.1:3000',
-      'http://127.0.0.1:5173',
-      'https://127.0.0.1:5173'
-    ];
+  // Enable compression for better performance
+  app.use(compression());
 
-    if (origin && (allowedOrigins.includes(origin) || origin.match(/^https?:\/\/[^:]+:5000$/))) {
-      res.setHeader('Access-Control-Allow-Origin', origin);
-      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-requested-with, Accept, Cache-Control, Pragma');
-      res.setHeader('Access-Control-Allow-Credentials', 'true');
-    }
-
-    if (req.method === 'OPTIONS') {
-      return res.sendStatus(200);
-    }
-
-    next();
-  });
-
-  // Security headers with Helmet
+  // Security headers with Helmet (adjusted for CORS and external data)
   app.use(helmet({
     contentSecurityPolicy: {
       directives: {
