@@ -37,10 +37,41 @@ router.get('/', async (req, res) => {
 
     const data = await response.json();
     
-    // The API returns data in data.data, so extract it
-    const eventData = data?.data || data;
-    console.log(`✅ GTA betting events fetched successfully: ${Array.isArray(eventData) ? eventData.length : 'unknown'} records`);
-    res.json(eventData);
+    console.log(`📊 Full response structure:`, JSON.stringify(data, null, 2).substring(0, 500));
+    
+    // Extract the actual event data from the nested structure
+    // The API returns: { data: { eventReports: [...] } } or similar
+    let eventData = [];
+    
+    if (Array.isArray(data)) {
+      // Direct array
+      eventData = data;
+    } else if (Array.isArray(data.data)) {
+      // data.data is array
+      eventData = data.data;
+    } else if (data.data?.eventReports && Array.isArray(data.data.eventReports)) {
+      // data.data.eventReports is array
+      eventData = data.data.eventReports;
+    } else if (data.data?.events && Array.isArray(data.data.events)) {
+      // data.data.events is array
+      eventData = data.data.events;
+    } else if (data.eventReports && Array.isArray(data.eventReports)) {
+      // eventReports at root
+      eventData = data.eventReports;
+    } else if (data.events && Array.isArray(data.events)) {
+      // events at root
+      eventData = data.events;
+    } else if (typeof data.data === 'object' && data.data !== null) {
+      // If data.data is an object, try to find the array inside it
+      const values = Object.values(data.data);
+      const arrayValues = values.filter(v => Array.isArray(v));
+      if (arrayValues.length > 0) {
+        eventData = arrayValues[0];
+      }
+    }
+    
+    console.log(`✅ Extracted ${Array.isArray(eventData) ? eventData.length : 0} betting events`);
+    res.json(eventData || []);
   } catch (error) {
     console.error('❌ Error fetching GTA betting events:', error.message);
     console.error('Error details:', {
