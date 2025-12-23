@@ -35,7 +35,7 @@ export function SettingsProvider({ children }) {
       console.log("⚠️ Using default settings due to fetch failure");
       setSettings({
         theme: {
-          mode: "light",
+          mode: "dark",
           lightBg: "#ffffff",
           lightFont: "#000000",
           darkBg: "#1e1e1e",
@@ -94,9 +94,11 @@ export function SettingsProvider({ children }) {
     const html = document.documentElement;
 
     if (activeTheme.mode === "dark") {
+      html.classList.add("dark");
       html.style.backgroundColor = activeTheme.darkBg;
       html.style.color = activeTheme.darkFont;
     } else {
+      html.classList.remove("dark");
       html.style.backgroundColor = activeTheme.lightBg;
       html.style.color = activeTheme.lightFont;
     }

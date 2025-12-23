@@ -4,10 +4,10 @@
 
 /* 🌈 Base Variables */
 :root {
-  --bg: #f8fafc;
-  --card: #ffffff;
-  --muted: #6b7280;
-  --accent: #4f46e5; /* indigo-600 */
+  --bg: #0f172a;
+  --card: #0b1220;
+  --muted: #9ca3af;
+  --accent: #6366f1;
 }
 
 /* 🌙 Dark Mode Overrides */
