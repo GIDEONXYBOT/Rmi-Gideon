@@ -900,7 +900,7 @@ export async function fetchChickenFightBettingData() {
  * Fetches from external API: http://122.3.203.8/api/m/secure/report/event
  * with X-TOKEN authentication
  */
-router.get('/api/gta-event-report-proxy', async (req, res) => {
+router.get('/gta-event-report-proxy', async (req, res) => {
   try {
     const externalUrl = 'http://122.3.203.8/api/m/secure/report/event';
     const xToken = 'af9735e1c7857a07f0b078df36842ace';

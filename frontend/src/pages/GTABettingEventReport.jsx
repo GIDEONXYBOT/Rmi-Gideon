@@ -49,7 +49,7 @@ export default function GTABettingEventReport() {
         return;
       }
 
-      const url = `${getApiUrl()}/api/gta-event-report-proxy`;
+      const url = `${getApiUrl()}/api/external-betting/gta-event-report-proxy`;
 
       const response = await axios.get(url);
 
