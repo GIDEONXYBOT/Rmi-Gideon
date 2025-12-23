@@ -53,7 +53,8 @@ export default function BettingEventReport() {
 
       const response = await axios.get(url, {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'X-TOKEN': 'af9735e1c7857a07f0b078df36842ace'
         }
       });
 
