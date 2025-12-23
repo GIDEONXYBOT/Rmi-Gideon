@@ -10,7 +10,9 @@ export default function GTALeaderboard() {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch('http://122.3.203.8/leaderboard');
+      // Fetch from backend proxy instead of directly from HTTP endpoint
+      // This avoids mixed content (HTTPS -> HTTP) security issues
+      const response = await fetch('/api/leaderboard/gta');
       
       if (!response.ok) {
         throw new Error(`HTTP Error: ${response.status}`);

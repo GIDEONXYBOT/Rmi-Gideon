@@ -224,6 +224,7 @@ import chickenFightRoutes from "./routes/chicken-fight.js"; // 🐔 /api/chicken
 import chickenFightRegistrationRoutes from "./routes/chicken-fight-registration.js"; // 🐔 /api/chicken-fight-registration
 import drawsRoutes from "./routes/draws.js"; // 📊 /api/draws
 import tellerSalaryCalculationRoutes from "./routes/tellerSalaryCalculation.js"; // 📊 /api/teller-salary-calculation
+import leaderboardRoutes from "./routes/leaderboard.js"; // 🎯 /api/leaderboard
 import { initChickenFightSocket } from "./socket/chickenFightSocket.js"; // 🐔 Socket.IO handlers
 import { initLeaderboardSocket } from "./socket/leaderboardSocket.js"; // 📊 Leaderboard Socket.IO handlers
 
@@ -277,6 +278,7 @@ app.use("/api/media", mediaRoutes);
 app.use("/api/chicken-fight", chickenFightRoutes); // 🐔 Chicken Fight betting system
 app.use("/api/chicken-fight-registration", chickenFightRegistrationRoutes); // 🐔 Chicken Fight registration
 app.use("/api/draws", drawsRoutes); // 📊 Draw results for regla pattern - updated for public access
+app.use("/api/leaderboard", leaderboardRoutes); // 🎯 GTA Leaderboard proxy
 // Deployed: 2025-12-08
 // app.use("/api/chat", chatRoutes);
 // app.use("/api/schedule", scheduleRoutes);
