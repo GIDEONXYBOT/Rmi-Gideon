@@ -190,38 +190,36 @@ const LeaderboardPage = () => {
 
   // Update fight times cache only when draw data changes
   useEffect(() => {
+    // Reset and rebuild the cache on each update
+    const newTimes = {};
+    
     draws.forEach((draw, index) => {
-      if (draw.id && !fightTimesRef.current[draw.id]) {
+      if (draw.id) {
         let timeToDisplay;
         
         // Try to use createdAt if available from the API
         if (draw.createdAt) {
           timeToDisplay = formatDate(draw.createdAt);
         } else {
-          // Generate time based on fight sequence number (not index)
+          // Generate time based on index position
           // Fights are listed in descending order (newest first)
-          // Use fightSequence or fallback to index
-          const fightNum = draw.batch?.fightSequence || draw.id || index;
-          
-          // Calculate time: earlier fight number = earlier in the day
-          // Assume fights happen roughly every 2-3 minutes (use 150 seconds)
-          // Start from current time and work backwards
           const now = new Date();
-          const fightCount = draws.length;
           const minutesPerFight = 2.5; // 2.5 minutes between fights
-          const totalMinutes = fightCount * minutesPerFight;
           
           // Time = now - (current index * minutes per fight)
           const minutesAgo = index * minutesPerFight;
           const adjustedTime = new Date(now.getTime() - (minutesAgo * 60 * 1000));
           timeToDisplay = formatDate(adjustedTime.toISOString());
-          
-          console.log(`Fight ${index} (ID: ${draw.id}): ${timeToDisplay} (${minutesAgo} min ago)`);
         }
         
-        fightTimesRef.current[draw.id] = timeToDisplay;
+        newTimes[draw.id] = timeToDisplay;
       }
     });
+    
+    // Update the ref with new times
+    fightTimesRef.current = newTimes;
+    console.log('🕐 Generated fight times:', Object.keys(newTimes).length, 'fights');
+    
   }, [draws]);
 
   const getCurrentTime = () => {
