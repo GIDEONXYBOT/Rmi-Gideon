@@ -110,13 +110,13 @@ export default function GTATellerManagement() {
   };
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
+    <div className="p-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">GTA Teller Management</h1>
-            <p className="text-gray-600 mt-1">Manage tellers without RMI accounts for GTA scheduling</p>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">GTA Teller Management</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">Manage tellers without RMI accounts for GTA scheduling</p>
           </div>
           <button
             onClick={() => setShowForm(!showForm)}
@@ -129,21 +129,21 @@ export default function GTATellerManagement() {
 
         {/* Form */}
         {showForm && (
-          <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
               {editingId ? 'Edit Teller' : 'Add New Teller'}
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Full Name *
                   </label>
                   <input
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Enter full name"
                   />
                 </div>
@@ -223,14 +223,14 @@ export default function GTATellerManagement() {
 
         {/* Tellers List */}
         {loading ? (
-          <div className="bg-white rounded-lg shadow p-8 text-center">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
             <div className="animate-spin w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading GTA tellers...</p>
+            <p className="text-gray-600 dark:text-gray-400">Loading GTA tellers...</p>
           </div>
         ) : tellers.length === 0 ? (
-          <div className="bg-white rounded-lg shadow p-8 text-center">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
             <Users size={48} className="mx-auto text-gray-400 mb-4" />
-            <p className="text-gray-600">No GTA tellers added yet</p>
+            <p className="text-gray-600 dark:text-gray-400">No GTA tellers added yet</p>
             <button
               onClick={() => setShowForm(true)}
               className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
@@ -240,23 +240,23 @@ export default function GTATellerManagement() {
             </button>
           </div>
         ) : (
-          <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
             <table className="w-full">
-              <thead className="bg-gray-100 border-b border-gray-200">
+              <thead className="bg-gray-100 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
                 <tr>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Name</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Phone</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Email</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Position</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Status</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Actions</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Name</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Phone</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Email</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Position</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Status</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {tellers.map((teller, idx) => (
-                  <tr key={teller._id || idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{teller.name}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
+                  <tr key={teller._id || idx} className={idx % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-700'}>
+                    <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">{teller.name}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
                       {teller.phone ? (
                         <span className="flex items-center gap-1">
                           <Phone size={16} className="text-blue-600" />
@@ -266,7 +266,7 @@ export default function GTATellerManagement() {
                         <span className="text-gray-400">—</span>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
+                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
                       {teller.email ? (
                         <span className="flex items-center gap-1">
                           <Mail size={16} className="text-blue-600" />
@@ -276,7 +276,7 @@ export default function GTATellerManagement() {
                         <span className="text-gray-400">—</span>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{teller.position}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{teller.position}</td>
                     <td className="px-6 py-4 text-sm">
                       <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
                         teller.status === 'active'
