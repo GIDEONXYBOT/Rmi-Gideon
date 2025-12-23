@@ -12,8 +12,8 @@ export default function GTABettingEventReport() {
       setLoading(true);
       setError(null);
       
-      // Fetch from backend proxy (HTTPS safe)
-      const backendUrl = 'https://rmi-backend-zhdr.onrender.com/api/gta-betting-events';
+      // Use the existing betting-event API endpoint that's proven to work
+      const backendUrl = 'https://rmi-backend-zhdr.onrender.com/api/reports/betting-event';
       
       const response = await fetch(backendUrl);
       
@@ -22,7 +22,30 @@ export default function GTABettingEventReport() {
         throw new Error(errorData.error || `HTTP Error: ${response.status}`);
       }
       
-      let result = await response.json();
+      const apiResponse = await response.json();
+      
+      // Extract the data from the structured response
+      let result = [];
+      if (apiResponse.success && apiResponse.data) {
+        // If it has staffReports, transform it to event format
+        if (apiResponse.data.staffReports && Array.isArray(apiResponse.data.staffReports)) {
+          result = apiResponse.data.staffReports.map((item, idx) => ({
+            id: idx + 1,
+            eventName: `${item.name || item.username} - Bets`,
+            status: 'active',
+            amount: parseFloat(item.betAmount) || 0,
+            participants: 1,
+            betCount: 1,
+            username: item.username,
+            commission: parseFloat(item.commission) || 0,
+            systemBalance: parseFloat(item.systemBalance) || 0
+          }));
+        } 
+        // If it's already an array of events
+        else if (Array.isArray(apiResponse.data)) {
+          result = apiResponse.data;
+        }
+      }
       
       // If result is empty, use demo data to show UI
       if (!Array.isArray(result) || result.length === 0) {
