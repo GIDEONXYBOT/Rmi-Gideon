@@ -168,22 +168,25 @@ const LeaderboardPage = () => {
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleString('en-PH', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    if (!dateString) return '';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date)) return '';
+      
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      return `${hours}:${minutes}`;
+    } catch (e) {
+      return '';
+    }
   };
 
   const getCurrentTime = () => {
-    return new Date().toLocaleString('en-PH', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: true
-    });
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    return `${hours}:${minutes}:${seconds}`;
   };
 
   const getCurrentDate = () => {
@@ -193,6 +196,7 @@ const LeaderboardPage = () => {
       month: 'short',
       day: 'numeric'
     }).toUpperCase();
+  };
   };
 
   const getStreakCount = (draws, ...targetResults) => {
@@ -293,11 +297,11 @@ const LeaderboardPage = () => {
                 }, 0))}
               </div>
               <div className="text-xs text-blue-400 font-mono">
-                🕐 {currentTime.toLocaleTimeString()}
+                🕐 {getCurrentTime()}
               </div>
               {lastUpdated && (
                 <div className="text-xs text-gray-500">
-                  Updated: {lastUpdated.toLocaleTimeString()}
+                  Updated: {formatDate(lastUpdated.toISOString())}
                 </div>
               )}
             </div>
@@ -322,10 +326,7 @@ const LeaderboardPage = () => {
                 </div>
               </div>
               <div className="text-xs text-gray-500 mb-1">
-                {new Date(draw.createdAt).toLocaleTimeString('en-PH', {
-                  hour: '2-digit',
-                  minute: '2-digit'
-                })}
+                {formatDate(draw.createdAt)}
               </div>
               <div className="flex justify-between text-xs text-gray-400">
                 <span>Total: ₱{draw.details ? (draw.details.redTotalBetAmount + draw.details.blueTotalBetAmount + (draw.details.drawTotalBetAmount || 0)).toLocaleString() : '0'}</span>
