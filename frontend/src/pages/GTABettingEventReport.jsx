@@ -12,16 +12,10 @@ export default function GTABettingEventReport() {
       setLoading(true);
       setError(null);
       
-      // Fetch from external GTA dashboard with token
-      const apiUrl = 'http://122.3.203.8/dashboard';
-      const token = 'af9735e1c7857a07f0b078df36842ace';
+      // Fetch from backend proxy (HTTPS safe)
+      const backendUrl = 'https://rmi-backend-zhdr.onrender.com/api/gta-betting-events';
       
-      const response = await fetch(apiUrl, {
-        headers: {
-          'X-TOKEN': token,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await fetch(backendUrl);
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));

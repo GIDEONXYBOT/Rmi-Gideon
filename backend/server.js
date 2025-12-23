@@ -226,6 +226,7 @@ import drawsRoutes from "./routes/draws.js"; // 📊 /api/draws
 import tellerSalaryCalculationRoutes from "./routes/tellerSalaryCalculation.js"; // 📊 /api/teller-salary-calculation
 import leaderboardRoutes from "./routes/leaderboard.js"; // 🎯 /api/leaderboard
 import gtaTellersRoutes from "./routes/gtaTellers.js"; // 🏢 /api/gta-tellers (GTA workplace teller management)
+import gtaBettingEventsRoutes from "./routes/gtaBettingEvents.js"; // 📊 /api/gta-betting-events (GTA betting events proxy)
 import { initChickenFightSocket } from "./socket/chickenFightSocket.js"; // 🐔 Socket.IO handlers
 import { initLeaderboardSocket } from "./socket/leaderboardSocket.js"; // 📊 Leaderboard Socket.IO handlers
 
@@ -281,6 +282,7 @@ app.use("/api/chicken-fight-registration", chickenFightRegistrationRoutes); // �
 app.use("/api/draws", drawsRoutes); // 📊 Draw results for regla pattern - updated for public access
 app.use("/api/leaderboard", leaderboardRoutes); // 🎯 GTA Leaderboard proxy
 app.use("/api/gta-tellers", gtaTellersRoutes); // 🏢 GTA Workplace teller management
+app.use("/api/gta-betting-events", gtaBettingEventsRoutes); // 📊 GTA Betting Events proxy
 // Deployed: 2025-12-08
 // app.use("/api/chat", chatRoutes);
 // app.use("/api/schedule", scheduleRoutes);
