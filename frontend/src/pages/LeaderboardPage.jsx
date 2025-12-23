@@ -197,7 +197,6 @@ const LeaderboardPage = () => {
       day: 'numeric'
     }).toUpperCase();
   };
-  };
 
   const getStreakCount = (draws, ...targetResults) => {
     let streak = 0;
