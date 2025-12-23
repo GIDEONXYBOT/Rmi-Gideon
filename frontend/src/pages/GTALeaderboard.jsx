@@ -12,7 +12,8 @@ export default function GTALeaderboard() {
       setError(null);
       // Fetch from backend proxy instead of directly from HTTP endpoint
       // This avoids mixed content (HTTPS -> HTTP) security issues
-      const response = await fetch('/api/leaderboard/gta');
+      const backendUrl = 'https://rmi-backend-zhdr.onrender.com/api/leaderboard/gta';
+      const response = await fetch(backendUrl);
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
