@@ -17,9 +17,10 @@ router.get('/gta', async (req, res) => {
   try {
     console.log('🎯 Leaderboard request received for /api/leaderboard/gta');
     
-    // Fetch from external HTTP endpoint (safe on backend)
-    console.log('📡 Fetching from http://122.3.203.8/leaderboard...');
-    const response = await axios.get('http://122.3.203.8/leaderboard', {
+    // Fetch from external endpoint (safe on backend)
+    const leaderboardUrl = 'https://reverb.sixthreeinteractive.me/VMWAZWRLKTPR2XRU0XZJ3QQO/leaderboard';
+    console.log('📡 Fetching from', leaderboardUrl);
+    const response = await axios.get(leaderboardUrl, {
       timeout: 10000, // 10 second timeout
       headers: {
         'User-Agent': 'RMI-Teller-Report/1.0',
@@ -44,14 +45,14 @@ router.get('/gta', async (req, res) => {
     if (error.code === 'ECONNREFUSED') {
       return res.status(503).json({
         error: 'External leaderboard service unavailable',
-        details: 'Could not connect to external service at 122.3.203.8',
+        details: 'Could not connect to external service',
       });
     }
     
     if (error.code === 'ENOTFOUND') {
       return res.status(503).json({
         error: 'External leaderboard host not found',
-        details: '122.3.203.8 could not be resolved',
+        details: 'Could not resolve leaderboard host',
       });
     }
 

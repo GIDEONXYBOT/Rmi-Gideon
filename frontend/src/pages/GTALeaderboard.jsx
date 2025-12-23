@@ -61,7 +61,6 @@ export default function GTALeaderboard() {
             <div>
               <p className="font-semibold text-red-800">Error fetching data</p>
               <p className="text-red-700 text-sm">{error}</p>
-              <p className="text-red-600 text-xs mt-2">Source: http://122.3.203.8/leaderboard</p>
             </div>
           </div>
         )}
@@ -130,7 +129,7 @@ export default function GTALeaderboard() {
                 </div>
                 <div className="bg-purple-50 p-4 rounded-lg">
                   <p className="text-gray-600 text-sm">Source</p>
-                  <p className="text-xs font-bold text-purple-600 break-words">122.3.203.8</p>
+                  <p className="text-xs font-bold text-purple-600 break-words">Reverb Leaderboard</p>
                 </div>
               </div>
             </div>
