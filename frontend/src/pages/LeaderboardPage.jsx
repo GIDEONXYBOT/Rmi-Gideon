@@ -173,9 +173,13 @@ const LeaderboardPage = () => {
       const date = new Date(dateString);
       if (isNaN(date)) return '';
       
-      const hours = String(date.getHours()).padStart(2, '0');
+      let hours = date.getHours();
       const minutes = String(date.getMinutes()).padStart(2, '0');
-      return `${hours}:${minutes}`;
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12;
+      hours = hours ? hours : 12; // 12am should display as 12, not 0
+      const hoursStr = String(hours).padStart(2, '0');
+      return `${hoursStr}:${minutes} ${ampm}`;
     } catch (e) {
       return '';
     }
@@ -183,10 +187,14 @@ const LeaderboardPage = () => {
 
   const getCurrentTime = () => {
     const now = new Date();
-    const hours = String(now.getHours()).padStart(2, '0');
+    let hours = now.getHours();
     const minutes = String(now.getMinutes()).padStart(2, '0');
     const seconds = String(now.getSeconds()).padStart(2, '0');
-    return `${hours}:${minutes}:${seconds}`;
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12; // 12am should display as 12, not 0
+    const hoursStr = String(hours).padStart(2, '0');
+    return `${hoursStr}:${minutes}:${seconds} ${ampm}`;
   };
 
   const getCurrentDate = () => {
