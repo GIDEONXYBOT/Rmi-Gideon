@@ -15,14 +15,16 @@ export default function GTALeaderboard() {
       const response = await fetch('/api/leaderboard/gta');
       
       if (!response.ok) {
-        throw new Error(`HTTP Error: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP Error: ${response.status}`);
       }
       
       const result = await response.json();
       setData(result);
     } catch (err) {
-      setError(err.message || 'Failed to fetch GTA leaderboard data');
-      console.error('Leaderboard fetch error:', err);
+      const errorMsg = err.message || 'Failed to fetch GTA leaderboard data';
+      setError(errorMsg);
+      console.error('Leaderboard fetch error:', errorMsg, err);
     } finally {
       setLoading(false);
     }
