@@ -26,7 +26,7 @@ export default function GTATellerManagement() {
   const fetchTellers = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API}/gta-tellers`);
+      const response = await axios.get(`${API}/api/gta-tellers`);
       setTellers(response.data || []);
     } catch (error) {
       console.error('Error fetching GTA tellers:', error);
@@ -55,12 +55,12 @@ export default function GTATellerManagement() {
     try {
       if (editingId) {
         // Update existing teller
-        await axios.put(`${API}/gta-tellers/${editingId}`, formData);
+        await axios.put(`${API}/api/gta-tellers/${editingId}`, formData);
         setTellers(tellers.map(t => t._id === editingId ? { ...t, ...formData } : t));
         showToast({ type: 'success', message: 'Teller updated successfully' });
       } else {
         // Create new teller
-        const response = await axios.post(`${API}/gta-tellers`, formData);
+        const response = await axios.post(`${API}/api/gta-tellers`, formData);
         setTellers([...tellers, response.data]);
         showToast({ type: 'success', message: 'Teller added successfully' });
       }
@@ -93,7 +93,7 @@ export default function GTATellerManagement() {
     if (!window.confirm('Are you sure you want to delete this teller?')) return;
 
     try {
-      await axios.delete(`${API}/gta-tellers/${id}`);
+      await axios.delete(`${API}/api/gta-tellers/${id}`);
       setTellers(tellers.filter(t => t._id !== id));
       showToast({ type: 'success', message: 'Teller deleted successfully' });
     } catch (error) {
