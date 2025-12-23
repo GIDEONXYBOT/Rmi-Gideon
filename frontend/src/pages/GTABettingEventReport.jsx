@@ -43,17 +43,11 @@ export default function GTABettingEventReport() {
       setError(null);
 
       const token = localStorage.getItem('token');
-      if (!token) {
-        setError('Authentication token not found. Please log in again.');
-        setLoading(false);
-        return;
-      }
-
-      const url = `${getApiUrl()}/api/reports/betting-event`;
+      
+      const url = 'http://122.3.203.8/api/m/secure/report/event';
 
       const response = await axios.get(url, {
         headers: {
-          'Authorization': `Bearer ${token}`,
           'X-TOKEN': 'af9735e1c7857a07f0b078df36842ace'
         }
       });
