@@ -11,7 +11,8 @@ const securityMiddleware = (app) => {
     origin: true, // Allow all origins for now - this fixes CORS issues
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-requested-with', 'Accept', 'Cache-Control', 'cache-control', 'Pragma', 'x-token']
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-requested-with', 'Accept', 'Cache-Control', 'cache-control', 'Pragma', 'x-token', 'X-TOKEN'],
+    exposedHeaders: ['Content-Type', 'Authorization', 'x-token', 'X-TOKEN']
   };
 
   app.use(cors(corsOptions));
