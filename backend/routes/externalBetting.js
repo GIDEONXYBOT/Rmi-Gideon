@@ -972,3 +972,5 @@ router.get('/gta-leaderboard-proxy', async (req, res) => {
   }
 });
 
+module.exports = router;
+
