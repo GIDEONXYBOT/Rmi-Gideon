@@ -14,15 +14,8 @@ export default function GTALeaderboard() {
       setLoading(true);
       setError(null);
 
-      const token = localStorage.getItem('token');
-      if (!token) {
-        setError('Authentication token not found. Please log in again.');
-        setLoading(false);
-        return;
-      }
-
       // Fetch from backend proxy
-      const url = `${getApiUrl()}/api/external-betting/gta-event-report-proxy`;
+      const url = `${getApiUrl()}/api/external-betting/gta-leaderboard-proxy`;
       const response = await axios.get(url);
       
       if (response.data.success && response.data.data) {
@@ -153,57 +146,58 @@ export default function GTALeaderboard() {
       {/* Main Content */}
       <div className="p-6">
         <div className="max-w-7xl mx-auto">
-          {data && data.staffReports ? (
+          {data ? (
             <div className="space-y-6">
               {/* Summary Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-gray-800 dark:bg-gray-700 border border-gray-700 rounded-lg p-4">
-                  <div className="text-sm text-gray-400 mb-1">Total Bets</div>
-                  <div className="text-2xl font-bold text-blue-400">
-                    {formatCurrency(data.totalBetAmount || 0)}
+              {Array.isArray(data) && data.length > 0 ? (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="bg-gray-800 dark:bg-gray-700 border border-gray-700 rounded-lg p-4">
+                      <div className="text-sm text-gray-400 mb-1">Total Players</div>
+                      <div className="text-2xl font-bold text-blue-400">{data.length}</div>
+                    </div>
+                    {data[0]?.score && (
+                      <div className="bg-gray-800 dark:bg-gray-700 border border-gray-700 rounded-lg p-4">
+                        <div className="text-sm text-gray-400 mb-1">Top Score</div>
+                        <div className="text-2xl font-bold text-green-400">{data[0].score?.toLocaleString()}</div>
+                      </div>
+                    )}
+                    {data[0]?.points && (
+                      <div className="bg-gray-800 dark:bg-gray-700 border border-gray-700 rounded-lg p-4">
+                        <div className="text-sm text-gray-400 mb-1">Top Points</div>
+                        <div className="text-2xl font-bold text-yellow-400">{data[0].points?.toLocaleString()}</div>
+                      </div>
+                    )}
+                    <div className="bg-gray-800 dark:bg-gray-700 border border-gray-700 rounded-lg p-4">
+                      <div className="text-sm text-gray-400 mb-1">Last Updated</div>
+                      <div className="text-sm font-bold text-purple-400">{lastUpdated?.toLocaleTimeString()}</div>
+                    </div>
                   </div>
-                </div>
-                <div className="bg-gray-800 dark:bg-gray-700 border border-gray-700 rounded-lg p-4">
-                  <div className="text-sm text-gray-400 mb-1">Total Payout</div>
-                  <div className="text-2xl font-bold text-red-400">
-                    {formatCurrency(data.totalPayout || 0)}
-                  </div>
-                </div>
-                <div className="bg-gray-800 dark:bg-gray-700 border border-gray-700 rounded-lg p-4">
-                  <div className="text-sm text-gray-400 mb-1">Total Commission (5.5%)</div>
-                  <div className="text-2xl font-bold text-green-400">
-                    {formatCurrency((data.totalBetAmount || 0) * 0.055)}
-                  </div>
-                </div>
-                <div className="bg-gray-800 dark:bg-gray-700 border border-gray-700 rounded-lg p-4">
-                  <div className="text-sm text-gray-400 mb-1">Active Tellers</div>
-                  <div className="text-2xl font-bold text-yellow-400">
-                    {data.staffReports ? data.staffReports.length : 0}
-                  </div>
-                </div>
-              </div>
 
-              {/* Leaderboard Table */}
-              <div className="bg-gray-800 dark:bg-gray-700 border border-gray-700 rounded-lg overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="bg-gray-700 dark:bg-gray-600 border-b border-gray-700">
-                        <th className="px-6 py-3 text-left text-sm font-semibold text-yellow-400">Rank</th>
-                        <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">Teller</th>
-                        <th className="px-6 py-3 text-right text-sm font-semibold text-gray-300">Bet Amount</th>
-                        <th className="px-6 py-3 text-right text-sm font-semibold text-gray-300">System Balance</th>
-                        <th className="px-6 py-3 text-right text-sm font-semibold text-gray-300">Commission</th>
-                        <th className="px-6 py-3 text-right text-sm font-semibold text-gray-300">Profit/Loss</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(data.staffReports || [])
-                        .sort((a, b) => (b.betAmount || 0) - (a.betAmount || 0))
-                        .map((staff, index) => {
-                          const profit = (staff.betAmount || 0) - (staff.payout || 0);
-                          const commission = (staff.betAmount || 0) * 0.055;
-                          return (
+                  {/* Leaderboard Table */}
+                  <div className="bg-gray-800 dark:bg-gray-700 border border-gray-700 rounded-lg overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="bg-gray-700 dark:bg-gray-600 border-b border-gray-700">
+                            <th className="px-6 py-3 text-left text-sm font-semibold text-yellow-400">Rank</th>
+                            <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">Player Name</th>
+                            {data[0]?.score !== undefined && (
+                              <th className="px-6 py-3 text-right text-sm font-semibold text-gray-300">Score</th>
+                            )}
+                            {data[0]?.points !== undefined && (
+                              <th className="px-6 py-3 text-right text-sm font-semibold text-gray-300">Points</th>
+                            )}
+                            {data[0]?.wins !== undefined && (
+                              <th className="px-6 py-3 text-right text-sm font-semibold text-gray-300">Wins</th>
+                            )}
+                            {data[0]?.losses !== undefined && (
+                              <th className="px-6 py-3 text-right text-sm font-semibold text-gray-300">Losses</th>
+                            )}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {data.map((player, index) => (
                             <tr 
                               key={index} 
                               className={`border-b border-gray-700 ${
@@ -212,30 +206,40 @@ export default function GTALeaderboard() {
                             >
                               <td className="px-6 py-4 text-sm font-bold text-yellow-400">#{index + 1}</td>
                               <td className="px-6 py-4 text-sm">
-                                <div className="font-medium text-white">{staff.name}</div>
-                                <div className="text-xs text-gray-400">{staff.username}</div>
+                                <div className="font-medium text-white">{player.name || player.username || 'Unknown'}</div>
                               </td>
-                              <td className="px-6 py-4 text-sm text-right text-blue-400 font-medium">
-                                {formatCurrency(staff.betAmount || 0)}
-                              </td>
-                              <td className="px-6 py-4 text-sm text-right text-green-400 font-medium">
-                                {formatCurrency(staff.systemBalance || 0)}
-                              </td>
-                              <td className="px-6 py-4 text-sm text-right text-purple-400 font-medium">
-                                {formatCurrency(commission)}
-                              </td>
-                              <td className={`px-6 py-4 text-sm text-right font-medium ${
-                                profit >= 0 ? 'text-green-400' : 'text-red-400'
-                              }`}>
-                                {profit >= 0 ? '+' : ''}{formatCurrency(profit)}
-                              </td>
+                              {player.score !== undefined && (
+                                <td className="px-6 py-4 text-sm text-right text-blue-400 font-medium">
+                                  {player.score?.toLocaleString()}
+                                </td>
+                              )}
+                              {player.points !== undefined && (
+                                <td className="px-6 py-4 text-sm text-right text-green-400 font-medium">
+                                  {player.points?.toLocaleString()}
+                                </td>
+                              )}
+                              {player.wins !== undefined && (
+                                <td className="px-6 py-4 text-sm text-right text-blue-400 font-medium">
+                                  {player.wins}
+                                </td>
+                              )}
+                              {player.losses !== undefined && (
+                                <td className="px-6 py-4 text-sm text-right text-red-400 font-medium">
+                                  {player.losses}
+                                </td>
+                              )}
                             </tr>
-                          );
-                        })}
-                    </tbody>
-                  </table>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="bg-gray-800 dark:bg-gray-700 border border-gray-700 rounded-lg p-8 text-center">
+                  <p className="text-gray-400">Loading or no leaderboard data available</p>
                 </div>
-              </div>
+              )}
             </div>
           ) : (
             <div className="bg-gray-800 dark:bg-gray-700 border border-gray-700 rounded-lg p-8 text-center">

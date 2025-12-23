@@ -935,4 +935,40 @@ router.get('/gta-event-report-proxy', async (req, res) => {
   }
 });
 
-export default router;
+/**
+ * Proxy endpoint for GTA leaderboard
+ * Fetches from external API: http://122.3.203.8/leaderboard
+ */
+router.get('/gta-leaderboard-proxy', async (req, res) => {
+  try {
+    const externalUrl = 'http://122.3.203.8/leaderboard';
+
+    console.log('🔄 Fetching GTA leaderboard from external API...');
+
+    const response = await axios.get(externalUrl, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      timeout: 10000
+    });
+
+    console.log('✅ GTA leaderboard fetched successfully');
+
+    // Return success response
+    res.json({
+      success: true,
+      data: response.data
+    });
+
+  } catch (error) {
+    console.error('❌ Error fetching GTA leaderboard:', error.message);
+
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to fetch GTA leaderboard',
+      message: 'Failed to fetch leaderboard data from external API'
+    });
+  }
+});
+
