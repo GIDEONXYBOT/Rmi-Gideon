@@ -173,6 +173,7 @@ import MyProfile from "./pages/MyProfile.jsx";
 import PublicLeaderboard from "./pages/PublicLeaderboard.jsx";
 import GTALeaderboard from "./pages/GTALeaderboard.jsx";
 import BettingEventReports from "./pages/BettingEventReports.jsx";
+import WorkplaceSchedule from "./pages/WorkplaceSchedule.jsx";
 import TellerSalaryCalculation from "./pages/TellerSalaryCalculation.jsx";
 
 // Supervisor Pages
@@ -341,6 +342,7 @@ function App() {
                       <Route path="leaderboard" element={<LeaderboardPage />} />
                       <Route path="gta-leaderboard" element={<GTALeaderboard />} />
                       <Route path="betting-event-reports" element={<BettingEventReports />} />
+                      <Route path="workplace-schedule" element={<WorkplaceSchedule />} />
                       <Route path="user-approval" element={<AdminUserApproval />} />
                       <Route path="salary" element={<Payroll />} />
                       {/* Unified: /admin/payroll shows management UI (alias for payroll-management) */}
@@ -524,6 +526,7 @@ function App() {
                       <Route path="leaderboard" element={<LeaderboardPage />} />
                       <Route path="gta-leaderboard" element={<GTALeaderboard />} />
                       <Route path="betting-event-reports" element={<BettingEventReports />} />
+                      <Route path="workplace-schedule" element={<WorkplaceSchedule />} />
                       <Route path="user-approval" element={<AdminUserApproval />} />
                       <Route path="salary" element={<Payroll />} />
                       {/* Unified: /admin/payroll shows management UI (alias for payroll-management) */}
