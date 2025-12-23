@@ -96,6 +96,36 @@ const securityMiddleware = (app) => {
 
   app.use(cors(corsOptions));
 
+  // Ensure CORS headers are sent for all requests
+  app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    const allowedOrigins = [
+      'https://www.rmi.gideonbot.xyz',
+      'https://rmi.gideonbot.xyz',
+      'https://gideon-reports.pages.dev',
+      'https://rmi-backend-zhdr.onrender.com',
+      'http://localhost:3000',
+      'http://localhost:5173',
+      'https://localhost:5173',
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:5173',
+      'https://127.0.0.1:5173'
+    ];
+
+    if (origin && (allowedOrigins.includes(origin) || origin.match(/^https?:\/\/[^:]+:5000$/))) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-requested-with, Accept, Cache-Control, Pragma');
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+    }
+
+    if (req.method === 'OPTIONS') {
+      return res.sendStatus(200);
+    }
+
+    next();
+  });
+
   // Security headers with Helmet
   app.use(helmet({
     contentSecurityPolicy: {
