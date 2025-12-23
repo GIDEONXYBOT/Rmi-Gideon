@@ -215,6 +215,8 @@ const LeaderboardPage = () => {
           const minutesAgo = index * minutesPerFight;
           const adjustedTime = new Date(now.getTime() - (minutesAgo * 60 * 1000));
           timeToDisplay = formatDate(adjustedTime.toISOString());
+          
+          console.log(`Fight ${index} (ID: ${draw.id}): ${timeToDisplay} (${minutesAgo} min ago)`);
         }
         
         fightTimesRef.current[draw.id] = timeToDisplay;
