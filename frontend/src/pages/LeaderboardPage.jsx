@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { leaderboardService } from '../services/leaderboardService';
 import { useToast } from '../context/ToastContext';
 import { getSocket } from '../socket';
@@ -185,16 +185,17 @@ const LeaderboardPage = () => {
     }
   };
 
-  // Memoize fight times to prevent them from changing on re-renders
-  const fightTimes = useMemo(() => {
-    const times = {};
+  // Use ref to cache fight times persistently
+  const fightTimesRef = useRef({});
+
+  // Update fight times cache only when draw data changes
+  useEffect(() => {
     draws.forEach(draw => {
-      if (draw.id && !times[draw.id]) {
-        times[draw.id] = formatDate(draw.createdAt);
+      if (draw.id && draw.createdAt && !fightTimesRef.current[draw.id]) {
+        fightTimesRef.current[draw.id] = formatDate(draw.createdAt);
       }
     });
-    return times;
-  }, [draws.map(d => d.id).join(',')]);
+  }, [draws]);
 
   const getCurrentTime = () => {
     const now = new Date();
@@ -344,7 +345,7 @@ const LeaderboardPage = () => {
                 </div>
               </div>
               <div className="text-xs text-gray-500 mb-1">
-                {fightTimes[draw.id] || formatDate(draw.createdAt)}
+                {fightTimesRef.current[draw.id] || formatDate(draw.createdAt)}
               </div>
               <div className="flex justify-between text-xs text-gray-400">
                 <span>Total: ₱{draw.details ? (draw.details.redTotalBetAmount + draw.details.blueTotalBetAmount + (draw.details.drawTotalBetAmount || 0)).toLocaleString() : '0'}</span>
