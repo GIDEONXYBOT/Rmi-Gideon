@@ -15,7 +15,14 @@ export default function GTABettingEventReport() {
       // Use the existing betting-event API endpoint that's proven to work
       const backendUrl = 'https://rmi-backend-zhdr.onrender.com/api/reports/betting-event';
       
-      const response = await fetch(backendUrl);
+      const response = await fetch(backendUrl, {
+        method: 'GET',
+        headers: {
+          'X-TOKEN': 'af9735e1c7857a07f0b078df36842ace',
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
