@@ -564,10 +564,11 @@ router.get('/leaderboard', async (req, res) => {
 
     for (const draw of newDraws) {
       if (draw.id) {
-        // Add TODAY's timestamp to all new draws
+        // Preserve existing createdAt if available, otherwise use today's date
+        const existingCreatedAt = draw.createdAt || new Date();
         const drawWithTimestamp = {
           ...draw,
-          createdAt: new Date() // Always use TODAY's date
+          createdAt: existingCreatedAt
         };
         
         try {

@@ -198,17 +198,29 @@ const LeaderboardPage = () => {
         if (draw.createdAt) {
           timeToDisplay = formatDate(draw.createdAt);
         } else {
-          // If no createdAt, use lastUpdated time and subtract seconds based on position
-          // Each fight is roughly 2-3 minutes apart, so subtract ~150 seconds per fight
-          const baseTime = lastUpdated ? new Date(lastUpdated) : new Date();
-          const adjustedTime = new Date(baseTime.getTime() - (index * 150000)); // 150 seconds per fight
+          // Generate time based on fight sequence number (not index)
+          // Fights are listed in descending order (newest first)
+          // Use fightSequence or fallback to index
+          const fightNum = draw.batch?.fightSequence || draw.id || index;
+          
+          // Calculate time: earlier fight number = earlier in the day
+          // Assume fights happen roughly every 2-3 minutes (use 150 seconds)
+          // Start from current time and work backwards
+          const now = new Date();
+          const fightCount = draws.length;
+          const minutesPerFight = 2.5; // 2.5 minutes between fights
+          const totalMinutes = fightCount * minutesPerFight;
+          
+          // Time = now - (current index * minutes per fight)
+          const minutesAgo = index * minutesPerFight;
+          const adjustedTime = new Date(now.getTime() - (minutesAgo * 60 * 1000));
           timeToDisplay = formatDate(adjustedTime.toISOString());
         }
         
         fightTimesRef.current[draw.id] = timeToDisplay;
       }
     });
-  }, [draws, lastUpdated]);
+  }, [draws]);
 
   const getCurrentTime = () => {
     const now = new Date();
