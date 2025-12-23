@@ -78,6 +78,7 @@ const AVAILABLE_MENU_ITEMS = [
   { id: "gta-leaderboard", label: "GTA Leaderboards", icon: <BarChart3 size={16} />, allowedRoles: ["super_admin", "admin"] },
   { id: "betting-event-reports", label: "Betting Event Reports", icon: <BarChart3 size={16} />, allowedRoles: ["super_admin", "admin"] },
   { id: "workplace-schedule", label: "Workplace Schedule", icon: <Calendar size={16} />, allowedRoles: ["super_admin", "admin"] },
+  { id: "gta-teller-management", label: "GTA Teller Management", icon: <Users size={16} />, allowedRoles: ["super_admin", "admin"] },
   { id: "teller-mappings", label: "Teller Mappings", icon: <Link size={16} />, allowedRoles: ["super_admin"] },
   // Legacy IDs for backward compatibility
   { id: "supervisor-reports", label: "Supervisor Reports (Legacy)", icon: <FileText size={16} /> },
