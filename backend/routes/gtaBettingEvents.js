@@ -1,5 +1,4 @@
 import express from 'express';
-import axios from 'axios';
 
 const router = express.Router();
 
@@ -12,86 +11,62 @@ router.get('/', async (req, res) => {
 
     console.log(`📊 Fetching GTA betting events from ${externalUrl}`);
 
-    const response = await axios.get(externalUrl, {
+    // Use native fetch (same as working endpoints in reports.js)
+    const response = await fetch(externalUrl, {
+      method: 'GET',
       headers: {
         'X-TOKEN': token,
         'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (RMI-Betting-Dashboard) Node.js Backend',
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache'
+        'Accept': 'application/json'
       },
-      timeout: 10000, // 10 second timeout
-      validateStatus: () => true // Don't throw on any status code
+      timeout: 10000
     });
 
     console.log(`📊 Response status: ${response.status}`);
-    console.log(`📊 Response headers:`, response.headers);
+    console.log(`📊 Response headers:`, Object.fromEntries(response.headers));
 
     // Check if response is successful
-    if (response.status >= 400) {
-      console.error(`❌ External service error: ${response.status}`, response.data);
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`❌ External service error: ${response.status}`, errorText);
       return res.status(response.status).json({
         error: `External service returned ${response.status}`,
-        details: response.data || 'No additional details'
+        details: errorText || 'No additional details'
       });
     }
 
-    // The API returns data in response.data.data, so extract it
-    const eventData = response.data?.data || response.data;
+    const data = await response.json();
+    
+    // The API returns data in data.data, so extract it
+    const eventData = data?.data || data;
     console.log(`✅ GTA betting events fetched successfully: ${Array.isArray(eventData) ? eventData.length : 'unknown'} records`);
     res.json(eventData);
   } catch (error) {
     console.error('❌ Error fetching GTA betting events:', error.message);
     console.error('Error details:', {
-      code: error.code,
-      statusCode: error.response?.status,
-      statusText: error.response?.statusText,
-      data: error.response?.data
+      name: error.name,
+      message: error.message
     });
 
-    // Handle different error types
-    if (error.code === 'ECONNREFUSED') {
+    // Network errors
+    if (error.message.includes('fetch')) {
       return res.status(503).json({
         error: 'External GTA dashboard is unavailable',
-        details: 'Connection refused - service may be down'
+        details: error.message || 'Network error - service may be down'
       });
     }
 
-    if (error.code === 'ENOTFOUND') {
-      return res.status(503).json({
-        error: 'External GTA dashboard host not found',
-        details: 'DNS resolution failed - incorrect host or network issue'
-      });
-    }
-
-    if (error.code === 'ECONNABORTED') {
+    // Timeout errors
+    if (error.name === 'AbortError' || error.message.includes('timeout')) {
       return res.status(504).json({
         error: 'External GTA dashboard request timeout',
         details: 'Request took too long (>10s)'
       });
     }
 
-    if (error.response?.status === 403) {
-      return res.status(403).json({
-        error: 'Access Forbidden - Authentication Failed',
-        details: 'The X-TOKEN may be invalid or expired, or the service is rejecting requests from this IP',
-        timestamp: new Date().toISOString()
-      });
-    }
-
-    if (error.response?.status) {
-      return res.status(error.response.status).json({
-        error: `External service returned ${error.response.status}`,
-        details: error.response.data || error.message,
-        statusText: error.response.statusText
-      });
-    }
-
     res.status(500).json({
       error: 'Failed to fetch GTA betting events',
-      details: error.message,
-      code: error.code
+      details: error.message
     });
   }
 });
