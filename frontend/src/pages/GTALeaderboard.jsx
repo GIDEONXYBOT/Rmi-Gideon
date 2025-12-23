@@ -1,27 +1,36 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, AlertCircle } from 'lucide-react';
+import { RefreshCw, AlertCircle, BarChart3 } from 'lucide-react';
+import axios from 'axios';
+import { getApiUrl } from '../utils/apiConfig.js';
 
 export default function GTALeaderboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [lastUpdated, setLastUpdated] = useState(null);
 
   const fetchLeaderboard = async () => {
     try {
       setLoading(true);
       setError(null);
-      // Fetch from backend proxy instead of directly from HTTP endpoint
-      // This avoids mixed content (HTTPS -> HTTP) security issues
-      const backendUrl = 'https://rmi-backend-zhdr.onrender.com/api/leaderboard/gta';
-      const response = await fetch(backendUrl);
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP Error: ${response.status}`);
+
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('Authentication token not found. Please log in again.');
+        setLoading(false);
+        return;
       }
+
+      // Fetch from backend proxy
+      const url = `${getApiUrl()}/api/external-betting/gta-event-report-proxy`;
+      const response = await axios.get(url);
       
-      const result = await response.json();
-      setData(result);
+      if (response.data.success && response.data.data) {
+        setData(response.data.data);
+        setLastUpdated(new Date());
+      } else {
+        throw new Error('Invalid data format from API');
+      }
     } catch (err) {
       const errorMsg = err.message || 'Failed to fetch GTA leaderboard data';
       setError(errorMsg);
@@ -38,111 +47,204 @@ export default function GTALeaderboard() {
     return () => clearInterval(interval);
   }, []);
 
-  return (
-    <div className="p-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-800 dark:text-white">🎮 GTA Leaderboards</h1>
-          <button
-            onClick={fetchLeaderboard}
-            disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 dark:bg-blue-700 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50"
-          >
-            <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
-            Refresh
-          </button>
-        </div>
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-PH', {
+      style: 'currency',
+      currency: 'PHP'
+    }).format(amount || 0);
+  };
 
-        {/* Error State */}
-        {error && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6 flex gap-3">
-            <AlertCircle className="text-red-600 dark:text-red-400 flex-shrink-0" size={20} />
+  const formatDateTime = (dateString) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleString('en-PH', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  // Get current time and date
+  const getCurrentTime = () => {
+    return new Date().toLocaleString('en-PH', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    });
+  };
+
+  const getCurrentDate = () => {
+    return new Date().toLocaleString('en-PH', {
+      weekday: 'short',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    }).toUpperCase();
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black dark:bg-gray-900 text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <span className="text-lg">Loading GTA leaderboard...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-black dark:bg-gray-900 text-white p-6">
+        <div className="bg-red-900 dark:bg-red-900/30 border border-red-700 rounded-lg p-4 max-w-2xl mx-auto">
+          <div className="flex">
+            <AlertCircle className="text-red-400 flex-shrink-0 mr-3" size={20} />
             <div>
-              <p className="font-semibold text-red-800 dark:text-red-200">Error fetching data</p>
-              <p className="text-red-700 dark:text-red-300 text-sm">{error}</p>
+              <h3 className="text-sm font-medium text-red-200">Error Loading Data</h3>
+              <div className="mt-2 text-sm text-red-300">{error}</div>
+              <button
+                onClick={fetchLeaderboard}
+                className="mt-4 bg-red-800 hover:bg-red-700 text-red-200 px-3 py-2 rounded-md text-sm font-medium"
+              >
+                Try Again
+              </button>
             </div>
           </div>
-        )}
+        </div>
+      </div>
+    );
+  }
 
-        {/* Loading State */}
-        {loading && !data && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
-            <div className="animate-spin w-8 h-8 border-4 border-blue-200 dark:border-blue-900 border-t-blue-600 dark:border-t-blue-400 rounded-full mx-auto mb-4"></div>
-            <p className="text-gray-600 dark:text-gray-300">Loading GTA leaderboard data...</p>
+  return (
+    <div className="min-h-screen bg-black dark:bg-gray-900 text-white font-sans">
+      {/* Header */}
+      <div className="bg-gray-900 dark:bg-gray-800 border-b border-gray-700 px-6 py-4 sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex items-center space-x-4">
+              <BarChart3 size={24} className="text-yellow-400" />
+              <h1 className="text-2xl font-bold text-white">🎮 GTA Leaderboards</h1>
+            </div>
+            <button
+              onClick={fetchLeaderboard}
+              disabled={loading}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:opacity-50"
+              title="Refresh data"
+            >
+              <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+              Refresh
+            </button>
           </div>
-        )}
+          <div className="flex justify-between items-center text-sm">
+            <div className="text-gray-400">
+              {getCurrentTime()} • {getCurrentDate()}
+            </div>
+            {lastUpdated && (
+              <div className="text-xs text-gray-500">
+                Last updated: {lastUpdated.toLocaleTimeString()}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
-        {/* Data Display */}
-        {data && !loading && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-            {/* JSON Raw View */}
-            <div className="p-6">
-              <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">📊 Leaderboard Data</h2>
-              
-              {/* Check if data is an array */}
-              {Array.isArray(data) ? (
+      {/* Main Content */}
+      <div className="p-6">
+        <div className="max-w-7xl mx-auto">
+          {data && data.staffReports ? (
+            <div className="space-y-6">
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-gray-800 dark:bg-gray-700 border border-gray-700 rounded-lg p-4">
+                  <div className="text-sm text-gray-400 mb-1">Total Bets</div>
+                  <div className="text-2xl font-bold text-blue-400">
+                    {formatCurrency(data.totalBetAmount || 0)}
+                  </div>
+                </div>
+                <div className="bg-gray-800 dark:bg-gray-700 border border-gray-700 rounded-lg p-4">
+                  <div className="text-sm text-gray-400 mb-1">Total Payout</div>
+                  <div className="text-2xl font-bold text-red-400">
+                    {formatCurrency(data.totalPayout || 0)}
+                  </div>
+                </div>
+                <div className="bg-gray-800 dark:bg-gray-700 border border-gray-700 rounded-lg p-4">
+                  <div className="text-sm text-gray-400 mb-1">Total Commission (5.5%)</div>
+                  <div className="text-2xl font-bold text-green-400">
+                    {formatCurrency((data.totalBetAmount || 0) * 0.055)}
+                  </div>
+                </div>
+                <div className="bg-gray-800 dark:bg-gray-700 border border-gray-700 rounded-lg p-4">
+                  <div className="text-sm text-gray-400 mb-1">Active Tellers</div>
+                  <div className="text-2xl font-bold text-yellow-400">
+                    {data.staffReports ? data.staffReports.length : 0}
+                  </div>
+                </div>
+              </div>
+
+              {/* Leaderboard Table */}
+              <div className="bg-gray-800 dark:bg-gray-700 border border-gray-700 rounded-lg overflow-hidden">
                 <div className="overflow-x-auto">
-                  <table className="w-full border-collapse">
+                  <table className="w-full">
                     <thead>
-                      <tr className="bg-gray-100 dark:bg-gray-700">
-                        <th className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-left text-gray-900 dark:text-white">Rank</th>
-                        <th className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-left text-gray-900 dark:text-white">Name</th>
-                        <th className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-right text-gray-900 dark:text-white">Score</th>
-                        <th className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-left text-gray-900 dark:text-white">Details</th>
+                      <tr className="bg-gray-700 dark:bg-gray-600 border-b border-gray-700">
+                        <th className="px-6 py-3 text-left text-sm font-semibold text-yellow-400">Rank</th>
+                        <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">Teller</th>
+                        <th className="px-6 py-3 text-right text-sm font-semibold text-gray-300">Bet Amount</th>
+                        <th className="px-6 py-3 text-right text-sm font-semibold text-gray-300">System Balance</th>
+                        <th className="px-6 py-3 text-right text-sm font-semibold text-gray-300">Commission</th>
+                        <th className="px-6 py-3 text-right text-sm font-semibold text-gray-300">Profit/Loss</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {data.map((item, idx) => (
-                        <tr key={idx} className={idx % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-750'}>
-                          <td className="border border-gray-300 dark:border-gray-600 px-4 py-2 font-bold text-gray-900 dark:text-white">{idx + 1}</td>
-                          <td className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-gray-900 dark:text-white">{item.name || item.player || 'N/A'}</td>
-                          <td className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-right font-bold text-gray-900 dark:text-white">{item.score || item.points || 0}</td>
-                          <td className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-sm text-gray-600 dark:text-gray-400">
-                            {JSON.stringify(item).length > 100 
-                              ? JSON.stringify(item).substring(0, 100) + '...' 
-                              : JSON.stringify(item)
-                            }
-                          </td>
-                        </tr>
-                      ))}
+                      {(data.staffReports || [])
+                        .sort((a, b) => (b.betAmount || 0) - (a.betAmount || 0))
+                        .map((staff, index) => {
+                          const profit = (staff.betAmount || 0) - (staff.payout || 0);
+                          const commission = (staff.betAmount || 0) * 0.055;
+                          return (
+                            <tr 
+                              key={index} 
+                              className={`border-b border-gray-700 ${
+                                index % 2 === 0 ? 'bg-gray-800 dark:bg-gray-750' : 'bg-gray-750 dark:bg-gray-700'
+                              } hover:bg-gray-700 dark:hover:bg-gray-600 transition`}
+                            >
+                              <td className="px-6 py-4 text-sm font-bold text-yellow-400">#{index + 1}</td>
+                              <td className="px-6 py-4 text-sm">
+                                <div className="font-medium text-white">{staff.name}</div>
+                                <div className="text-xs text-gray-400">{staff.username}</div>
+                              </td>
+                              <td className="px-6 py-4 text-sm text-right text-blue-400 font-medium">
+                                {formatCurrency(staff.betAmount || 0)}
+                              </td>
+                              <td className="px-6 py-4 text-sm text-right text-green-400 font-medium">
+                                {formatCurrency(staff.systemBalance || 0)}
+                              </td>
+                              <td className="px-6 py-4 text-sm text-right text-purple-400 font-medium">
+                                {formatCurrency(commission)}
+                              </td>
+                              <td className={`px-6 py-4 text-sm text-right font-medium ${
+                                profit >= 0 ? 'text-green-400' : 'text-red-400'
+                              }`}>
+                                {profit >= 0 ? '+' : ''}{formatCurrency(profit)}
+                              </td>
+                            </tr>
+                          );
+                        })}
                     </tbody>
                   </table>
                 </div>
-              ) : (
-                <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded text-sm font-mono text-gray-900 dark:text-gray-100 overflow-x-auto max-h-96 overflow-y-auto">
-                  <pre>{JSON.stringify(data, null, 2)}</pre>
-                </div>
-              )}
-
-              {/* Stats */}
-              <div className="mt-6 grid grid-cols-3 gap-4">
-                <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-                  <p className="text-gray-600 dark:text-gray-400 text-sm">Total Entries</p>
-                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                    {Array.isArray(data) ? data.length : 'N/A'}
-                  </p>
-                </div>
-                <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
-                  <p className="text-gray-600 dark:text-gray-400 text-sm">Last Updated</p>
-                  <p className="text-sm font-bold text-green-600 dark:text-green-400">{new Date().toLocaleTimeString()}</p>
-                </div>
-                <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
-                  <p className="text-gray-600 dark:text-gray-400 text-sm">Source</p>
-                  <p className="text-xs font-bold text-purple-600 dark:text-purple-400 break-words">GTA Event Leaderboard</p>
-                </div>
               </div>
             </div>
-          </div>
-        )}
-
-        {/* Empty State */}
-        {data && !loading && Object.keys(data).length === 0 && (
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-            <p className="text-yellow-800 dark:text-yellow-200">No leaderboard data available at this moment.</p>
-          </div>
-        )}
+          ) : (
+            <div className="bg-gray-800 dark:bg-gray-700 border border-gray-700 rounded-lg p-8 text-center">
+              <p className="text-gray-400">No leaderboard data available</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
+}
 }
