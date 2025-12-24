@@ -117,11 +117,10 @@ jobs:
         fi
     
     - name: Create Release and Upload APK
-      uses: softprops/action-gh-release@v1
-      with:
-        tag_name: ${{ github.ref_name }}
-        name: RMI Teller Report ${{ github.ref_name }}
-        draft: false
-        prerelease: false
-        files: ./app-release-signed.apk
-        generate_release_notes: true
+      run: |
+        # Create the release
+        gh release create ${{ github.ref_name }} \
+          --title "RMI Teller Report ${{ github.ref_name }}" \
+          --notes "Automated APK release" \
+          --latest \
+          app-release-signed.apk
