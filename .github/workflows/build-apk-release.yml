@@ -47,6 +47,16 @@ jobs:
         cordova platform add android
         cordova build android --release
         cd ..
+        
+        # Check if APK was built
+        if [ ! -d "android/platforms/android/app/build/outputs/apk/release" ]; then
+          echo "ERROR: Cordova build failed - APK directory not found"
+          echo "Checking if android directory exists:"
+          ls -la android/
+          echo "Checking cordova platforms:"
+          cd android && cordova platform list && cd ..
+          exit 1
+        fi
     
     - name: Sign APK
       env:
@@ -71,12 +81,17 @@ jobs:
         fi
         
         # Find the unsigned APK file
-        APK_FILE=$(find android/platforms/android/app/build/outputs/apk/release -name "*release-unsigned.apk" | head -1)
+        APK_FILE=$(find android/platforms/android/app/build/outputs/apk/release -name "*release-unsigned.apk" 2>/dev/null | head -1)
         if [ -z "$APK_FILE" ]; then
           echo "ERROR: Could not find unsigned APK file"
-          ls -la android/platforms/android/app/build/outputs/apk/release/
+          echo "Contents of APK directory:"
+          ls -la android/platforms/android/app/build/outputs/apk/release/ 2>/dev/null || echo "Directory doesn't exist"
+          echo "Full build outputs directory:"
+          find android/platforms/android/app/build/outputs -name "*.apk" 2>/dev/null || echo "No APK files found"
           exit 1
         fi
+        
+        echo "Found APK file: $APK_FILE"
         
         # Sign APK
         jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
