@@ -1,0 +1,88 @@
+name: Build and Release APK
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    
+    - name: Set up Java
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+    
+    - name: Set up Android SDK
+      uses: android-actions/setup-android@v2
+    
+    - name: Install dependencies
+      run: npm install
+    
+    - name: Build frontend
+      run: npm run build
+    
+    - name: Copy frontend to Cordova
+      run: |
+        rm -rf android/www
+        cp -r frontend/dist android/www
+    
+    - name: Build APK
+      run: |
+        cd android
+        npm install
+        cordova build android --release
+        cd ..
+    
+    - name: Sign APK
+      env:
+        KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      run: |
+        # Decode keystore from base64
+        echo "$KEYSTORE_BASE64" | base64 -d > keystore.jks
+        
+        # Sign APK
+        jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
+          -keystore keystore.jks \
+          -storepass "$KEYSTORE_PASSWORD" \
+          -keypass "$KEY_PASSWORD" \
+          android/platforms/android/app/build/outputs/apk/release/app-release-unsigned.apk \
+          "$KEY_ALIAS"
+        
+        # Optimize APK
+        $ANDROID_SDK_ROOT/build-tools/35.0.0/zipalign -v 4 \
+          android/platforms/android/app/build/outputs/apk/release/app-release-unsigned.apk \
+          app-release-signed.apk
+    
+    - name: Create Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: RMI Teller Report ${{ github.ref_name }}
+        draft: false
+        prerelease: false
+    
+    - name: Upload APK to Release
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./app-release-signed.apk
+        asset_name: RMI-TellerReport-${{ github.ref_name }}.apk
+        asset_content_type: application/vnd.android.package-archive
