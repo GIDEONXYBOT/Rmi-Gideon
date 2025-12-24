@@ -45,7 +45,7 @@ jobs:
         cd android
         npm install
         cordova platform add android
-        cordova build android --release
+        cordova build android --release -- --packageType=apk
         cd ..
         
         # Check if APK was built
