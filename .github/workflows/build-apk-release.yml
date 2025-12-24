@@ -48,23 +48,6 @@ jobs:
         cd android
         npm install
         cordova platform add android
-        
-        # Copy icon to Android drawable directories
-        mkdir -p platforms/android/app/src/main/res/drawable-ldpi
-        mkdir -p platforms/android/app/src/main/res/drawable-mdpi
-        mkdir -p platforms/android/app/src/main/res/drawable-hdpi
-        mkdir -p platforms/android/app/src/main/res/drawable-xhdpi
-        mkdir -p platforms/android/app/src/main/res/drawable-xxhdpi
-        mkdir -p platforms/android/app/src/main/res/drawable-xxxhdpi
-        
-        # Copy icon to all density folders
-        cp res/icon/android/icon.png platforms/android/app/src/main/res/drawable-ldpi/ic_launcher.png
-        cp res/icon/android/icon.png platforms/android/app/src/main/res/drawable-mdpi/ic_launcher.png
-        cp res/icon/android/icon.png platforms/android/app/src/main/res/drawable-hdpi/ic_launcher.png
-        cp res/icon/android/icon.png platforms/android/app/src/main/res/drawable-xhdpi/ic_launcher.png
-        cp res/icon/android/icon.png platforms/android/app/src/main/res/drawable-xxhdpi/ic_launcher.png
-        cp res/icon/android/icon.png platforms/android/app/src/main/res/drawable-xxxhdpi/ic_launcher.png
-        
         cordova build android --release -- --packageType=apk
         cd ..
         
