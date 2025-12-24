@@ -37,7 +37,6 @@ jobs:
           path: frontend/dist
 
       - name: Deploy to Cloudflare Pages (optional)
-        if: ${{ secrets.CF_PAGES_API_TOKEN != null && secrets.CF_ACCOUNT_ID != null && secrets.CF_PAGES_PROJECT_NAME != null }}
         uses: cloudflare/pages-action@v1
         with:
           apiToken: ${{ secrets.CF_PAGES_API_TOKEN }}
