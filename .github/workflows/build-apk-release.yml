@@ -84,17 +84,15 @@ jobs:
         fi
         
         # Find the unsigned APK file
-        APK_FILE=$(find android/platforms/android/app/build/outputs/apk/release -name "*release-unsigned.apk" 2>/dev/null | head -1)
+        APK_FILE=$(find android/platforms/android/app/build/outputs/apk/release -name "*.apk" 2>/dev/null | head -1)
         if [ -z "$APK_FILE" ]; then
-          echo "ERROR: Could not find unsigned APK file"
-          echo "Contents of APK directory:"
-          ls -la android/platforms/android/app/build/outputs/apk/release/ 2>/dev/null || echo "Directory doesn't exist"
-          echo "Full build outputs directory:"
-          find android/platforms/android/app/build/outputs -name "*.apk" 2>/dev/null || echo "No APK files found"
+          echo "ERROR: Could not find APK file"
+          echo "Searching for APK files:"
+          find android/platforms/android/app/build/outputs -name "*.apk" 2>/dev/null || echo "No APK found"
           exit 1
         fi
         
-        echo "Found APK file: $APK_FILE"
+        echo "Found APK: $APK_FILE"
         
         # Sign APK
         jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
@@ -104,17 +102,14 @@ jobs:
           "$APK_FILE" \
           "$KEY_ALIAS"
         
-        # Optimize APK
-        $ANDROID_SDK_ROOT/build-tools/35.0.0/zipalign -v 4 \
-          "$APK_FILE" \
-          app-release-signed.apk
-        
-        # Verify APK was created
+        # Copy and verify signed APK
+        cp "$APK_FILE" app-release-signed.apk
         if [ ! -f "app-release-signed.apk" ]; then
-          echo "ERROR: Signed APK not found!"
-          ls -la *.apk 2>/dev/null || echo "No APK files found"
+          echo "ERROR: Signed APK not created!"
           exit 1
         fi
+        
+        ls -lh app-release-signed.apk
     
     - name: Create Release and Upload APK
       env:
