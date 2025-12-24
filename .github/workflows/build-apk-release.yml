@@ -27,10 +27,12 @@ jobs:
       uses: android-actions/setup-android@v2
     
     - name: Install dependencies
-      run: npm install
+      run: |
+        npm install
+        cd frontend && npm install && cd ..
     
     - name: Build frontend
-      run: npm run build
+      run: cd frontend && npm run build && cd ..
     
     - name: Copy frontend to Cordova
       run: |
