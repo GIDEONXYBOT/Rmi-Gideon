@@ -41,6 +41,7 @@ jobs:
     
     - name: Build APK
       run: |
+        npm install -g cordova
         cd android
         npm install
         cordova build android --release
