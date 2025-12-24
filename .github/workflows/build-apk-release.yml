@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      packages: write
 
     steps:
     - uses: actions/checkout@v3
@@ -107,6 +108,13 @@ jobs:
         $ANDROID_SDK_ROOT/build-tools/35.0.0/zipalign -v 4 \
           "$APK_FILE" \
           app-release-signed.apk
+        
+        # Verify APK was created
+        if [ ! -f "app-release-signed.apk" ]; then
+          echo "ERROR: Signed APK not found!"
+          ls -la *.apk 2>/dev/null || echo "No APK files found"
+          exit 1
+        fi
     
     - name: Create Release and Upload APK
       uses: softprops/action-gh-release@v1
