@@ -70,17 +70,25 @@ jobs:
           exit 1
         fi
         
+        # Find the unsigned APK file
+        APK_FILE=$(find android/platforms/android/app/build/outputs/apk/release -name "*release-unsigned.apk" | head -1)
+        if [ -z "$APK_FILE" ]; then
+          echo "ERROR: Could not find unsigned APK file"
+          ls -la android/platforms/android/app/build/outputs/apk/release/
+          exit 1
+        fi
+        
         # Sign APK
         jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
           -keystore keystore.jks \
           -storepass "$KEYSTORE_PASSWORD" \
           -keypass "$KEY_PASSWORD" \
-          android/platforms/android/app/build/outputs/apk/release/app-release-unsigned.apk \
+          "$APK_FILE" \
           "$KEY_ALIAS"
         
         # Optimize APK
         $ANDROID_SDK_ROOT/build-tools/35.0.0/zipalign -v 4 \
-          android/platforms/android/app/build/outputs/apk/release/app-release-unsigned.apk \
+          "$APK_FILE" \
           app-release-signed.apk
     
     - name: Create Release
