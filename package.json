@@ -9,9 +9,14 @@
     "prod": "npm run build && npm start",
     "production": "npm run build && npm start",
     "electron": "npm run build && electron .",
-    "dist": "npm run build && electron-builder --win --x64"
+    "dist": "npm run build && electron-builder --win --x64",
+    "build:apk": "npm run build && xcopy /E /I frontend\\dist android\\www && cd android && cordova build android --release && cd ..",
+    "build:apk-debug": "npm run build && xcopy /E /I frontend\\dist android\\www && cd android && cordova build android --debug && cd .."
   },
   "dependencies": {
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/cli": "^8.0.0",
+    "@capacitor/core": "^8.0.0",
     "axios": "^1.13.2",
     "bcryptjs": "^3.0.3",
     "cheerio": "^1.1.2",
@@ -22,7 +27,8 @@
     "electron": "^26.0.0",
     "electron-builder": "^24.2.0",
     "electron-updater": "^6.6.2",
-    "sharp": "^0.34.5"
+    "sharp": "^0.34.5",
+    "tslib": "^2.8.1"
   },
   "build": {
     "appId": "com.rmi.teller-report",
