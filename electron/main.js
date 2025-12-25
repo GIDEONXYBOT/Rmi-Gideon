@@ -198,30 +198,44 @@ ipcMain.handle('get-printers', async () => {
 
 // Configure auto-updater (only if available)
 if (autoUpdater && !isDev) {
-  autoUpdater.checkForUpdatesAndNotify();
+  console.log('🔄 Setting up auto-updater...');
   
-  autoUpdater.on('update-available', () => {
+  // Check for updates on startup
+  autoUpdater.checkForUpdatesAndNotify().catch(err => {
+    console.warn('⚠️ Initial update check failed:', err.message);
+  });
+  
+  autoUpdater.on('update-available', (info) => {
+    console.log('📦 Update available:', info.version);
     dialog.showMessageBox({
       type: 'info',
       title: 'Update Available',
-      message: 'A new version of RMI Teller Report is available.',
+      message: `Version ${info.version} is available.`,
       detail: 'The app will download and install the update automatically.',
       buttons: ['OK']
-    });
+    }).catch(err => console.error('Dialog error:', err));
   });
 
-  autoUpdater.on('update-downloaded', () => {
+  autoUpdater.on('update-downloaded', (info) => {
+    console.log('✅ Update downloaded:', info.version);
     dialog.showMessageBox({
       type: 'info',
       title: 'Update Ready',
-      message: 'Update downloaded. The app will restart to apply the changes.',
+      message: 'Update downloaded and ready to install.',
+      detail: 'The app will restart to apply the changes.',
       buttons: ['Restart Now', 'Later']
     }).then(result => {
       if (result.response === 0) {
         autoUpdater.quitAndInstall();
       }
-    });
+    }).catch(err => console.error('Dialog error:', err));
   });
+
+  autoUpdater.on('error', (err) => {
+    console.error('❌ Update error:', err);
+  });
+} else {
+  console.log('⚠️ Auto-updater disabled (dev mode or not available)');
 }
 
 // Auto-updater setup
@@ -231,9 +245,19 @@ const setupUpdater = (window) => {
     return;
   }
 
+  console.log('🔧 Configuring updater for main window...');
+
+  // Check for updates on app start
+  autoUpdater.checkForUpdates().catch(err => {
+    console.warn('⚠️ Update check failed:', err.message);
+  });
+
   // Check for updates automatically every 10 minutes
   setInterval(() => {
-    autoUpdater.checkForUpdates();
+    console.log('🔍 Auto-checking for updates...');
+    autoUpdater.checkForUpdates().catch(err => {
+      console.warn('⚠️ Auto-update check failed:', err.message);
+    });
   }, 10 * 60 * 1000);
 
   autoUpdater.on('checking-for-update', () => {

@@ -264,8 +264,17 @@ export default function Dashboard({ overrideRole }) {
             <h1 className="text-2xl font-bold">Welcome back{user?.name ? `, ${user.name}` : ""}</h1>
             <p className="text-sm text-gray-400">Overview & live metrics</p>
           </div>
-          <div className="text-sm text-gray-400">
-            <div>Role: <span className="font-semibold">{role}</span></div>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition flex items-center gap-2"
+              title="Refresh page (F5)"
+            >
+              ↻ Refresh
+            </button>
+            <div className="text-sm text-gray-400">
+              <div>Role: <span className="font-semibold">{role}</span></div>
+            </div>
           </div>
         </FadeInUp>
 
