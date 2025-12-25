@@ -63,7 +63,19 @@ const LeaderboardPage = () => {
         leaderboardService.getCurrentDraw()
       ]);
 
-      setDraws(drawsData);
+      // Remove duplicates from draws based on fight sequence
+      const seenFights = new Set();
+      const uniqueDraws = drawsData.filter(draw => {
+        const fightKey = draw.batch?.fightSequence || draw.id;
+        if (seenFights.has(fightKey)) {
+          console.warn(`⚠️ Duplicate fight detected: #${fightKey}`);
+          return false;
+        }
+        seenFights.add(fightKey);
+        return true;
+      });
+
+      setDraws(uniqueDraws);
       setStats(statsData);
       setCurrentDraw(currentDrawData);
       setLastUpdated(new Date());
@@ -71,7 +83,7 @@ const LeaderboardPage = () => {
       if (!isBackground) {
         showToast({
           type: 'success',
-          message: `Loaded ${drawsData.length} draws from external leaderboard`
+          message: `Loaded ${uniqueDraws.length} unique draws (${drawsData.length - uniqueDraws.length} duplicates removed)`
         });
       }
     } catch (err) {

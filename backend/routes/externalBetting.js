@@ -586,6 +586,7 @@ router.get('/leaderboard', async (req, res) => {
     console.log(`✅ Successfully saved/updated ${newDraws.length} draws with today's date`);
 
     // Query TODAY's data ONLY from database - sorted by fightSequence descending (newest first)
+    // Remove duplicates by using unique fight sequence
     let todaysDraws = await mongoose.connection.db.collection('draws').find({
       createdAt: {
         $gte: todayStart,
@@ -593,7 +594,21 @@ router.get('/leaderboard', async (req, res) => {
       }
     }).sort({ 'batch.fightSequence': -1 }).toArray();
 
-    console.log(`📊 Found ${todaysDraws.length} fights for today in database`);
+    console.log(`📊 Found ${todaysDraws.length} fights for today in database BEFORE deduplication`);
+
+    // Remove duplicates by fight ID and fight sequence
+    const seenFights = new Set();
+    const uniqueDraws = [];
+    for (const draw of todaysDraws) {
+      const fightKey = draw.batch?.fightSequence || draw.id;
+      if (!seenFights.has(fightKey)) {
+        seenFights.add(fightKey);
+        uniqueDraws.push(draw);
+      }
+    }
+
+    console.log(`📊 After deduplication: ${uniqueDraws.length} unique fights for today`);
+    todaysDraws = uniqueDraws;
 
     // If no fights for today in DB, log it but still return what we found (empty or old data)
     if (todaysDraws.length === 0) {
