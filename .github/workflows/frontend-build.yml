@@ -35,12 +35,3 @@ jobs:
         with:
           name: frontend-dist
           path: frontend/dist
-
-      - name: Deploy to Cloudflare Pages (optional)
-        if: false  # Disabled - configure Cloudflare secrets if needed
-        uses: cloudflare/pages-action@v1
-        with:
-          apiToken: ${{ secrets.CF_PAGES_API_TOKEN }}
-          accountId: ${{ secrets.CF_ACCOUNT_ID }}
-          projectName: ${{ secrets.CF_PAGES_PROJECT_NAME }}
-          directory: frontend/dist
