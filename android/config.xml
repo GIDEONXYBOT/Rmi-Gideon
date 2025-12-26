@@ -2,12 +2,31 @@
 <widget id="com.rmi.tellerreport" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
     <name>RMI Teller Report</name>
     <description>
-        A sample Apache Cordova application that responds to the deviceready event.
+        RMI Teller Report - Chicken Fighting Management System
     </description>
-    <author email="dev@cordova.apache.org" href="https://cordova.apache.org">
-        Apache Cordova Team
+    <author email="support@rmi.local" href="https://rmi.local">
+        RMI Development Team
     </author>
     <content src="index.html" />
+    
+    <!-- Android specific configuration -->
+    <preference name="android-minSdkVersion" value="21" />
+    <preference name="android-targetSdkVersion" value="35" />
+    <preference name="android-compileSdkVersion" value="35" />
+    <preference name="android-useAndroidX" value="true" />
+    <preference name="android-enableJetifier" value="true" />
+    <preference name="AndroidLaunchMode" value="singleTop" />
+    <preference name="StatusBarOverlaysWebView" value="false" />
+    <preference name="StatusBarStyle" value="blacktranslucent" />
+    
+    <!-- Allow various intent URLs -->
     <allow-intent href="http://*/*" />
     <allow-intent href="https://*/*" />
+    <allow-intent href="tel:*" />
+    <allow-intent href="sms:*" />
+    <allow-intent href="mailto:*" />
+    <allow-intent href="geo:*" />
+    
+    <!-- Android allow intents -->
+    <allow-intent href="market:*" />
 </widget>
