@@ -104,10 +104,18 @@ jobs:
         # Verify signing
         jarsigner -verify -verbose "$APK_FILE"
         
-        # Optimize with zipalign
-        zipalign -f -v 4 "$APK_FILE" app-release-signed.apk
+        # Find zipalign in Android SDK (it's in build-tools)
+        ZIPALIGN=$(find $ANDROID_SDK_ROOT/build-tools -name "zipalign" -type f 2>/dev/null | head -1)
+        if [ -z "$ZIPALIGN" ]; then
+          echo "⚠️  zipalign not found, skipping alignment (APK will still work)"
+          cp "$APK_FILE" app-release-signed.apk
+        else
+          # Optimize with zipalign
+          echo "📦 Aligning APK with zipalign..."
+          $ZIPALIGN -f -v 4 "$APK_FILE" app-release-signed.apk
+        fi
         
-        echo "✅ APK signed and aligned"
+        echo "✅ APK signed and ready"
         ls -lh app-release-signed.apk
         
         # Cleanup
