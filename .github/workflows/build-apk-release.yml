@@ -47,8 +47,18 @@ jobs:
         npm install -g cordova
         cd android
         npm install
-        cordova platform add android
-        cordova build android --release -- --packageType=apk
+        cordova platform add android --save
+        
+        echo "🔨 Building APK with Cordova..."
+        cordova build android --release -- --packageType=apk 2>&1 | tee build.log
+        
+        # Check build log for errors
+        if grep -i "error\|failed" build.log; then
+          echo "❌ Build had errors!"
+          tail -100 build.log
+          exit 1
+        fi
+        
         cd ..
         
         # Check if APK was built
@@ -60,6 +70,10 @@ jobs:
           cd android && cordova platform list && cd ..
           exit 1
         fi
+        
+        # List all APK files found
+        echo "📦 APK files found:"
+        find android/platforms/android/app/build/outputs/apk -name "*.apk" -type f -exec ls -lh {} \;
     
     - name: Sign APK
       run: |
