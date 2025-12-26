@@ -39,18 +39,42 @@ jobs:
     
     - name: Copy frontend to Cordova
       run: |
-        rm -rf android/www
-        cp -r frontend/dist android/www
+        echo "📂 Copying frontend build to Cordova www..."
+        rm -rf android/www/*
+        cp -r frontend/dist/* android/www/
+        
+        echo "✅ Frontend files copied:"
+        ls -la android/www/ | head -20
+        
+        echo "📦 Checking index.html exists:"
+        if [ -f "android/www/index.html" ]; then
+          echo "✅ index.html found"
+          wc -l android/www/index.html
+        else
+          echo "❌ ERROR: index.html NOT found!"
+          find android/www -type f | head -20
+          exit 1
+        fi
     
     - name: Build APK
       run: |
         npm install -g cordova
         cd android
+        
+        # Clean previous builds
+        echo "🧹 Cleaning previous builds..."
+        rm -rf platforms/
+        rm -rf www/
+        
+        # Copy frontend files
+        echo "📂 Copying frontend to www..."
+        mkdir -p www
+        cp -r ../frontend/dist/* www/
+        
         npm install
         cordova platform add android --save
         
         echo "🔨 Building APK with Cordova..."
-        # Build debug APK instead of release - more reliable for testing
         cordova build android -- --packageType=apk 2>&1 | tee build.log
         
         # Check build log for errors
@@ -65,16 +89,24 @@ jobs:
         # Check if APK was built
         if [ ! -d "android/platforms/android/app/build/outputs/apk" ]; then
           echo "ERROR: Cordova build failed - APK directory not found"
-          echo "Checking if android directory exists:"
-          ls -la android/
-          echo "Checking cordova platforms:"
-          cd android && cordova platform list && cd ..
+          ls -la android/platforms/android/app/build/outputs/ 2>/dev/null || echo "Build outputs not found"
           exit 1
         fi
         
         # List all APK files found
         echo "📦 APK files found:"
         find android/platforms/android/app/build/outputs/apk -name "*.apk" -type f -exec ls -lh {} \;
+        
+        # Verify APK is valid
+        APK_FILE=$(find android/platforms/android/app/build/outputs/apk -name "*.apk" 2>/dev/null | head -1)
+        if [ -z "$APK_FILE" ]; then
+          echo "❌ ERROR: No APK file found!"
+          exit 1
+        fi
+        
+        echo "✅ APK file: $APK_FILE"
+        file "$APK_FILE"
+        unzip -t "$APK_FILE" | head -20
     
     - name: Sign APK
       run: |
