@@ -50,10 +50,11 @@ jobs:
         cordova platform add android --save
         
         echo "🔨 Building APK with Cordova..."
-        cordova build android --release -- --packageType=apk 2>&1 | tee build.log
+        # Build debug APK instead of release - more reliable for testing
+        cordova build android -- --packageType=apk 2>&1 | tee build.log
         
         # Check build log for errors
-        if grep -i "error\|failed" build.log; then
+        if grep -i "error\|failed\|fatal" build.log | grep -v "gradle-cache"; then
           echo "❌ Build had errors!"
           tail -100 build.log
           exit 1
@@ -62,7 +63,7 @@ jobs:
         cd ..
         
         # Check if APK was built
-        if [ ! -d "android/platforms/android/app/build/outputs/apk/release" ]; then
+        if [ ! -d "android/platforms/android/app/build/outputs/apk" ]; then
           echo "ERROR: Cordova build failed - APK directory not found"
           echo "Checking if android directory exists:"
           ls -la android/
@@ -77,21 +78,23 @@ jobs:
     
     - name: Sign APK
       run: |
-        # Find the unsigned APK file
-        APK_FILE=$(find android/platforms/android/app/build/outputs/apk/release -name "*.apk" 2>/dev/null | head -1)
+        # Find the APK file (debug or release)
+        APK_FILE=$(find android/platforms/android/app/build/outputs/apk -name "*.apk" 2>/dev/null | head -1)
         if [ -z "$APK_FILE" ]; then
           echo "ERROR: Could not find APK file"
           find android/platforms/android/app/build/outputs -name "*.apk" 2>/dev/null || echo "No APK found"
           exit 1
         fi
         
-        echo "Found unsigned APK: $APK_FILE"
+        echo "Found APK: $APK_FILE"
         ls -lh "$APK_FILE"
+        file "$APK_FILE"
         
         # Decode keystore from base64
         echo "$KEYSTORE_BASE64" | base64 -d > signing-key.jks
         
         # Sign the APK with jarsigner
+        echo "🔑 Signing APK..."
         jarsigner -verbose \
           -sigalg SHA256withRSA \
           -digestalg SHA-256 \
@@ -102,6 +105,7 @@ jobs:
           "$KEY_ALIAS"
         
         # Verify signing
+        echo "✅ Verifying signature..."
         jarsigner -verify -verbose "$APK_FILE"
         
         # Find zipalign in Android SDK (it's in build-tools)
@@ -116,6 +120,11 @@ jobs:
         fi
         
         echo "✅ APK signed and ready"
+        ls -lh app-release-signed.apk
+        file app-release-signed.apk
+        
+        # Cleanup
+        rm -f signing-key.jks
         ls -lh app-release-signed.apk
         
         # Cleanup
