@@ -1,12 +1,15 @@
 name: Deploy Frontend to Cloudflare Pages
 
+# DISABLED - Not configured for this project
+# To enable: Set CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID secrets
 on:
   push:
-    branches: [ main ]
+    branches: []  # Never runs
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    if: false  # Disabled
 
     steps:
       - name: Checkout
