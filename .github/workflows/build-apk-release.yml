@@ -1,4 +1,4 @@
-name: Build and Release APK
+name: Build APK with Capacitor
 
 on:
   push:
@@ -37,96 +37,42 @@ jobs:
     - name: Build frontend
       run: cd frontend && npm run build && cd ..
     
-    - name: Copy frontend to Cordova
-      run: |
-        echo "📂 Copying frontend build to Cordova www..."
-        rm -rf android/www/*
-        cp -r frontend/dist/* android/www/
-        
-        echo "✅ Frontend files copied:"
-        ls -la android/www/ | head -20
-        
-        echo "📦 Checking index.html exists:"
-        if [ -f "android/www/index.html" ]; then
-          echo "✅ index.html found"
-          wc -l android/www/index.html
-        else
-          echo "❌ ERROR: index.html NOT found!"
-          find android/www -type f | head -20
-          exit 1
-        fi
+    - name: Install Capacitor CLI
+      run: npm install -g @capacitor/cli
     
-    - name: Build APK
+    - name: Initialize Capacitor (if needed)
       run: |
-        npm install -g cordova
-        cd android
-        
-        # Clean previous builds
-        echo "🧹 Cleaning previous builds..."
-        rm -rf platforms/
-        rm -rf www/
-        
-        # Copy frontend files
-        echo "📂 Copying frontend to www..."
-        mkdir -p www
-        cp -r ../frontend/dist/* www/
-        
-        npm install
-        cordova platform add android --save
-        
-        echo "🔨 Building APK with Cordova..."
-        cordova build android -- --packageType=apk 2>&1 | tee build.log
-        
-        # Check build log for errors
-        if grep -i "error\|failed\|fatal" build.log | grep -v "gradle-cache"; then
-          echo "❌ Build had errors!"
-          tail -100 build.log
-          exit 1
+        # Add Android if not present
+        if [ ! -d "android" ] || [ ! -f "android/app/build.gradle" ]; then
+          npx cap add android
         fi
-        
+        npx cap sync android
+    
+    - name: Build Android APK
+      run: |
+        cd android
+        chmod +x gradlew
+        ./gradlew assembleDebug
         cd ..
         
-        # Check if APK was built
-        if [ ! -d "android/platforms/android/app/build/outputs/apk" ]; then
-          echo "ERROR: Cordova build failed - APK directory not found"
-          ls -la android/platforms/android/app/build/outputs/ 2>/dev/null || echo "Build outputs not found"
+        # Check if APK exists
+        if [ ! -f "android/app/build/outputs/apk/debug/app-debug.apk" ]; then
+          echo "ERROR: APK not found"
+          find android/app/build/outputs -name "*.apk" 2>/dev/null || echo "No APK found"
           exit 1
         fi
         
-        # List all APK files found
-        echo "📦 APK files found:"
-        find android/platforms/android/app/build/outputs/apk -name "*.apk" -type f -exec ls -lh {} \;
-        
-        # Verify APK is valid
-        APK_FILE=$(find android/platforms/android/app/build/outputs/apk -name "*.apk" 2>/dev/null | head -1)
-        if [ -z "$APK_FILE" ]; then
-          echo "❌ ERROR: No APK file found!"
-          exit 1
-        fi
-        
-        echo "✅ APK file: $APK_FILE"
-        file "$APK_FILE"
-        unzip -t "$APK_FILE" | head -20
+        echo "✅ APK built successfully"
+        ls -lh android/app/build/outputs/apk/debug/app-debug.apk
     
-    - name: Sign APK
+    - name: Sign and prepare APK
       run: |
-        # Find the APK file (debug or release)
-        APK_FILE=$(find android/platforms/android/app/build/outputs/apk -name "*.apk" 2>/dev/null | head -1)
-        if [ -z "$APK_FILE" ]; then
-          echo "ERROR: Could not find APK file"
-          find android/platforms/android/app/build/outputs -name "*.apk" 2>/dev/null || echo "No APK found"
-          exit 1
-        fi
+        APK_FILE="android/app/build/outputs/apk/debug/app-debug.apk"
         
-        echo "Found APK: $APK_FILE"
-        ls -lh "$APK_FILE"
-        file "$APK_FILE"
-        
-        # Decode keystore from base64
+        # Decode keystore
         echo "$KEYSTORE_BASE64" | base64 -d > signing-key.jks
         
-        # Sign the APK with jarsigner
-        echo "🔑 Signing APK..."
+        # Sign APK
         jarsigner -verbose \
           -sigalg SHA256withRSA \
           -digestalg SHA-256 \
@@ -136,47 +82,29 @@ jobs:
           "$APK_FILE" \
           "$KEY_ALIAS"
         
-        # Verify signing
-        echo "✅ Verifying signature..."
-        jarsigner -verify -verbose "$APK_FILE"
-        
-        # Find zipalign in Android SDK (it's in build-tools)
-        ZIPALIGN=$(find $ANDROID_SDK_ROOT/build-tools -name "zipalign" -type f 2>/dev/null | head -1)
-        if [ -z "$ZIPALIGN" ]; then
-          echo "⚠️  zipalign not found, skipping alignment (APK will still work)"
-          cp "$APK_FILE" app-release-signed.apk
-        else
-          # Optimize with zipalign
-          echo "📦 Aligning APK with zipalign..."
+        # Align (if zipalign available)
+        ZIPALIGN=$(find $ANDROID_SDK_ROOT/build-tools -name "zipalign" | head -1)
+        if [ -n "$ZIPALIGN" ]; then
           $ZIPALIGN -f -v 4 "$APK_FILE" app-release-signed.apk
+        else
+          cp "$APK_FILE" app-release-signed.apk
         fi
         
-        echo "✅ APK signed and ready"
-        ls -lh app-release-signed.apk
-        file app-release-signed.apk
-        
-        # Cleanup
         rm -f signing-key.jks
         ls -lh app-release-signed.apk
-        
-        # Cleanup
-        rm -f signing-key.jks
       env:
         KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
         KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
     
-    - name: Create Release and Upload APK
+    - name: Create Release
       env:
         GH_TOKEN: ${{ github.token }}
       run: |
-        # Delete existing release if it exists
         gh release delete ${{ github.ref_name }} --yes 2>/dev/null || true
-        
-        # Create the release
         gh release create ${{ github.ref_name }} \
           --title "RMI Teller Report ${{ github.ref_name }}" \
-          --notes "Automated APK release" \
+          --notes "Capacitor-built APK" \
           --latest \
           app-release-signed.apk
