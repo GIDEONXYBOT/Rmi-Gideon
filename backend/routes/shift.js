@@ -3,6 +3,7 @@ import Shift from "../models/Shift.js";
 import User from "../models/User.js";
 import Payroll from "../models/Payroll.js";
 import SystemSettings from "../models/SystemSettings.js";
+import { generateTransactionId } from "../utils/transactionId.js";
 
 const router = express.Router();
 
@@ -72,12 +73,10 @@ router.post("/set", async (req, res) => {
     const endOfDay = new Date(date);
     endOfDay.setHours(23, 59, 59, 999);
 
+    // First, check by date field to find existing payroll for this exact date
     let payroll = await Payroll.findOne({
       user: userId,
-      createdAt: {
-        $gte: startOfDay,
-        $lte: endOfDay
-      }
+      date: date
     });
 
     if (payroll) {
@@ -98,6 +97,9 @@ router.post("/set", async (req, res) => {
       await payroll.save();
       console.log(`✅ Updated payroll for ${user.name}: ₱${oldTotalSalary} → ₱${payroll.totalSalary}`);
     } else {
+      // Generate unique transaction ID for this payroll entry
+      const transactionId = generateTransactionId(userId.toString(), date);
+      
       // Create new payroll
       payroll = new Payroll({
         user: userId,
@@ -107,10 +109,12 @@ router.post("/set", async (req, res) => {
         daysPresent: 1,
         approved: false,
         locked: false,
+        date: date,
+        transactionId: transactionId,
         createdAt: startOfDay
       });
       await payroll.save();
-      console.log(`✅ Created payroll for ${user.name} with base salary: ₱${baseSalaryUsed}`);
+      console.log(`✅ Created payroll for ${user.name} with base salary: ₱${baseSalaryUsed}, transactionId: ${transactionId}`);
     }
 
     res.json({ success: true, shift, payroll });

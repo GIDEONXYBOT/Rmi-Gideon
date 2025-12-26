@@ -7,6 +7,7 @@ import Capital from "../models/Capital.js";
 import SystemSettings from "../models/SystemSettings.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { computeTotalSalary } from "../lib/payrollCalc.js";
+import { generateTransactionId } from "../utils/transactionId.js";
 
 const router = express.Router();
 
@@ -395,6 +396,9 @@ router.post("/sync-teller-reports", async (req, res) => {
     let deletedCount = 0;
 
     if (existingPayrolls.length === 0) {
+      // Generate unique transaction ID for this payroll entry
+      const transactionId = generateTransactionId(userId.toString(), dateKey);
+      
       // Create new payroll entry
       payroll = new Payroll({
         user: userId,
@@ -406,7 +410,9 @@ router.post("/sync-teller-reports", async (req, res) => {
         withdrawal: 0,
         daysPresent: daysWorked,
         date: dateKey,
+        transactionId: transactionId,
       });
+      console.log(`✅ Creating new payroll for user ${user.username} (${dateKey}) with transactionId: ${transactionId}`);
     } else if (existingPayrolls.length === 1) {
       // Single entry - just update it
       payroll = existingPayrolls[0];
@@ -416,6 +422,12 @@ router.post("/sync-teller-reports", async (req, res) => {
       payroll.daysPresent = daysWorked;
       payroll.date = dateKey;
       if (!payroll.role && user.role) payroll.role = user.role;
+      
+      // Ensure it has a transactionId (for backwards compatibility)
+      if (!payroll.transactionId) {
+        payroll.transactionId = generateTransactionId(userId.toString(), dateKey);
+        console.log(`✅ Added transactionId to existing payroll: ${payroll.transactionId}`);
+      }
     } else {
       // Multiple entries found - consolidate into the oldest one
       console.warn(`⚠️  Found ${existingPayrolls.length} payroll entries for user ${user.username} (${dateKey}). Consolidating...`);
@@ -427,6 +439,12 @@ router.post("/sync-teller-reports", async (req, res) => {
       payroll.daysPresent = daysWorked;
       payroll.date = dateKey;
       if (!payroll.role && user.role) payroll.role = user.role;
+
+      // Ensure it has a transactionId (for backwards compatibility)
+      if (!payroll.transactionId) {
+        payroll.transactionId = generateTransactionId(userId.toString(), dateKey);
+        console.log(`✅ Added transactionId to consolidated payroll: ${payroll.transactionId}`);
+      }
 
       // Delete all other duplicates
       for (let i = 1; i < existingPayrolls.length; i++) {

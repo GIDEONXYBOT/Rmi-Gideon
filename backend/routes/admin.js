@@ -9,6 +9,7 @@ import Cashflow from "../models/Cashflow.js";
 import AdminFinance from "../models/AdminFinance.js";
 import { sendPayrollUpdateNotification, sendErrorNotification } from '../services/emailService.js';
 import bcrypt from "bcrypt";
+import { generateTransactionId } from "../utils/transactionId.js";
 
 const router = express.Router();
 // ensure admin routes are authenticated
@@ -1017,6 +1018,9 @@ router.post("/create-shane-marie-payroll", requireRole(['admin', 'super_admin'])
         shortIsInstallment: true
       }, { period: 'daily' });
       
+      const dateKey = new Date(data.date).toISOString().split('T')[0];
+      const transactionId = generateTransactionId(shaneMarie._id.toString(), dateKey);
+      
       const payroll = new Payroll({
         user: shaneMarie._id,
         role: shaneMarie.role,
@@ -1027,7 +1031,8 @@ router.post("/create-shane-marie-payroll", requireRole(['admin', 'super_admin'])
         totalSalary: totalSalary,
         deduction: 0,
         withdrawal: 0,
-        date: new Date(data.date),
+        date: dateKey,
+        transactionId: transactionId,
         approved: false,
         locked: false,
         note: data.description,
@@ -1037,7 +1042,7 @@ router.post("/create-shane-marie-payroll", requireRole(['admin', 'super_admin'])
       
       await payroll.save();
       createdPayrolls.push(payroll);
-      console.log(`✅ ${data.description}: ₱${totalSalary}`);
+      console.log(`✅ ${data.description}: ₱${totalSalary}, transactionId: ${transactionId}`);
     }
     
     res.json({

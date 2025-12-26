@@ -8,6 +8,26 @@ const AdjustmentSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
+/**
+ * Payroll Schema
+ * 
+ * Each payroll entry represents a unique transaction for a user on a specific date.
+ * 
+ * Key Design Decisions:
+ * - `transactionId`: Unique identifier for each payroll entry to prevent unwanted merging
+ *   Format: ${userId}_${date}_${timestamp}_${randomId}
+ *   This ensures multiple payroll entries can exist for the same user on the same day
+ * 
+ * - `date`: YYYY-MM-DD format string for easy querying and filtering by date ranges
+ *   Used for grouping and aggregations without the time component
+ * 
+ * - Sparse Index on `transactionId`: Allows existing records without transactionId (null)
+ *   while enforcing uniqueness for new records that have it
+ * 
+ * Migration Note:
+ * - Old payroll entries without transactionId are handled gracefully
+ * - Run migrate-payroll-transaction-ids.js to add transactionId to existing entries
+ */
 const PayrollSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
@@ -41,9 +61,22 @@ const PayrollSchema = new mongoose.Schema(
 
     // 📅 Date field for easier daily payroll queries
     date: { type: String }, // YYYY-MM-DD format
+
+    // 🆔 Unique transaction ID to prevent merging of separate payroll entries
+    // Format: ${userId}_${date}_${timestamp}_${randomId}
+    // Each payroll transaction has a unique ID to ensure multiple entries can exist
+    // for the same user on the same day (e.g., multiple capital transactions)
+    transactionId: { 
+      type: String, 
+      sparse: true, // Allows null for old records while enforcing uniqueness for non-null values
+      index: true 
+    },
   },
   { timestamps: true }
 );
+
+// Add unique index on transactionId (sparse allows null values for old records)
+PayrollSchema.index({ transactionId: 1 }, { unique: true, sparse: true });
 
 export default mongoose.models.Payroll ||
   mongoose.model("Payroll", PayrollSchema);

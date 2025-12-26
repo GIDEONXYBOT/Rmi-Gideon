@@ -9,6 +9,7 @@ import TellerMapping from "../models/TellerMapping.js";
 import { DateTime } from "luxon";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import axios from "axios";
+import { generateTransactionId } from "../utils/transactionId.js";
 
 const router = express.Router();
 
@@ -115,6 +116,9 @@ router.put("/teller/:id", async (req, res) => {
       if (!payroll) {
         const user = await User.findById(tellerId).lean();
         const base = (user && user.baseSalary) ? Number(user.baseSalary) : 0;
+        const dateKey = reportDate.toISOString().split('T')[0];
+        const transactionId = generateTransactionId(tellerId.toString(), dateKey);
+        
         payroll = new Payroll({
           user: tellerId,
           role: user?.role || report.role || "teller",
@@ -124,8 +128,11 @@ router.put("/teller/:id", async (req, res) => {
           deduction: 0,
           withdrawal: 0,
           totalSalary: base,
+          date: dateKey,
+          transactionId: transactionId,
           createdAt: reportDate,
         });
+        console.log(`✅ Creating payroll for report override with transactionId: ${transactionId}`);
       }
 
       // Apply report over/short values
