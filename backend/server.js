@@ -370,8 +370,10 @@ const io = new Server(server, {
     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
   },
   transports: ['websocket', 'polling'],
-  pingInterval: 10000,
-  pingTimeout: 5000
+  pingInterval: 25000,
+  pingTimeout: 20000,
+  connectTimeout: 45000,
+  upgradeTimeout: 10000
 });
 
 // Make io available globally for routes
@@ -454,13 +456,10 @@ io.on("connection", (socket) => {
 */
 
 // ======================================================
-// ✅ SOCKET EVENT HANDLERS (DISABLED FOR PRODUCTION)
+// ✅ SOCKET EVENT HANDLERS (ENABLED)
 // ======================================================
 
-// Handle socket.io requests (disabled)
-app.get('/socket.io/*', (req, res) => {
-  res.status(200).json({ message: 'Socket.IO disabled' });
-});
+// Socket.IO is now enabled and ready for real-time communication
 
 // Scheduler setup
 // import { initSupervisorResetScheduler } from "./scheduler/supervisorReset.js";

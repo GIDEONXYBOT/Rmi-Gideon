@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { HashRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { PageWrapper } from './components/PageWrapper.jsx';
 import UpdateStatus from './components/UpdateStatus.jsx';
+import UpdateNotification from './components/UpdateNotification.jsx';
 import "./index.css";
 import axios from "axios";
 
@@ -261,6 +262,7 @@ function App() {
             <HashRouter>
               <PageWrapper>
                 <UpdateStatus />
+                <UpdateNotification />
                 <Routes>
             {/* Redirect root to login */}
             <Route path="/" element={<Navigate to="/login" />} />

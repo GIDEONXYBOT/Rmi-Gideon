@@ -80,10 +80,29 @@ router.get('/feed', async (req, res) => {
     const { userId } = req.query;
     const filter = {};
     if (userId) filter.uploader = userId;
-    const list = await FeedItem.find(filter).sort({ createdAt: -1 }).limit(50).populate('uploader', 'username name avatarUrl').populate('likes', 'username name');
+    
+    // Set timeout for MongoDB query (15 seconds for Render)
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Query timeout')), 15000)
+    );
+    
+    const queryPromise = FeedItem.find(filter)
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .select('-imageData -thumbData') // Exclude base64 blobs for speed
+      .populate('uploader', 'username name avatarUrl')
+      .populate('likes', 'username name')
+      .lean() // Return plain objects, not Mongoose docs
+      .exec();
+    
+    const list = await Promise.race([queryPromise, timeoutPromise]);
     res.json({ success: true, items: list });
   } catch (err) {
     console.error('Failed to fetch feed', err);
+    // If timeout, return empty feed instead of error
+    if (err.message === 'Query timeout') {
+      return res.json({ success: true, items: [], warning: 'Feed temporarily unavailable, please retry' });
+    }
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });

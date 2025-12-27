@@ -69,3 +69,31 @@ export function createSocket(io, options = {}) {
 
 // BACKWARD COMPATIBILITY - but use getApiUrl() function instead!
 export const API_URL = getApiUrl();
+
+/**
+ * Wake up the backend (especially for Render free tier cold starts)
+ * Sends a light ping to wake up the server before heavy requests
+ */
+export async function wakeUpBackend() {
+  try {
+    const url = `${getApiUrl()}/api/health`;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      signal: controller.signal,
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (response.ok) {
+      console.log('✅ Backend woken up:', response.status);
+      return true;
+    }
+  } catch (err) {
+    console.warn('⚠️ Backend wake-up ping failed (will retry on demand):', err.message);
+  }
+  return false;
+}

@@ -27,7 +27,13 @@ export function getGlobalSocket() {
       console.log('🔌 Connecting to Socket.IO:', socketUrl);
       globalSocket = io(socketUrl, {
         transports: ['websocket', 'polling'],
-        timeout: 10000,
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+        reconnectionAttempts: 10,
+        timeout: 60000,
+        pingInterval: 30000,
+        pingTimeout: 25000,
         forceNew: true
       });
 
@@ -41,6 +47,11 @@ export function getGlobalSocket() {
 
       globalSocket.on('connect_error', (error) => {
         console.error('❌ Socket connection error:', error);
+        console.warn('⚠️ Socket.IO unavailable, app will use polling for updates');
+      });
+
+      globalSocket.on('reconnect_failed', () => {
+        console.warn('⚠️ Socket.IO reconnection failed permanently, using polling mode');
       });
 
     } catch (error) {

@@ -55,8 +55,8 @@ const securityMiddleware = (app) => {
 
   // Authentication rate limiting (stricter)
   const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 10, // Limit login attempts (was 5)
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 50, // Limit login attempts (was 10)
     message: {
       error: 'Too many login attempts, please try again later.'
     },

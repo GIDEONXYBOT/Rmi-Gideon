@@ -15,39 +15,34 @@ router.post("/login", async (req, res) => {
       return res.status(400).json({ message: "Username and password required" });
 
     // Optimized: Single query with only needed fields
-    const user = await User.findOne({ username }).select('_id username name role status password plainTextPassword').lean();
+    const user = await User.findOne({ username }).select('_id username name role status password').lean();
     
     if (!user) {
       console.log(`❌ User not found: ${username}`);
-      return res.status(404).json({ message: "User not found" });
+      return res.status(401).json({ message: "Invalid username or password" });
     }
 
     console.log(`👤 Found user: ${username}, role: ${user.role}, status: ${user.status}`);
 
-    // Fast path: Check plaintext first (common for mobile quick logins)
+    // Password validation - ONLY use bcrypt (secure)
     let isMatch = false;
-    let needsRehash = false;
+    
+    if (!user.password) {
+      console.log(`❌ User has no password hash: ${username}`);
+      return res.status(401).json({ message: "Invalid username or password" });
+    }
 
-    // Try plaintext first (faster)
-    if (user.plainTextPassword && password === user.plainTextPassword) {
-      isMatch = true;
-      console.log(`🔐 PlainText match (fast path)`);
-    } 
-    // Then try bcrypt if hashed
-    else if (user.password && (user.password.startsWith("$2a$") || user.password.startsWith("$2b$"))) {
+    // Always use bcrypt for password comparison
+    try {
       isMatch = await bcrypt.compare(password, user.password);
-      console.log(`🔐 Bcrypt compare result: ${isMatch}`);
-    } 
-    // Fallback: direct comparison
-    else if (user.password === password) {
-      isMatch = true;
-      needsRehash = true;
-      console.log(`🔐 Direct compare match (needs rehash)`);
+    } catch (bcryptErr) {
+      console.error(`❌ Bcrypt error for ${username}:`, bcryptErr);
+      return res.status(401).json({ message: "Invalid username or password" });
     }
 
     if (!isMatch) {
       console.log(`❌ Password mismatch for ${username}`);
-      return res.status(400).json({ message: "Invalid username or password" });
+      return res.status(401).json({ message: "Invalid username or password" });
     }
 
     // Check approval status
@@ -56,7 +51,7 @@ router.post("/login", async (req, res) => {
       return res.status(403).json({ message: "Your account is pending admin approval." });
     }
 
-    // ⚡ Generate JWT token
+    // ⚡ Generate JWT token (7 days expiration)
     const token = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET || "secretkey",
@@ -64,16 +59,8 @@ router.post("/login", async (req, res) => {
     );
 
     console.log(`✅ Login successful for ${username}`);
-    
-    // ✅ Background rehashing (don't wait for it on mobile)
-    if (needsRehash && !user.password.startsWith("$2")) {
-      User.findByIdAndUpdate(user._id, {
-        password: await bcrypt.hash(password, 10),
-        plainTextPassword: password
-      }).catch(err => console.warn('⚠️ Background rehash failed:', err));
-    }
 
-    // Send response immediately (don't wait for background tasks)
+    // Send response immediately
     res.json({
       token,
       user: {
@@ -97,17 +84,23 @@ router.post("/register", async (req, res) => {
     if (!username || !password)
       return res.status(400).json({ message: "Username and password required" });
 
+    // Validate password strength (minimum 6 characters)
+    if (password.length < 6) {
+      return res.status(400).json({ message: "Password must be at least 6 characters" });
+    }
+
     const existing = await User.findOne({ username });
     if (existing)
       return res.status(400).json({ message: "Username already exists" });
 
+    // Hash password with bcrypt (salt rounds: 10)
     const hashedPassword = await bcrypt.hash(password, 10);
     const userCount = await User.countDocuments();
 
     const newUser = new User({
       username,
       password: hashedPassword,
-      plainTextPassword: password, // ✅ Store plain text before hashing
+      // DO NOT store plaintext passwords - removed plainTextPassword field
       name: name || username,
       role: userCount === 0 ? "admin" : role || "teller",
       status: userCount === 0 ? "approved" : "pending",
