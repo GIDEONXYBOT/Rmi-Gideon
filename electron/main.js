@@ -196,6 +196,138 @@ ipcMain.handle('get-printers', async () => {
   return getAvailablePrinters();
 });
 
+// USB ESC/POS printing for thermal printers
+const printESCPOS = async (bytes, printerName = null) => {
+  const { SerialPort } = require('serialport');
+  const usb = require('usb');
+
+  try {
+    console.log('🔌 Attempting USB ESC/POS print...');
+
+    // Find USB thermal printer
+    const devices = usb.getDeviceList();
+    let thermalPrinter = null;
+
+    // Common thermal printer USB IDs (you may need to add more)
+    const thermalPrinterIds = [
+      { vendorId: 0x04b8, productId: 0x0202 }, // Epson
+      { vendorId: 0x0471, productId: 0x0055 }, // Philips
+      { vendorId: 0x0493, productId: 0x8760 }, // Samsung
+      { vendorId: 0x0fe6, productId: 0x811e }, // ICS
+      { vendorId: 0x1a86, productId: 0x7584 }, // CH340 common in thermal printers
+      { vendorId: 0x067b, productId: 0x2303 }, // Prolific
+    ];
+
+    for (const device of devices) {
+      const deviceId = { vendorId: device.deviceDescriptor.idVendor, productId: device.deviceDescriptor.idProduct };
+      if (thermalPrinterIds.some(id => id.vendorId === deviceId.vendorId && id.productId === deviceId.productId)) {
+        thermalPrinter = device;
+        console.log(`✅ Found thermal printer: ${deviceId.vendorId}:${deviceId.productId}`);
+        break;
+      }
+    }
+
+    if (!thermalPrinter) {
+      // Try to find by common serial ports (COM ports on Windows)
+      const ports = await SerialPort.list();
+      const thermalPorts = ports.filter(port =>
+        port.manufacturer && (
+          port.manufacturer.toLowerCase().includes('thermal') ||
+          port.manufacturer.toLowerCase().includes('printer') ||
+          port.manufacturer.toLowerCase().includes('epson') ||
+          port.manufacturer.toLowerCase().includes('star') ||
+          port.manufacturer.toLowerCase().includes('citizen')
+        )
+      );
+
+      if (thermalPorts.length > 0) {
+        const port = new SerialPort({
+          path: thermalPorts[0].path,
+          baudRate: 9600, // Common baud rate for thermal printers
+          dataBits: 8,
+          parity: 'none',
+          stopBits: 1,
+          autoOpen: false
+        });
+
+        await new Promise((resolve, reject) => {
+          port.open((err) => {
+            if (err) reject(err);
+            else resolve();
+          });
+        });
+
+        console.log(`✅ Connected to thermal printer on ${thermalPorts[0].path}`);
+
+        // Send ESC/POS data
+        await new Promise((resolve, reject) => {
+          port.write(Buffer.from(bytes), (err) => {
+            if (err) reject(err);
+            else {
+              // Wait a bit for data to be sent
+              setTimeout(() => {
+                port.close((err) => {
+                  if (err) console.warn('Warning closing port:', err);
+                  resolve();
+                });
+              }, 100);
+            }
+          });
+        });
+
+        console.log('✅ ESC/POS data sent to USB thermal printer');
+        return { success: true };
+      }
+
+      throw new Error('No USB thermal printer found');
+    }
+
+    // If we found a USB device, try to communicate with it
+    thermalPrinter.open();
+
+    // Find the correct interface (usually interface 0 for printers)
+    const interface = thermalPrinter.interface(0);
+    if (interface.isKernelDriverActive()) {
+      interface.detachKernelDriver();
+    }
+    interface.claim();
+
+    // Find bulk out endpoint
+    const endpoint = interface.endpoints.find(ep => ep.direction === 'out' && ep.transferType === usb.LIBUSB_TRANSFER_TYPE_BULK);
+
+    if (endpoint) {
+      // Send data in chunks
+      const chunkSize = 64; // USB bulk transfer size
+      for (let i = 0; i < bytes.length; i += chunkSize) {
+        const chunk = bytes.slice(i, i + chunkSize);
+        await new Promise((resolve, reject) => {
+          endpoint.transfer(Buffer.from(chunk), (err) => {
+            if (err) reject(err);
+            else resolve();
+          });
+        });
+      }
+
+      console.log('✅ ESC/POS data sent to USB thermal printer');
+      interface.release(true);
+      thermalPrinter.close();
+      return { success: true };
+    } else {
+      interface.release(true);
+      thermalPrinter.close();
+      throw new Error('No suitable USB endpoint found');
+    }
+
+  } catch (error) {
+    console.error('❌ USB ESC/POS print failed:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+ipcMain.handle('print-escpos', async (_, bytes, printerName) => {
+  return printESCPOS(bytes, printerName);
+});
+
 // Configure auto-updater (only if available)
 if (autoUpdater && !isDev) {
   console.log('🔄 Setting up auto-updater...');

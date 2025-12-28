@@ -4,6 +4,7 @@ import { SettingsContext } from '../context/SettingsContext';
 import { useToast } from '../context/ToastContext';
 import { getApiUrl } from '../utils/apiConfig';
 import { Loader2, ChevronLeft, ChevronRight, Calendar, Printer, HardDrive, Settings2, CheckSquare, Square, Copy } from 'lucide-react';
+import { tryPrintRawBT, buildSalaryReceipt58, smartPrintWithAllOptions, bluetoothPrinterManager } from '../utils/escpos';
 
 export default function TellerSalaryCalculation() {
   const { user, settings } = useContext(SettingsContext);
@@ -21,6 +22,10 @@ export default function TellerSalaryCalculation() {
   const [autoPrintEnabled, setAutoPrintEnabled] = useState(
     localStorage.getItem('autoPrintEnabled') === 'true'
   );
+
+  // Bluetooth printer state
+  const [bluetoothPrinters, setBluetoothPrinters] = useState([]);
+  const [bluetoothStatus, setBluetoothStatus] = useState(bluetoothPrinterManager.getStatus());
   const [noBSalarDays, setNoBSalaryDays] = useState(() => {
     const saved = localStorage.getItem('noBSalarDays');
     return saved ? JSON.parse(saved) : {};
@@ -263,186 +268,54 @@ export default function TellerSalaryCalculation() {
     });
   };
 
-  const handlePrint = (teller) => {
+  const handlePrint = async (teller) => {
     const dailyOver = teller.over || {};
-    const html = buildPrintHtml(teller, dailyOver);
-    if (window?.electronAPI?.printHTML) {
-      window.electronAPI.printHTML(html, selectedPrinter);
-      showToast({ type: 'success', message: `Printing to ${selectedPrinter?.name || 'default printer'}...` });
-      return;
-    }
-    previewPrintInBrowser(html);
-  };
-
-  // Build A4 batch print HTML for 6 cards per page
-  const buildA4BatchPrintHtml = () => {
-    const selectedTellersList = tellers.filter(t => selectedTellers[t.id]);
-    if (selectedTellersList.length === 0) {
-      showToast({ type: 'error', message: 'Please select at least one teller to print' });
-      return null;
-    }
-
     const weekLabel = getWeekRangeLabel();
-    
-    const cardHtml = selectedTellersList.map(teller => {
-      const dailyOver = teller.over || {};
-      let totalBaseSalary = 0;
-      const rowsHtml = dayLabels
-        .map(({ key, label }) => {
-          const overAmount = dailyOver[key] || 0;
-          const noBSalaryKey = `${teller.id}-${key}`;
-          const isIncluded = noBSalarDays[noBSalaryKey];
-          const baseSalaryForDay = isIncluded ? baseSalaryAmount : 0;
-          totalBaseSalary += baseSalaryForDay;
-          return `<tr><td>${label}</td><td>₱${overAmount.toFixed(2)}</td><td>₱${baseSalaryForDay.toFixed(2)}</td></tr>`;
-        })
-        .join('');
-      
-      const totalOver = sumOver(dailyOver);
-      const totalComp = totalBaseSalary + totalOver;
 
-      return `
-        <div class="card">
-          <div class="card-header">
-            <h4>${teller.name}</h4>
-            <p>ID: ${teller.id}</p>
-          </div>
-          <div class="card-body">
-            <table class="daily-table">
-              <thead>
-                <tr><th>Day</th><th>Over</th><th>Base</th></tr>
-              </thead>
-              <tbody>
-                ${rowsHtml}
-              </tbody>
-            </table>
-            <div class="totals">
-              <div class="total-row"><span>Over Total:</span> <strong>₱${totalOver.toFixed(2)}</strong></div>
-              <div class="total-row"><span>Base Total:</span> <strong>₱${totalBaseSalary.toFixed(2)}</strong></div>
-              <div class="total-comp"><span>TOTAL:</span> <strong>₱${totalComp.toFixed(2)}</strong></div>
-            </div>
-          </div>
-        </div>
-      `;
-    }).join('');
+    // Calculate salary data
+    let totalBaseSalary = 0;
+    const dailyData = dayLabels.map(({ key, label }) => {
+      const overAmount = dailyOver[key] || 0;
+      const noBSalaryKey = `${teller.id}-${key}`;
+      const isIncluded = noBSalarDays[noBSalaryKey];
+      const baseSalaryForDay = isIncluded ? baseSalaryAmount : 0;
+      totalBaseSalary += baseSalaryForDay;
+      return {
+        day: label,
+        over: overAmount,
+        base: baseSalaryForDay
+      };
+    });
 
-    const html = `<!DOCTYPE html>
-<html>
-<head>
-  <title>Teller Reports - ${weekLabel}</title>
-  <style>
-    @media print {
-      @page { size: A4; margin: 0.5cm; }
-      body { margin: 0; padding: 0.5cm; }
-    }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { 
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: #f5f5f5;
-      padding: 10px;
-    }
-    .page-title {
-      text-align: center;
-      margin-bottom: 15px;
-      font-size: 14px;
-      font-weight: bold;
-      padding: 10px;
-      border-bottom: 2px solid #333;
-    }
-    .cards-container {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
-      page-break-inside: avoid;
-    }
-    .card {
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      background: white;
-      padding: 10px;
-      page-break-inside: avoid;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-    .card-header {
-      border-bottom: 2px solid #4f46e5;
-      padding-bottom: 5px;
-      margin-bottom: 8px;
-    }
-    .card-header h4 {
-      font-size: 13px;
-      margin: 0;
-      color: #1f2937;
-    }
-    .card-header p {
-      font-size: 10px;
-      color: #6b7280;
-      margin: 2px 0 0 0;
-    }
-    .card-body {
-      font-size: 10px;
-    }
-    .daily-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 8px;
-    }
-    .daily-table th, .daily-table td {
-      border: 1px solid #e5e7eb;
-      padding: 3px;
-      text-align: right;
-      font-size: 9px;
-    }
-    .daily-table th {
-      background: #f3f4f6;
-      font-weight: 600;
-      text-align: center;
-    }
-    .daily-table td:first-child, .daily-table th:first-child {
-      text-align: left;
-    }
-    .totals {
-      border-top: 1px solid #e5e7eb;
-      padding-top: 5px;
-    }
-    .total-row {
-      display: flex;
-      justify-content: space-between;
-      font-size: 9px;
-      margin-bottom: 3px;
-    }
-    .total-comp {
-      display: flex;
-      justify-content: space-between;
-      font-size: 10px;
-      font-weight: bold;
-      padding-top: 3px;
-      border-top: 1px solid #d1d5db;
-      margin-top: 3px;
-      color: #4f46e5;
-    }
-    @media print {
-      .cards-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
-      .card { padding: 8px; }
-      body { background: white; }
-    }
-  </style>
-</head>
-<body>
-  <div class="page-title">Teller Salary Calculation - ${weekLabel}</div>
-  <div class="cards-container">
-    ${cardHtml}
-  </div>
-  <script>
-    window.onload = () => {
-      setTimeout(() => {
-        window.print();
-      }, 250);
+    const totalOver = sumOver(dailyOver);
+    const totalCompensation = totalBaseSalary + totalOver;
+
+    // Prepare receipt data
+    const receiptData = {
+      orgName: settings?.systemName || "RMI Teller Report",
+      tellerName: teller.name || "",
+      tellerId: teller.id || "",
+      weekLabel,
+      dailyData,
+      totalOver,
+      totalBase: totalBaseSalary,
+      totalCompensation,
+      dateStr: new Date().toLocaleString(),
     };
-  </script>
-</body>
-</html>`;
 
-    return html;
+    try {
+      // Use enhanced smart printing with all available methods
+      const result = await smartPrintWithAllOptions(receiptData, 'salary');
+
+      if (result.success) {
+        showToast({ type: 'success', message: result.message });
+      } else {
+        showToast({ type: 'error', message: 'Printing failed: ' + result.message });
+      }
+    } catch (error) {
+      console.error('Print error:', error);
+      showToast({ type: 'error', message: 'Print failed: ' + error.message });
+    }
   };
 
   const handleBatchPrint = () => {
@@ -505,6 +378,43 @@ export default function TellerSalaryCalculation() {
       type: 'info', 
       message: enabled ? 'Auto-print enabled' : 'Auto-print disabled' 
     });
+  };
+
+  // Bluetooth printer functions
+  const scanBluetoothPrinters = async () => {
+    try {
+      showToast({ type: 'info', message: 'Scanning for Bluetooth printers...' });
+      const printers = await bluetoothPrinterManager.scanPrinters();
+      setBluetoothPrinters(printers);
+      setBluetoothStatus(bluetoothPrinterManager.getStatus());
+      showToast({ type: 'success', message: `Found ${printers.length} Bluetooth device(s)` });
+    } catch (error) {
+      console.error('Bluetooth scan failed:', error);
+      showToast({ type: 'error', message: 'Bluetooth scan failed: ' + error.message });
+    }
+  };
+
+  const connectToBluetoothPrinter = async (printer) => {
+    try {
+      showToast({ type: 'info', message: `Connecting to ${printer.name}...` });
+      await bluetoothPrinterManager.connectToPrinter(printer);
+      setBluetoothStatus(bluetoothPrinterManager.getStatus());
+      showToast({ type: 'success', message: `Connected to ${printer.name}` });
+    } catch (error) {
+      console.error('Bluetooth connection failed:', error);
+      showToast({ type: 'error', message: 'Connection failed: ' + error.message });
+    }
+  };
+
+  const disconnectBluetoothPrinter = async () => {
+    try {
+      await bluetoothPrinterManager.disconnect();
+      setBluetoothStatus(bluetoothPrinterManager.getStatus());
+      showToast({ type: 'success', message: 'Bluetooth printer disconnected' });
+    } catch (error) {
+      console.error('Disconnect failed:', error);
+      showToast({ type: 'error', message: 'Disconnect failed: ' + error.message });
+    }
   };
 
   // Check if user is super_admin or supervisor
@@ -698,41 +608,106 @@ export default function TellerSalaryCalculation() {
             <div className={`mt-4 p-4 rounded-lg border-2 border-indigo-600 ${dark ? 'bg-gray-700' : 'bg-indigo-50'}`}>
               <h3 className={`font-semibold mb-3 ${dark ? 'text-white' : 'text-gray-900'}`}>
                 <HardDrive size={18} className="inline mr-2" />
-                USB Printer Settings
+                Printer Settings
               </h3>
-              
-              {availablePrinters.length === 0 ? (
-                <div className={`text-sm p-2 rounded ${dark ? 'bg-gray-600 text-gray-300' : 'bg-white text-gray-600'}`}>
-                  No printers found. Please connect a USB printer.
-                </div>
-              ) : (
-                <div className="space-y-2 mb-4">
-                  {availablePrinters.map((printer) => (
-                    <button
-                      key={printer.name}
-                      onClick={() => handleSelectPrinter(printer)}
-                      className={`w-full p-3 rounded-lg text-left transition flex items-center gap-3 ${
-                        selectedPrinter?.name === printer.name
-                          ? 'bg-indigo-600 text-white'
-                          : dark
-                          ? 'bg-gray-600 hover:bg-gray-500 text-gray-100'
-                          : 'bg-white hover:bg-gray-100 text-gray-900 border'
-                      }`}
-                    >
-                      <HardDrive size={16} />
-                      <div>
-                        <div className="font-semibold text-sm">{printer.name}</div>
-                        {printer.isDefault && (
-                          <div className="text-xs opacity-70">(Default Printer)</div>
+
+              {/* USB Printer Section */}
+              <div className="mb-6">
+                <h4 className={`font-medium mb-2 ${dark ? 'text-gray-200' : 'text-gray-800'}`}>
+                  USB Printers (Desktop)
+                </h4>
+                
+                {availablePrinters.length === 0 ? (
+                  <div className={`text-sm p-2 rounded ${dark ? 'bg-gray-600 text-gray-300' : 'bg-white text-gray-600'}`}>
+                    No USB printers found. Please connect a USB printer.
+                  </div>
+                ) : (
+                  <div className="space-y-2 mb-4">
+                    {availablePrinters.map((printer) => (
+                      <button
+                        key={printer.name}
+                        onClick={() => handleSelectPrinter(printer)}
+                        className={`w-full p-3 rounded-lg text-left transition flex items-center gap-3 ${
+                          selectedPrinter?.name === printer.name
+                            ? 'bg-indigo-600 text-white'
+                            : dark
+                            ? 'bg-gray-600 hover:bg-gray-500 text-gray-100'
+                            : 'bg-white hover:bg-gray-100 text-gray-900 border'
+                        }`}
+                      >
+                        <HardDrive size={16} />
+                        <div>
+                          <div className="font-semibold text-sm">{printer.name}</div>
+                          {printer.isDefault && (
+                            <div className="text-xs opacity-70">(Default Printer)</div>
+                          )}
+                        </div>
+                        {selectedPrinter?.name === printer.name && (
+                          <div className="ml-auto">✓</div>
                         )}
-                      </div>
-                      {selectedPrinter?.name === printer.name && (
-                        <div className="ml-auto">✓</div>
-                      )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Bluetooth Printer Section */}
+              <div className="mb-6">
+                <h4 className={`font-medium mb-2 ${dark ? 'text-gray-200' : 'text-gray-800'}`}>
+                  Bluetooth Printers (Mobile)
+                </h4>
+
+                <div className="flex gap-2 mb-3">
+                  <button
+                    onClick={scanBluetoothPrinters}
+                    className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition flex items-center gap-2"
+                  >
+                    🔍 Scan Bluetooth
+                  </button>
+                  
+                  {bluetoothStatus.isConnected && (
+                    <button
+                      onClick={disconnectBluetoothPrinter}
+                      className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition"
+                    >
+                      Disconnect
                     </button>
-                  ))}
+                  )}
                 </div>
-              )}
+
+                {bluetoothStatus.isConnected ? (
+                  <div className={`p-3 rounded-lg ${dark ? 'bg-green-800 text-green-100' : 'bg-green-100 text-green-800'}`}>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span className="font-semibold">Connected to {bluetoothStatus.connectedPrinter?.name}</span>
+                    </div>
+                  </div>
+                ) : bluetoothPrinters.length > 0 ? (
+                  <div className="space-y-2">
+                    {bluetoothPrinters.map((printer) => (
+                      <button
+                        key={printer.id}
+                        onClick={() => connectToBluetoothPrinter(printer)}
+                        className={`w-full p-3 rounded-lg text-left transition flex items-center gap-3 ${
+                          dark
+                            ? 'bg-gray-600 hover:bg-gray-500 text-gray-100'
+                            : 'bg-white hover:bg-gray-100 text-gray-900 border'
+                        }`}
+                      >
+                        📡
+                        <div>
+                          <div className="font-semibold text-sm">{printer.name}</div>
+                          <div className="text-xs opacity-70">Bluetooth Device</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className={`text-sm p-2 rounded ${dark ? 'bg-gray-600 text-gray-300' : 'bg-white text-gray-600'}`}>
+                    No Bluetooth printers found. Click "Scan Bluetooth" to search for devices.
+                  </div>
+                )}
+              </div>
 
               <div className={`p-3 rounded-lg border ${dark ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-200'} mt-3`}>
                 <label className="flex items-center gap-2 cursor-pointer">

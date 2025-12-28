@@ -21,7 +21,9 @@
     "bcryptjs": "^3.0.3",
     "cheerio": "^1.1.2",
     "dotenv": "^17.2.3",
-    "nodemailer": "^7.0.11"
+    "nodemailer": "^7.0.11",
+    "serialport": "^12.0.0",
+    "usb": "^2.13.0"
   },
   "devDependencies": {
     "electron": "^26.0.0",
