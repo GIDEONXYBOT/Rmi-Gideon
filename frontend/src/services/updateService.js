@@ -4,7 +4,8 @@
  */
 
 const VERSION_CHECK_INTERVAL = 60 * 60 * 1000; // Check every 1 hour
-const GITHUB_API = 'https://api.github.com/repos/GIDEONXYBOT/Rmi-Gideon/releases/latest';
+const GITHUB_API_LATEST = 'https://api.github.com/repos/GIDEONXYBOT/Rmi-Gideon/releases/latest';
+const GITHUB_API_ALL = 'https://api.github.com/repos/GIDEONXYBOT/Rmi-Gideon/releases';
 
 export class UpdateService {
   constructor() {
@@ -19,7 +20,7 @@ export class UpdateService {
    * Get current app version from package.json
    */
   getAppVersion() {
-    return '1.0.0'; // This should match your package.json version
+    return '1.1.0'; // Updated to match the latest release
   }
 
   /**
@@ -55,17 +56,49 @@ export class UpdateService {
     try {
       console.log('🔍 Checking for app updates...');
       
-      const response = await fetch(GITHUB_API, {
-        headers: {
-          'Accept': 'application/vnd.github.v3+json'
+      let release;
+      
+      // First try to get the latest stable release
+      try {
+        const response = await fetch(GITHUB_API_LATEST, {
+          headers: {
+            'Accept': 'application/vnd.github.v3+json'
+          }
+        });
+
+        if (response.ok) {
+          release = await response.json();
+          console.log('✅ Found latest stable release');
+        } else if (response.status === 404) {
+          // No stable release found, try to get all releases and find the latest
+          console.log('⚠️ No stable release found, checking all releases...');
+          
+          const allReleasesResponse = await fetch(GITHUB_API_ALL, {
+            headers: {
+              'Accept': 'application/vnd.github.v3+json'
+            }
+          });
+          
+          if (allReleasesResponse.ok) {
+            const allReleases = await allReleasesResponse.json();
+            
+            if (allReleases.length > 0) {
+              // Sort by published date (most recent first) and get the first one
+              release = allReleases.sort((a, b) => new Date(b.published_at) - new Date(a.published_at))[0];
+              console.log('✅ Found latest release (including pre-releases):', release.tag_name);
+            } else {
+              throw new Error('No releases found');
+            }
+          } else {
+            throw new Error(`GitHub API error: ${allReleasesResponse.status}`);
+          }
+        } else {
+          throw new Error(`GitHub API error: ${response.status}`);
         }
-      });
-
-      if (!response.ok) {
-        throw new Error(`GitHub API error: ${response.status}`);
+      } catch (error) {
+        console.error('❌ Error fetching releases:', error);
+        throw error;
       }
-
-      const release = await response.json();
       
       // Extract version from tag (e.g., "v1.0.1" -> "1.0.1")
       const tagVersion = release.tag_name.replace(/^v/, '');
