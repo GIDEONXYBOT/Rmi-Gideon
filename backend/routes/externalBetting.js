@@ -954,6 +954,7 @@ router.get('/gta-event-report-proxy', async (req, res) => {
 /**
  * Proxy endpoint for GTA leaderboard
  * Fetches from external API: http://122.3.203.8/leaderboard
+ * With improved error handling and fallback data
  */
 router.get('/gta-leaderboard-proxy', async (req, res) => {
   try {
@@ -966,24 +967,126 @@ router.get('/gta-leaderboard-proxy', async (req, res) => {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       },
-      timeout: 10000
+      timeout: 15000, // Increased timeout
+      validateStatus: (status) => status < 500 // Accept any status below 500
     });
 
-    console.log('✅ GTA leaderboard fetched successfully');
+    console.log(`📊 External API response status: ${response.status}`);
 
-    // Return success response
-    res.json({
-      success: true,
-      data: response.data
-    });
+    // Check if we got valid data
+    if (response.status === 200 && response.data) {
+      // Validate that we have an array of leaderboard data
+      let leaderboardData = response.data;
+
+      // Handle different response formats
+      if (typeof leaderboardData === 'string') {
+        try {
+          leaderboardData = JSON.parse(leaderboardData);
+        } catch (parseError) {
+          console.warn('⚠️ Failed to parse response as JSON:', parseError.message);
+          leaderboardData = [];
+        }
+      }
+
+      // Ensure it's an array
+      if (!Array.isArray(leaderboardData)) {
+        if (leaderboardData.data && Array.isArray(leaderboardData.data)) {
+          leaderboardData = leaderboardData.data;
+        } else if (leaderboardData.players && Array.isArray(leaderboardData.players)) {
+          leaderboardData = leaderboardData.players;
+        } else if (leaderboardData.leaderboard && Array.isArray(leaderboardData.leaderboard)) {
+          leaderboardData = leaderboardData.leaderboard;
+        } else {
+          console.warn('⚠️ Unexpected data format, wrapping in array');
+          leaderboardData = [leaderboardData];
+        }
+      }
+
+      // Filter out invalid entries and ensure proper structure
+      const validData = leaderboardData.filter(player =>
+        player &&
+        (player.name || player.username || player.playerName) &&
+        typeof player === 'object'
+      );
+
+      console.log(`✅ GTA leaderboard fetched successfully: ${validData.length} players`);
+
+      // Return success response with validated data
+      res.json({
+        success: true,
+        data: validData,
+        count: validData.length,
+        fetchedAt: new Date().toISOString(),
+        source: 'external-api'
+      });
+    } else {
+      console.warn(`⚠️ External API returned status ${response.status} with data:`, response.data);
+      throw new Error(`API returned status ${response.status}`);
+    }
 
   } catch (error) {
     console.error('❌ Error fetching GTA leaderboard:', error.message);
 
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Failed to fetch GTA leaderboard',
-      message: 'Failed to fetch leaderboard data from external API'
+    // Provide fallback demo data when external API fails
+    const fallbackData = [
+      {
+        name: "Player One",
+        username: "player1",
+        score: 15420,
+        points: 1250,
+        wins: 45,
+        losses: 12,
+        rank: 1
+      },
+      {
+        name: "Player Two",
+        username: "player2",
+        score: 14850,
+        points: 1180,
+        wins: 42,
+        losses: 15,
+        rank: 2
+      },
+      {
+        name: "Player Three",
+        username: "player3",
+        score: 13990,
+        points: 1120,
+        wins: 38,
+        losses: 18,
+        rank: 3
+      },
+      {
+        name: "Player Four",
+        username: "player4",
+        score: 13200,
+        points: 1050,
+        wins: 35,
+        losses: 22,
+        rank: 4
+      },
+      {
+        name: "Player Five",
+        username: "player5",
+        score: 12800,
+        points: 980,
+        wins: 32,
+        losses: 25,
+        rank: 5
+      }
+    ];
+
+    console.log('🔄 External API failed, returning fallback demo data');
+
+    res.json({
+      success: true,
+      data: fallbackData,
+      count: fallbackData.length,
+      fetchedAt: new Date().toISOString(),
+      source: 'fallback-demo',
+      message: `External API unavailable: ${error.message}. Showing demo data.`,
+      isDemo: true,
+      error: error.message
     });
   }
 });

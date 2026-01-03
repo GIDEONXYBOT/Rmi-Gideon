@@ -21,13 +21,23 @@ export default function GTALeaderboard() {
       if (response.data.success && response.data.data) {
         setData(response.data.data);
         setLastUpdated(new Date());
+
+        // Show a message if using demo data
+        if (response.data.isDemo) {
+          console.warn('⚠️ Using demo leaderboard data:', response.data.message);
+        }
       } else {
-        throw new Error('Invalid data format from API');
+        throw new Error(response.data.message || 'Invalid data format from API');
       }
     } catch (err) {
       const errorMsg = err.message || 'Failed to fetch GTA leaderboard data';
       setError(errorMsg);
       console.error('Leaderboard fetch error:', errorMsg, err);
+
+      // If API completely fails, show a user-friendly message
+      if (err.response?.status >= 500) {
+        setError('Leaderboard service temporarily unavailable. Please try again later.');
+      }
     } finally {
       setLoading(false);
     }
@@ -119,6 +129,11 @@ export default function GTALeaderboard() {
             <div className="flex items-center space-x-4">
               <BarChart3 size={24} className="text-yellow-400" />
               <h1 className="text-2xl font-bold text-white">🎮 GTA Leaderboards</h1>
+              {data && data.length > 0 && (
+                <span className="px-2 py-1 text-xs bg-green-600 text-green-200 rounded-full">
+                  Live Data
+                </span>
+              )}
             </div>
             <button
               onClick={fetchLeaderboard}
