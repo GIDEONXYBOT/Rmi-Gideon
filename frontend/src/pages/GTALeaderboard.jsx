@@ -14,10 +14,10 @@ export default function GTALeaderboard() {
       setLoading(true);
       setError(null);
 
-      // Fetch from backend proxy
-      const url = `${getApiUrl()}/api/external-betting/gta-leaderboard-proxy`;
+      // Use the same endpoint as the background scheduler to avoid duplicate API calls
+      const url = `${getApiUrl()}/api/external-betting/leaderboard`;
       const response = await axios.get(url);
-      
+
       if (response.data.success && response.data.data) {
         setData(response.data.data);
         setLastUpdated(new Date());
@@ -35,8 +35,8 @@ export default function GTALeaderboard() {
 
   useEffect(() => {
     fetchLeaderboard();
-    // Auto-refresh every 30 seconds
-    const interval = setInterval(fetchLeaderboard, 30000);
+    // Auto-refresh every 60 seconds (reduced from 30 to avoid excessive API calls)
+    const interval = setInterval(fetchLeaderboard, 60000);
     return () => clearInterval(interval);
   }, []);
 
