@@ -14,8 +14,8 @@ export default function GTALeaderboard() {
       setLoading(true);
       setError(null);
 
-      // Use the same endpoint as the background scheduler to avoid duplicate API calls
-      const url = `${getApiUrl()}/api/external-betting/leaderboard`;
+      // Use the external GTA leaderboard proxy endpoint for proper leaderboard data
+      const url = `${getApiUrl()}/api/external-betting/gta-leaderboard-proxy`;
       const response = await axios.get(url);
 
       if (response.data.success && response.data.data) {
