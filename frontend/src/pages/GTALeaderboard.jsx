@@ -14,8 +14,8 @@ export default function GTALeaderboard() {
       setLoading(true);
       setError(null);
 
-      // Use the external GTA leaderboard proxy endpoint for proper leaderboard data
-      const url = `${getApiUrl()}/api/external-betting/gta-leaderboard-proxy`;
+      // Use the internal GTArena leaderboard page for player data
+      const url = `${getApiUrl()}/api/external-betting/player-leaderboard`;
       const response = await axios.get(url);
 
       if (response.data.success && response.data.data) {
