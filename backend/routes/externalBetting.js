@@ -649,190 +649,77 @@ router.get('/leaderboard', async (req, res) => {
 /**
  * GET /api/external-betting/player-leaderboard
  * Fetch player leaderboard data from GTArena (public access for frontend)
- * Parses the leaderboard page for player rankings, scores, etc.
+ * Returns demo data since the current URL contains chicken fight data, not player rankings
  */
 router.get('/player-leaderboard', async (req, res) => {
   try {
-    console.log('🎮 Fetching player leaderboard data from GTArena...');
+    console.log('🎮 Fetching player leaderboard data...');
 
-    const client = axios.create();
-
-    // Step 1: Login to get authenticated session
-    const loginUrl = 'https://rmi-gideon.gtarena.ph/login';
-    console.log(`🔐 Attempting login to ${loginUrl}`);
-    const loginResponse = await client.post(loginUrl,
-      `username=${sessionData.username}&password=${sessionData.password}`,
+    // Return demo data directly since the current URL contains chicken fight data, not player rankings
+    const demoData = [
       {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        },
-        validateStatus: () => true
-      }
-    );
-    console.log(`📊 Login response status: ${loginResponse.status}`);
-
-    // Get cookies from login response
-    const cookies = loginResponse.headers['set-cookie']?.join('; ') || '';
-    console.log(`🍪 Cookies length: ${cookies.length}`);
-
-    // Step 2: Fetch leaderboard page
-    const leaderboardUrl = 'https://rmi-gideon.gtarena.ph/leaderboard';
-    console.log(`📥 Fetching leaderboard page: ${leaderboardUrl}`);
-    const leaderboardResponse = await client.get(leaderboardUrl, {
-      headers: {
-        'Cookie': cookies,
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache'
+        rank: 1,
+        name: "Player One",
+        username: "player1",
+        score: 15420,
+        points: 1250,
+        wins: 45,
+        losses: 12
       },
-      timeout: 15000,
-      validateStatus: () => true
-    });
-
-    console.log(`📄 Leaderboard page response status: ${leaderboardResponse.status}`);
-
-    if (leaderboardResponse.status !== 200) {
-      throw new Error(`Failed to fetch leaderboard page: HTTP ${leaderboardResponse.status}`);
-    }
-
-    // Step 3: Parse the HTML for player leaderboard data
-    const $ = cheerio.load(leaderboardResponse.data);
-    const players = [];
-
-    // Look for leaderboard table or player ranking elements
-    $('.leaderboard-row, .player-row, .rank-row, tr, [class*="player"], [class*="rank"]').each((index, element) => {
-      try {
-        const $row = $(element);
-
-        // Extract player information
-        const rank = parseInt(
-          $row.find('.rank, .position, [class*="rank"], [class*="position"]').first().text().trim() ||
-          $row.find('td').first().text().trim() ||
-          (index + 1).toString()
-        );
-
-        const name = $row.find('.name, .player-name, .username, [class*="name"], [class*="player"]').first().text().trim() ||
-                    $row.find('td').eq(1).text().trim();
-
-        const score = parseFloat(
-          $row.find('.score, .points, [class*="score"], [class*="point"]').first().text().replace(/[^0-9.-]/g, '') ||
-          $row.find('td').eq(2).text().replace(/[^0-9.-]/g, '') ||
-          '0'
-        );
-
-        const wins = parseInt(
-          $row.find('.wins, [class*="win"]').first().text().replace(/[^0-9]/g, '') ||
-          $row.find('td').eq(3).text().replace(/[^0-9]/g, '') ||
-          '0'
-        );
-
-        const losses = parseInt(
-          $row.find('.losses, [class*="loss"]').first().text().replace(/[^0-9]/g, '') ||
-          $row.find('td').eq(4).text().replace(/[^0-9]/g, '') ||
-          '0'
-        );
-
-        // Only add if we have at least a name
-        if (name && name.length > 0) {
-          players.push({
-            rank: isNaN(rank) ? index + 1 : rank,
-            name: name,
-            username: name.toLowerCase().replace(/\s+/g, '_'),
-            score: isNaN(score) ? 0 : score,
-            points: isNaN(score) ? 0 : score, // Use score as points if no separate points field
-            wins: isNaN(wins) ? 0 : wins,
-            losses: isNaN(losses) ? 0 : losses
-          });
-        }
-      } catch (parseError) {
-        console.warn(`⚠️ Failed to parse player row ${index}:`, parseError.message);
+      {
+        rank: 2,
+        name: "Player Two",
+        username: "player2",
+        score: 14850,
+        points: 1180,
+        wins: 42,
+        losses: 15
+      },
+      {
+        rank: 3,
+        name: "Player Three",
+        username: "player3",
+        score: 13990,
+        points: 1120,
+        wins: 38,
+        losses: 18
+      },
+      {
+        rank: 4,
+        name: "Player Four",
+        username: "player4",
+        score: 13200,
+        points: 1050,
+        wins: 35,
+        losses: 22
+      },
+      {
+        rank: 5,
+        name: "Player Five",
+        username: "player5",
+        score: 12800,
+        points: 980,
+        wins: 32,
+        losses: 25
       }
-    });
+    ];
 
-    // If no structured data found, try alternative parsing
-    if (players.length === 0) {
-      console.log('🔄 No structured leaderboard data found, trying alternative parsing...');
+    console.log('✅ Returning demo player leaderboard data');
 
-      // Look for any table rows that might contain player data
-      $('table tr').each((index, element) => {
-        if (index === 0) return; // Skip header row
-
-        const $row = $(element);
-        const cells = $row.find('td');
-
-        if (cells.length >= 2) {
-          const rank = parseInt(cells.eq(0).text().trim()) || index;
-          const name = cells.eq(1).text().trim();
-          const score = parseFloat(cells.eq(2).text().replace(/[^0-9.-]/g, '')) || 0;
-
-          if (name && name.length > 0) {
-            players.push({
-              rank: rank,
-              name: name,
-              username: name.toLowerCase().replace(/\s+/g, '_'),
-              score: score,
-              points: score,
-              wins: 0,
-              losses: 0
-            });
-          }
-        }
-      });
-    }
-
-    // If still no data, try parsing from any text that looks like rankings
-    if (players.length === 0) {
-      console.log('🔄 Trying text-based parsing for leaderboard data...');
-
-      const pageText = $('body').text();
-      const lines = pageText.split('\n').filter(line => line.trim().length > 0);
-
-      for (const line of lines) {
-        // Look for patterns like "1. Player Name - 1000 points"
-        const rankMatch = line.match(/^(\d+)\.?\s*(.+?)\s*[-:]\s*(\d+)/);
-        if (rankMatch) {
-          const rank = parseInt(rankMatch[1]);
-          const name = rankMatch[2].trim();
-          const score = parseInt(rankMatch[3]);
-
-          players.push({
-            rank: rank,
-            name: name,
-            username: name.toLowerCase().replace(/\s+/g, '_'),
-            score: score,
-            points: score,
-            wins: 0,
-            losses: 0
-          });
-        }
-      }
-    }
-
-    // Sort players by score descending if not already sorted
-    players.sort((a, b) => (b.score || 0) - (a.score || 0));
-
-    // Re-assign ranks based on sorted order
-    players.forEach((player, index) => {
-      player.rank = index + 1;
-    });
-
-    console.log(`✅ Successfully parsed ${players.length} players from GTArena leaderboard`);
-
-    // Return player leaderboard data
     res.json({
       success: true,
-      data: players,
-      count: players.length,
+      data: demoData,
+      count: demoData.length,
       fetchedAt: new Date().toISOString(),
-      source: 'gtarena-leaderboard-page',
-      message: `Found ${players.length} players on the leaderboard`
+      source: 'demo-data',
+      message: 'Player leaderboard data (demo data - real player data source needs to be identified)',
+      isDemo: true
     });
 
   } catch (err) {
-    console.error('❌ Error fetching player leaderboard data:', err.message);
+    console.error('❌ Error in player leaderboard endpoint:', err.message);
 
-    // Provide fallback demo data when parsing fails
+    // Fallback demo data
     const fallbackData = [
       {
         rank: 1,
@@ -881,20 +768,24 @@ router.get('/player-leaderboard', async (req, res) => {
       }
     ];
 
-    console.log('🔄 Leaderboard parsing failed, returning fallback demo data');
-
     res.json({
       success: true,
       data: fallbackData,
       count: fallbackData.length,
       fetchedAt: new Date().toISOString(),
       source: 'fallback-demo',
-      message: `Parsing failed: ${err.message}. Showing demo data.`,
+      message: `Error occurred: ${err.message}. Showing demo data.`,
       isDemo: true,
       error: err.message
     });
   }
 });
+
+/**
+ * GET /api/external-betting/chicken-fight-bets
+ * Fetch chicken fight betting data from GTArena
+ */
+router.get('/chicken-fight-bets', requireAuth, requireRole(['admin', 'super_admin']), async (req, res) => {
   try {
     console.log('🐔 Fetching chicken fight betting data from GTArena...');
 
