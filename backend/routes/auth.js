@@ -7,18 +7,30 @@ const router = express.Router();
 
 // ==================== LOGIN ====================
 router.post("/login", async (req, res) => {
+  const startTime = Date.now();
+  let timeoutId;
+
   try {
     const { username, password } = req.body;
-    console.log(`🔐 Login attempt: username="${username}"`);
-    
+    console.log(`🔐 Login attempt: username="${username}" from IP: ${req.ip}`);
+
     if (!username || !password)
       return res.status(400).json({ message: "Username and password required" });
 
+    // Set timeout for the request (30 seconds max)
+    timeoutId = setTimeout(() => {
+      console.log(`⏰ Login timeout for ${username}`);
+      if (!res.headersSent) {
+        res.status(408).json({ message: "Login request timed out. Please try again." });
+      }
+    }, 30000);
+
     // Optimized: Single query with only needed fields
     const user = await User.findOne({ username }).select('_id username name role status password').lean();
-    
+
     if (!user) {
       console.log(`❌ User not found: ${username}`);
+      clearTimeout(timeoutId);
       return res.status(401).json({ message: "Invalid username or password" });
     }
 
@@ -26,9 +38,10 @@ router.post("/login", async (req, res) => {
 
     // Password validation - ONLY use bcrypt (secure)
     let isMatch = false;
-    
+
     if (!user.password) {
       console.log(`❌ User has no password hash: ${username}`);
+      clearTimeout(timeoutId);
       return res.status(401).json({ message: "Invalid username or password" });
     }
 
@@ -37,17 +50,20 @@ router.post("/login", async (req, res) => {
       isMatch = await bcrypt.compare(password, user.password);
     } catch (bcryptErr) {
       console.error(`❌ Bcrypt error for ${username}:`, bcryptErr);
+      clearTimeout(timeoutId);
       return res.status(401).json({ message: "Invalid username or password" });
     }
 
     if (!isMatch) {
       console.log(`❌ Password mismatch for ${username}`);
+      clearTimeout(timeoutId);
       return res.status(401).json({ message: "Invalid username or password" });
     }
 
     // Check approval status
     if (user.status === "pending" && user.role !== "admin" && user.role !== "super_admin") {
       console.log(`⏳ User ${username} is pending approval`);
+      clearTimeout(timeoutId);
       return res.status(403).json({ message: "Your account is pending admin approval." });
     }
 
@@ -58,7 +74,9 @@ router.post("/login", async (req, res) => {
       { expiresIn: "7d" }
     );
 
-    console.log(`✅ Login successful for ${username}`);
+    clearTimeout(timeoutId);
+    const processingTime = Date.now() - startTime;
+    console.log(`✅ Login successful for ${username} (${processingTime}ms)`);
 
     // Send response immediately
     res.json({
@@ -72,8 +90,11 @@ router.post("/login", async (req, res) => {
       },
     });
   } catch (err) {
+    clearTimeout(timeoutId);
     console.error("❌ Login Error:", err);
-    res.status(500).json({ message: "Server error" });
+    if (!res.headersSent) {
+      res.status(500).json({ message: "Server error during login. Please try again." });
+    }
   }
 });
 

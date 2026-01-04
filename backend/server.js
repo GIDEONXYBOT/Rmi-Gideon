@@ -519,10 +519,17 @@ process.on('uncaughtException', (err) => {
   }
 });
 
+// Configure server for high concurrency
+server.setMaxListeners(100); // Increase max listeners
+server.maxConnections = 1000; // Allow up to 1000 concurrent connections
+server.keepAliveTimeout = 65000; // 65 seconds
+server.headersTimeout = 66000; // Slightly longer than keepAliveTimeout
+
 server.listen(PORT, "0.0.0.0", () => {
-  console.log(`🚀 Backend Server Started`);
+  console.log(`🚀 Backend Server Started (Concurrent-ready)`);
   console.log(`📡 Local: http://localhost:${PORT}`);
   console.log(`📡 Network: http://${LOCAL_IP}:${PORT}`);
+  console.log(`🔄 Max concurrent connections: ${server.maxConnections}`);
   // console.log(`🔌 Socket.IO ready for real-time updates\n`);
 });
 
