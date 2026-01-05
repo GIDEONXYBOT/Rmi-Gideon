@@ -349,6 +349,16 @@ export async function smartPrintWithAllOptions(receiptData, receiptType = 'telle
       win.document.open();
       win.document.write(html);
       win.document.close();
+
+      // Wait a bit for the document to load, then trigger print
+      setTimeout(() => {
+        win.print();
+        // Close the window after printing (optional)
+        setTimeout(() => {
+          win.close();
+        }, 1000);
+      }, 250);
+
       return { success: true, method: 'browser', message: 'Browser print dialog opened' };
     }
   } catch (browserError) {
