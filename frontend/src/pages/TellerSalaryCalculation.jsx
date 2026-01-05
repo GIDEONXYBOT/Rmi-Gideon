@@ -353,7 +353,7 @@ export default function TellerSalaryCalculation() {
   const handleBatchPrint = () => {
     const html = buildA4BatchPrintHtml();
     if (!html) return;
-    
+
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
       showToast({ type: 'error', message: 'Failed to open print window' });
@@ -362,6 +362,230 @@ export default function TellerSalaryCalculation() {
     printWindow.document.write(html);
     printWindow.document.close();
     printWindow.focus();
+  };
+
+  const buildA4BatchPrintHtml = () => {
+    const weekLabel = getWeekRangeLabel();
+    const selectedTellerIds = Object.keys(selectedTellers).filter(id => selectedTellers[id]);
+
+    if (selectedTellerIds.length === 0) {
+      showToast({ type: 'error', message: 'No tellers selected for batch printing' });
+      return null;
+    }
+
+    // Get selected tellers data
+    const selectedTellersData = tellers.filter(teller => selectedTellerIds.includes(teller.id.toString()));
+
+    // Group tellers into pages (6 per page)
+    const tellersPerPage = 6;
+    const pages = [];
+    for (let i = 0; i < selectedTellersData.length; i += tellersPerPage) {
+      pages.push(selectedTellersData.slice(i, i + tellersPerPage));
+    }
+
+    const pageHtml = pages.map((pageTellers, pageIndex) => {
+      const tellerCards = pageTellers.map(teller => {
+        const dailyOver = teller.over || {};
+
+        // Calculate salary data for this teller
+        let totalBaseSalary = 0;
+        const dailyData = dayLabels.map(({ key, label }) => {
+          const overAmount = dailyOver[key] || 0;
+          const noBSalaryKey = `${teller.id}-${key}`;
+          const isIncluded = noBSalarDays[noBSalaryKey];
+          const baseSalaryForDay = isIncluded ? baseSalaryAmount : 0;
+          totalBaseSalary += baseSalaryForDay;
+          return { day: label, over: overAmount, base: baseSalaryForDay };
+        });
+
+        const totalOver = sumOver(dailyOver);
+        const totalCompensation = totalBaseSalary + totalOver;
+
+        return `
+          <div class="teller-card">
+            <div class="teller-header">
+              <div class="teller-name">${teller.name}</div>
+              <div class="teller-id">ID: ${teller.id}</div>
+            </div>
+            <div class="teller-data">
+              ${dailyData.map(row => `
+                <div class="data-row">
+                  <span class="day">${row.day}</span>
+                  <span class="over">${formatCurrency(row.over)}</span>
+                  <span class="base">${formatCurrency(row.base)}</span>
+                </div>
+              `).join('')}
+            </div>
+            <div class="teller-total">
+              <div class="total-row">
+                <span class="label">TOTAL:</span>
+                <span class="amount">${formatCurrency(totalCompensation)}</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      return `
+        <div class="page" ${pageIndex > 0 ? 'style="page-break-before: always;"' : ''}>
+          <div class="page-header">
+            <h1>RMI Teller Salary Reports</h1>
+            <div class="week-info">${weekLabel}</div>
+            <div class="page-info">Page ${pageIndex + 1} of ${pages.length}</div>
+          </div>
+          <div class="tellers-grid">
+            ${tellerCards}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <title>Batch Teller Salary Reports</title>
+  <style>
+    @media print {
+      @page {
+        size: A4;
+        margin: 15mm;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Arial', sans-serif;
+      font-size: 10px;
+      line-height: 1.2;
+      margin: 0;
+      padding: 0;
+      color: #000;
+    }
+
+    .page {
+      width: 100%;
+      min-height: 270mm;
+      padding: 10mm;
+    }
+
+    .page-header {
+      text-align: center;
+      margin-bottom: 15mm;
+      border-bottom: 2px solid #000;
+      padding-bottom: 5mm;
+    }
+
+    .page-header h1 {
+      font-size: 18px;
+      font-weight: bold;
+      margin: 0 0 3mm 0;
+    }
+
+    .week-info {
+      font-size: 12px;
+      font-weight: bold;
+      margin-bottom: 2mm;
+    }
+
+    .page-info {
+      font-size: 10px;
+      color: #666;
+    }
+
+    .tellers-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8mm;
+      margin-top: 10mm;
+    }
+
+    .teller-card {
+      border: 1px solid #000;
+      padding: 3mm;
+      background: #f9f9f9;
+    }
+
+    .teller-header {
+      text-align: center;
+      margin-bottom: 3mm;
+      padding-bottom: 2mm;
+      border-bottom: 1px solid #000;
+    }
+
+    .teller-name {
+      font-size: 11px;
+      font-weight: bold;
+      margin-bottom: 1mm;
+    }
+
+    .teller-id {
+      font-size: 9px;
+      color: #666;
+    }
+
+    .teller-data {
+      margin-bottom: 3mm;
+    }
+
+    .data-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 1mm;
+      font-size: 9px;
+    }
+
+    .day {
+      width: 20px;
+      text-align: left;
+    }
+
+    .over {
+      flex: 1;
+      text-align: right;
+      padding-right: 3mm;
+    }
+
+    .base {
+      width: 35px;
+      text-align: right;
+    }
+
+    .teller-total {
+      border-top: 1px solid #000;
+      padding-top: 2mm;
+    }
+
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      font-weight: bold;
+      font-size: 10px;
+    }
+
+    .label {
+      flex: 1;
+    }
+
+    .amount {
+      text-align: right;
+    }
+
+    @media print {
+      .teller-card {
+        background: white !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  ${pageHtml}
+</body>
+</html>`;
+
+    return html;
   };
 
   const fetchAvailablePrinters = async () => {
