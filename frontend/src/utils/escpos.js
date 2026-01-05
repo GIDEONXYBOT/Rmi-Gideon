@@ -386,33 +386,94 @@ function generateTellerHTML(data) {
 }
 
 function generateSalaryHTML(data) {
-  // Generate HTML for salary receipt
+  // Generate HTML for salary receipt with proper pagination
   return `<!DOCTYPE html>
 <html>
 <head>
   <title>Salary Receipt</title>
   <style>
-    body { font-family: monospace; font-size: 11px; width: 220px; margin: 0; padding: 8px; }
+    @media print {
+      @page {
+        size: 58mm auto;
+        margin: 4mm;
+      }
+      body {
+        width: 50mm; /* Content width for 58mm paper minus margins */
+        margin: 0;
+        padding: 2mm;
+      }
+    }
+    body {
+      font-family: monospace;
+      font-size: 11px;
+      width: 220px;
+      margin: 0;
+      padding: 8px;
+      line-height: 1.2;
+    }
     .center { text-align: center; }
-    .line { border-top: 1px dashed #000; margin: 4px 0; }
-    .row { display: flex; justify-content: space-between; margin: 2px 0; }
+    .line {
+      border-top: 1px dashed #000;
+      margin: 4px 0;
+      page-break-inside: avoid;
+    }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      margin: 2px 0;
+      page-break-inside: avoid;
+    }
+    .header-section {
+      page-break-after: avoid;
+      margin-bottom: 4px;
+    }
+    .daily-data {
+      margin: 4px 0;
+    }
+    .daily-row {
+      page-break-inside: avoid;
+      margin: 2px 0;
+    }
+    .summary-section {
+      page-break-inside: avoid;
+      margin-top: 4px;
+    }
+    .footer-section {
+      page-break-inside: avoid;
+      margin-top: 8px;
+    }
   </style>
 </head>
 <body>
-  <div class="center"><strong>${data.orgName}</strong></div>
-  <div class="center">TELLER SALARY REPORT</div>
+  <div class="header-section">
+    <div class="center"><strong>${data.orgName}</strong></div>
+    <div class="center">TELLER SALARY REPORT</div>
+    <div class="line"></div>
+    <div>Teller: ${data.tellerName}</div>
+    <div>ID: ${data.tellerId}</div>
+    <div>Week: ${data.weekLabel}</div>
+    <div>Date: ${data.dateStr}</div>
+  </div>
   <div class="line"></div>
-  <div>Teller: ${data.tellerName}</div>
-  <div>ID: ${data.tellerId}</div>
-  <div>Week: ${data.weekLabel}</div>
-  <div>Date: ${data.dateStr}</div>
+  <div class="daily-data">
+    ${data.dailyData?.map(row => `<div class="daily-row row"><span>${row.day}</span><span>₱${row.over?.toFixed(2)}</span><span>₱${row.base?.toFixed(2)}</span></div>`).join('')}
+  </div>
   <div class="line"></div>
-  ${data.dailyData?.map(row => `<div class="row"><span>${row.day}</span><span>₱${row.over?.toFixed(2)}</span><span>₱${row.base?.toFixed(2)}</span></div>`).join('')}
+  <div class="summary-section">
+    <div class="row"><span><strong>TOTAL:</strong></span><span></span><span><strong>₱${data.totalCompensation?.toFixed(2)}</strong></span></div>
+  </div>
   <div class="line"></div>
-  <div class="row"><span><strong>TOTAL:</strong></span><span></span><span><strong>₱${data.totalCompensation?.toFixed(2)}</strong></span></div>
-  <div class="line"></div>
-  <div>Prepared by: ___________________</div>
-  <div class="center">Thank you</div>
+  <div class="footer-section">
+    <div>Prepared by: ___________________</div>
+    <div class="center">Thank you</div>
+  </div>
+  <script>
+    window.onload = () => {
+      setTimeout(() => {
+        window.print();
+      }, 250);
+    };
+  </script>
 </body>
 </html>`;
 }
