@@ -9,6 +9,8 @@ import Transaction from "../models/Transaction.js";
 import Payroll from "../models/Payroll.js";
 import DailyTellerAssignment from "../models/DailyTellerAssignment.js";
 import ShortPayment from "../models/ShortPayment.js";
+import Shift from "../models/Shift.js";
+import { generateTransactionId } from "../utils/transactionId.js";
 
 const router = express.Router();
 
@@ -253,6 +255,7 @@ router.post("/add-capital", requireAuth, requireRole(['admin', 'super_admin', 's
     // ✅ Auto-create payroll for TELLER with base salary (over/short added when report submitted) - DAILY
     try {
       const now = new Date();
+      const today = now.toISOString().split('T')[0]; // YYYY-MM-DD format
       const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
       const dayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
 
@@ -262,6 +265,9 @@ router.post("/add-capital", requireAuth, requireRole(['admin', 'super_admin', 's
       }).lean();
 
       if (!tellerPayrollExists && teller) {
+        // Generate unique transaction ID for this payroll entry
+        const transactionId = generateTransactionId(tellerId.toString(), today);
+        
         let tellerPayroll = new Payroll({
           user: tellerId,
           role: teller.role,
@@ -271,6 +277,8 @@ router.post("/add-capital", requireAuth, requireRole(['admin', 'super_admin', 's
           deduction: 0,
           withdrawal: 0,
           totalSalary: teller.baseSalary || 0,
+          date: today,
+          transactionId: transactionId,
         });
         
         // Apply active payment plans (auto-deduct weekly amounts)
@@ -280,7 +288,7 @@ router.post("/add-capital", requireAuth, requireRole(['admin', 'super_admin', 's
         if (req.app && req.app.io) {
           req.app.io.emit("payrollUpdated", { userId: tellerId, payrollId: tellerPayroll._id });
         }
-        console.log(`✅ Daily base salary payroll created for teller ${tellerId} (${now.toISOString().split('T')[0]})`);
+        console.log(`✅ Daily base salary payroll created for teller ${tellerId} (${today}) with transactionId: ${transactionId}`);
       }
     } catch (e) {
       console.warn("⚠️ Teller base payroll auto-create failed:", e?.message || e);
@@ -294,43 +302,40 @@ router.post("/add-capital", requireAuth, requireRole(['admin', 'super_admin', 's
         const dayStart = new Date(today + 'T00:00:00.000Z');
         const dayEnd = new Date(today + 'T23:59:59.999Z');
 
-        // Use upsert to prevent duplicate payroll creation (atomic operation)
-        let payroll = await Payroll.findOneAndUpdate(
-          {
-            user: supervisorId,
-            date: today // Use date field for uniqueness check
-          },
-          {
-            $setOnInsert: {
-              user: supervisorId,
-              role: sup.role,
-              baseSalary: sup.baseSalary || 0,
-              over: 0,
-              short: 0,
-              deduction: 0,
-              withdrawal: 0,
-              totalSalary: sup.baseSalary || 0,
-              date: today,
-            }
-          },
-          {
-            upsert: true,
-            new: true, // Return the updated document
-            setDefaultsOnInsert: true
-          }
-        );
+        // Check if payroll exists for today
+        let payroll = await Payroll.findOne({
+          user: supervisorId,
+          date: today
+        });
 
-        // Apply active payment plans (auto-deduct weekly amounts) - only if this is a new payroll
-        if (payroll.createdAt && (Date.now() - payroll.createdAt.getTime()) < 1000) {
-          // This is a newly created payroll (less than 1 second old)
+        // Only create if it doesn't exist
+        if (!payroll) {
+          // Generate unique transaction ID for this payroll entry
+          const transactionId = generateTransactionId(supervisorId.toString(), today);
+          
+          payroll = new Payroll({
+            user: supervisorId,
+            role: sup.role,
+            baseSalary: sup.baseSalary || 0,
+            over: 0,
+            short: 0,
+            deduction: 0,
+            withdrawal: 0,
+            totalSalary: sup.baseSalary || 0,
+            date: today,
+            transactionId: transactionId,
+          });
+
+          // Apply active payment plans (auto-deduct weekly amounts)
           payroll = await applyPaymentPlansToPayroll(supervisorId, payroll);
           await payroll.save();
+          
+          console.log(`✅ Daily base salary payroll created for supervisor ${supervisorId} (${today}) with transactionId: ${transactionId}`);
         }
 
         if (req.app && req.app.io) {
           req.app.io.emit("payrollUpdated", { userId: supervisorId, payrollId: payroll._id });
         }
-        console.log(`✅ Daily base salary payroll ensured for supervisor ${supervisorId} (${today})`);
       }
     } catch (e) {
       console.warn("⚠️ Supervisor base payroll auto-create failed:", e?.message || e);
