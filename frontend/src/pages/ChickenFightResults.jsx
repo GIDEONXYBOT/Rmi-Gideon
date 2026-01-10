@@ -223,128 +223,93 @@ export default function ChickenFightResults() {
     try {
       const token = localStorage.getItem('token');
       const legBandIdx = editData.legNumber - 1; // Convert to 0-based index
+      
+      // Track original and new leg bands
       const originalMeronLegBand = editData.meron?.legBandNumbers?.[legBandIdx];
       const originalWalaLegBand = editData.wala?.legBandNumbers?.[legBandIdx];
       const newMeronLegBand = editData.meron?.legBand;
       const newWalaLegBand = editData.wala?.legBand;
       
-      // Check if leg bands changed for each side
+      // Check if leg bands actually changed
       const meronLegBandChanged = newMeronLegBand !== originalMeronLegBand;
       const walaLegBandChanged = newWalaLegBand !== originalWalaLegBand;
       
-      // Find which entry the new leg bands belong to
-      const meronMatchedEntry = meronLegBandChanged ? findEntryByLegBand(newMeronLegBand) : null;
-      const walaMatchedEntry = walaLegBandChanged ? findEntryByLegBand(newWalaLegBand) : null;
+      // Find new entries if leg bands changed
+      const newMeronEntry = meronLegBandChanged ? findEntryByLegBand(newMeronLegBand) : null;
+      const newWalaEntry = walaLegBandChanged ? findEntryByLegBand(newWalaLegBand) : null;
       
-      // Build the update payload
+      // Build the updated entry results - only process existing entries
       const updatedEntryResults = gameData.entryResults.map(entry => {
         const updated = { ...entry };
         
-        // Handle Meron side
-        if (meronLegBandChanged && meronMatchedEntry && meronMatchedEntry._id === entry._id) {
-          // This is the NEW entry that the leg band now belongs to
-          if (!updated.legResults.some(leg => leg.legNumber === editData.legNumber)) {
-            // Add the fight result for this entry
-            updated.legResults.push({
-              legNumber: editData.legNumber,
-              result: editData.meron.legResult.result
-            });
-          } else {
-            // Update existing result
-            updated.legResults = updated.legResults.map(leg =>
-              leg.legNumber === editData.legNumber
-                ? { ...leg, result: editData.meron.legResult.result }
-                : leg
-            );
-          }
-          
-          // Update leg band numbers at the specific index
-          if (!updated.legBandNumbers) updated.legBandNumbers = [];
-          updated.legBandNumbers[legBandIdx] = newMeronLegBand;
-          
-          // Update leg band details
-          if (!updated.legBandDetails) updated.legBandDetails = [];
-          updated.legBandDetails[legBandIdx] = editData.meron.legBandDetail;
-        } else if (!meronLegBandChanged && editData.meron?.entryId === entry._id) {
-          // Meron side not changed, but this is the original entry - only update result if it changed
+        // Determine if this entry is the original meron or wala entry
+        const isOriginalMeron = editData.meron?.entryId === entry._id;
+        const isOriginalWala = editData.wala?.entryId === entry._id;
+        
+        // Determine if this entry is the new matched entry
+        const isNewMeronEntry = newMeronEntry && newMeronEntry._id === entry._id;
+        const isNewWalaEntry = newWalaEntry && newWalaEntry._id === entry._id;
+        
+        // Handle Meron updates
+        if (isOriginalMeron && !meronLegBandChanged) {
+          // Keep original meron entry but only update result (leg band stays same)
           updated.legResults = updated.legResults.map(leg =>
             leg.legNumber === editData.legNumber
               ? { ...leg, result: editData.meron.legResult.result }
               : leg
           );
-          // Keep leg band as is (no change)
-        }
-        
-        // Handle Wala side
-        if (walaLegBandChanged && walaMatchedEntry && walaMatchedEntry._id === entry._id) {
-          // This is the NEW entry that the leg band now belongs to
-          if (!updated.legResults.some(leg => leg.legNumber === editData.legNumber)) {
-            // Add the fight result for this entry
+        } else if (isOriginalMeron && meronLegBandChanged && !isNewMeronEntry) {
+          // Remove this fight from original meron entry (moving to different entry)
+          updated.legResults = updated.legResults.filter(leg => leg.legNumber !== editData.legNumber);
+        } else if (isNewMeronEntry && meronLegBandChanged) {
+          // Add/update fight in new meron entry
+          const existingLeg = updated.legResults.find(leg => leg.legNumber === editData.legNumber);
+          if (existingLeg) {
+            existingLeg.result = editData.meron.legResult.result;
+          } else {
             updated.legResults.push({
               legNumber: editData.legNumber,
-              result: editData.wala.legResult.result
+              result: editData.meron.legResult.result
             });
-          } else {
-            // Update existing result
-            updated.legResults = updated.legResults.map(leg =>
-              leg.legNumber === editData.legNumber
-                ? { ...leg, result: editData.wala.legResult.result }
-                : leg
-            );
           }
-          
-          // Update leg band numbers at the specific index
+          // Update leg band at the index
           if (!updated.legBandNumbers) updated.legBandNumbers = [];
-          updated.legBandNumbers[legBandIdx] = newWalaLegBand;
-          
-          // Update leg band details
+          updated.legBandNumbers[legBandIdx] = newMeronLegBand;
           if (!updated.legBandDetails) updated.legBandDetails = [];
-          updated.legBandDetails[legBandIdx] = editData.wala.legBandDetail;
-        } else if (!walaLegBandChanged && editData.wala?.entryId === entry._id) {
-          // Wala side not changed, but this is the original entry - only update result if it changed
+          updated.legBandDetails[legBandIdx] = editData.meron.legBandDetail;
+        }
+        
+        // Handle Wala updates
+        if (isOriginalWala && !walaLegBandChanged) {
+          // Keep original wala entry but only update result (leg band stays same)
           updated.legResults = updated.legResults.map(leg =>
             leg.legNumber === editData.legNumber
               ? { ...leg, result: editData.wala.legResult.result }
               : leg
           );
-          // Keep leg band as is (no change)
-        }
-        
-        // If leg band changed from this entry to another, remove the fight from this entry
-        if (meronLegBandChanged && editData.meron?.entryId === entry._id && meronMatchedEntry?._id !== entry._id) {
+        } else if (isOriginalWala && walaLegBandChanged && !isNewWalaEntry) {
+          // Remove this fight from original wala entry (moving to different entry)
           updated.legResults = updated.legResults.filter(leg => leg.legNumber !== editData.legNumber);
-        }
-        if (walaLegBandChanged && editData.wala?.entryId === entry._id && walaMatchedEntry?._id !== entry._id) {
-          updated.legResults = updated.legResults.filter(leg => leg.legNumber !== editData.legNumber);
+        } else if (isNewWalaEntry && walaLegBandChanged) {
+          // Add/update fight in new wala entry
+          const existingLeg = updated.legResults.find(leg => leg.legNumber === editData.legNumber);
+          if (existingLeg) {
+            existingLeg.result = editData.wala.legResult.result;
+          } else {
+            updated.legResults.push({
+              legNumber: editData.legNumber,
+              result: editData.wala.legResult.result
+            });
+          }
+          // Update leg band at the index
+          if (!updated.legBandNumbers) updated.legBandNumbers = [];
+          updated.legBandNumbers[legBandIdx] = newWalaLegBand;
+          if (!updated.legBandDetails) updated.legBandDetails = [];
+          updated.legBandDetails[legBandIdx] = editData.wala.legBandDetail;
         }
         
         return updated;
-      }).filter(entry => entry.legResults.length > 0); // Remove entries with no fights
-      
-      // If a new entry gained a fight, add it to the results
-      if (meronMatchedEntry && !gameData.entryResults.some(e => e._id === meronMatchedEntry._id)) {
-        updatedEntryResults.push({
-          ...meronMatchedEntry,
-          legResults: [{
-            legNumber: editData.legNumber,
-            result: editData.meron.legResult.result
-          }],
-          legBandNumbers: meronMatchedEntry.legBandNumbers,
-          legBandDetails: meronMatchedEntry.legBandDetails
-        });
-      }
-      
-      if (walaMatchedEntry && !gameData.entryResults.some(e => e._id === walaMatchedEntry._id)) {
-        updatedEntryResults.push({
-          ...walaMatchedEntry,
-          legResults: [{
-            legNumber: editData.legNumber,
-            result: editData.wala.legResult.result
-          }],
-          legBandNumbers: walaMatchedEntry.legBandNumbers,
-          legBandDetails: walaMatchedEntry.legBandDetails
-        });
-      }
+      }).filter(entry => entry.legResults && entry.legResults.length > 0); // Remove entries with no fights
       
       const res = await axios.put(
         `${getApiUrl()}/api/chicken-fight/game/results`,
