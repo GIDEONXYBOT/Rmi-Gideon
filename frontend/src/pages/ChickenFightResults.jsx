@@ -165,10 +165,19 @@ export default function ChickenFightResults() {
   
   const handleEditClick = (fights, legNum = currentFightNum) => {
     setEditingFightIndex(legNum);
+    const legBandIdx = legNum - 1; // Convert to 0-based index
     setEditData({
       legNumber: legNum,
-      meron: fights[0],
-      wala: fights[1]
+      meron: {
+        ...fights[0],
+        legBand: fights[0].legBandNumbers?.[legBandIdx] || '',
+        legBandDetail: fights[0].legBandDetails?.[legBandIdx] || { legBand: '', featherType: '' }
+      },
+      wala: {
+        ...fights[1],
+        legBand: fights[1].legBandNumbers?.[legBandIdx] || '',
+        legBandDetail: fights[1].legBandDetails?.[legBandIdx] || { legBand: '', featherType: '' }
+      }
     });
     setShowEditModal(true);
   };
@@ -181,25 +190,44 @@ export default function ChickenFightResults() {
     
     try {
       const token = localStorage.getItem('token');
+      const legBandIdx = editData.legNumber - 1; // Convert to 0-based index
       
       // Build the update payload
       const updatedEntryResults = gameData.entryResults.map(entry => {
         const updated = { ...entry };
         
         if (editData.meron?.entryId === entry._id) {
+          // Update leg results
           updated.legResults = updated.legResults.map(leg => 
             leg.legNumber === editData.legNumber 
               ? { ...leg, result: editData.meron.legResult.result }
               : leg
           );
+          
+          // Update leg band numbers at the specific index
+          if (!updated.legBandNumbers) updated.legBandNumbers = [];
+          updated.legBandNumbers[legBandIdx] = editData.meron.legBand;
+          
+          // Update leg band details at the specific index
+          if (!updated.legBandDetails) updated.legBandDetails = [];
+          updated.legBandDetails[legBandIdx] = editData.meron.legBandDetail;
         }
         
         if (editData.wala?.entryId === entry._id) {
+          // Update leg results
           updated.legResults = updated.legResults.map(leg => 
             leg.legNumber === editData.legNumber 
               ? { ...leg, result: editData.wala.legResult.result }
               : leg
           );
+          
+          // Update leg band numbers at the specific index
+          if (!updated.legBandNumbers) updated.legBandNumbers = [];
+          updated.legBandNumbers[legBandIdx] = editData.wala.legBand;
+          
+          // Update leg band details at the specific index
+          if (!updated.legBandDetails) updated.legBandDetails = [];
+          updated.legBandDetails[legBandIdx] = editData.wala.legBandDetail;
         }
         
         return updated;
@@ -977,55 +1005,167 @@ export default function ChickenFightResults() {
             
             <div className="space-y-6">
               {/* Meron */}
-              <div>
-                <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  {editData.meron?.entryName} - Result
-                </label>
-                <select
-                  value={editData.meron?.legResult?.result || ''}
-                  onChange={(e) => setEditData({
-                    ...editData,
-                    meron: {
-                      ...editData.meron,
-                      legResult: { ...editData.meron.legResult, result: e.target.value }
-                    }
-                  })}
-                  className={`w-full px-4 py-2 rounded-lg border ${
-                    isDarkMode
-                      ? 'bg-gray-700 border-gray-600 text-white'
-                      : 'bg-white border-gray-300'
-                  }`}
-                >
-                  <option value="win">Win</option>
-                  <option value="loss">Loss</option>
-                  <option value="draw">Draw</option>
-                </select>
+              <div className="border-b pb-4">
+                <h3 className={`text-lg font-semibold mb-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                  {editData.meron?.entryName}
+                </h3>
+                
+                {/* Meron - Leg Band */}
+                <div className="mb-3">
+                  <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Leg Band Number
+                  </label>
+                  <input
+                    type="text"
+                    value={editData.meron?.legBand || ''}
+                    onChange={(e) => setEditData({
+                      ...editData,
+                      meron: {
+                        ...editData.meron,
+                        legBand: e.target.value,
+                        legBandDetail: { ...editData.meron.legBandDetail, legBand: e.target.value }
+                      }
+                    })}
+                    placeholder="Enter leg band number or '000' for unknown"
+                    className={`w-full px-4 py-2 rounded-lg border font-mono ${
+                      isDarkMode
+                        ? 'bg-gray-700 border-gray-600 text-white'
+                        : 'bg-white border-gray-300'
+                    }`}
+                  />
+                </div>
+
+                {/* Meron - Feather Type */}
+                <div className="mb-3">
+                  <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Feather Type (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={editData.meron?.legBandDetail?.featherType || ''}
+                    onChange={(e) => setEditData({
+                      ...editData,
+                      meron: {
+                        ...editData.meron,
+                        legBandDetail: { ...editData.meron.legBandDetail, featherType: e.target.value }
+                      }
+                    })}
+                    placeholder="e.g., White, Black, Brown"
+                    className={`w-full px-4 py-2 rounded-lg border ${
+                      isDarkMode
+                        ? 'bg-gray-700 border-gray-600 text-white'
+                        : 'bg-white border-gray-300'
+                    }`}
+                  />
+                </div>
+
+                {/* Meron - Result */}
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Fight Result
+                  </label>
+                  <select
+                    value={editData.meron?.legResult?.result || ''}
+                    onChange={(e) => setEditData({
+                      ...editData,
+                      meron: {
+                        ...editData.meron,
+                        legResult: { ...editData.meron.legResult, result: e.target.value }
+                      }
+                    })}
+                    className={`w-full px-4 py-2 rounded-lg border ${
+                      isDarkMode
+                        ? 'bg-gray-700 border-gray-600 text-white'
+                        : 'bg-white border-gray-300'
+                    }`}
+                  >
+                    <option value="win">Win</option>
+                    <option value="loss">Loss</option>
+                    <option value="draw">Draw</option>
+                  </select>
+                </div>
               </div>
               
               {/* Wala */}
               <div>
-                <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  {editData.wala?.entryName} - Result
-                </label>
-                <select
-                  value={editData.wala?.legResult?.result || ''}
-                  onChange={(e) => setEditData({
-                    ...editData,
-                    wala: {
-                      ...editData.wala,
-                      legResult: { ...editData.wala.legResult, result: e.target.value }
-                    }
-                  })}
-                  className={`w-full px-4 py-2 rounded-lg border ${
-                    isDarkMode
-                      ? 'bg-gray-700 border-gray-600 text-white'
-                      : 'bg-white border-gray-300'
-                  }`}
-                >
-                  <option value="win">Win</option>
-                  <option value="loss">Loss</option>
-                  <option value="draw">Draw</option>
-                </select>
+                <h3 className={`text-lg font-semibold mb-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                  {editData.wala?.entryName}
+                </h3>
+                
+                {/* Wala - Leg Band */}
+                <div className="mb-3">
+                  <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Leg Band Number
+                  </label>
+                  <input
+                    type="text"
+                    value={editData.wala?.legBand || ''}
+                    onChange={(e) => setEditData({
+                      ...editData,
+                      wala: {
+                        ...editData.wala,
+                        legBand: e.target.value,
+                        legBandDetail: { ...editData.wala.legBandDetail, legBand: e.target.value }
+                      }
+                    })}
+                    placeholder="Enter leg band number or '000' for unknown"
+                    className={`w-full px-4 py-2 rounded-lg border font-mono ${
+                      isDarkMode
+                        ? 'bg-gray-700 border-gray-600 text-white'
+                        : 'bg-white border-gray-300'
+                    }`}
+                  />
+                </div>
+
+                {/* Wala - Feather Type */}
+                <div className="mb-3">
+                  <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Feather Type (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={editData.wala?.legBandDetail?.featherType || ''}
+                    onChange={(e) => setEditData({
+                      ...editData,
+                      wala: {
+                        ...editData.wala,
+                        legBandDetail: { ...editData.wala.legBandDetail, featherType: e.target.value }
+                      }
+                    })}
+                    placeholder="e.g., White, Black, Brown"
+                    className={`w-full px-4 py-2 rounded-lg border ${
+                      isDarkMode
+                        ? 'bg-gray-700 border-gray-600 text-white'
+                        : 'bg-white border-gray-300'
+                    }`}
+                  />
+                </div>
+
+                {/* Wala - Result */}
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Fight Result
+                  </label>
+                  <select
+                    value={editData.wala?.legResult?.result || ''}
+                    onChange={(e) => setEditData({
+                      ...editData,
+                      wala: {
+                        ...editData.wala,
+                        legResult: { ...editData.wala.legResult, result: e.target.value }
+                      }
+                    })}
+                    className={`w-full px-4 py-2 rounded-lg border ${
+                      isDarkMode
+                        ? 'bg-gray-700 border-gray-600 text-white'
+                        : 'bg-white border-gray-300'
+                    }`}
+                  >
+                    <option value="win">Win</option>
+                    <option value="loss">Loss</option>
+                    <option value="draw">Draw</option>
+                  </select>
+                </div>
               </div>
             </div>
             
