@@ -22,6 +22,10 @@ export default function ChickenFightResults() {
   const [editingFightIndex, setEditingFightIndex] = useState(null);
   const [editData, setEditData] = useState(null);
   
+  // Entries data for leg band lookup
+  const [entries, setEntries] = useState([]);
+  const [matchedEntries, setMatchedEntries] = useState({ meron: null, wala: null });
+  
   // Load game data
   const loadGameData = async () => {
     setLoading(true);
@@ -47,7 +51,35 @@ export default function ChickenFightResults() {
   
   useEffect(() => {
     loadGameData();
+    loadEntries();
   }, []);
+  
+  // Load all entries for leg band lookup
+  const loadEntries = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get(`${getApiUrl()}/api/chicken-fight/entries`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data.success && res.data.entries) {
+        setEntries(res.data.entries);
+      }
+    } catch (err) {
+      console.error('Failed to load entries:', err);
+    }
+  };
+  
+  // Function to find entry by leg band number
+  const findEntryByLegBand = (legBandNumber) => {
+    if (!legBandNumber) return null;
+    
+    for (const entry of entries) {
+      if (entry.legBandNumbers && entry.legBandNumbers.includes(legBandNumber)) {
+        return entry;
+      }
+    }
+    return null;
+  };
   
   // Get fights grouped by leg number
   const getFightsByLegNumber = () => {
@@ -1018,14 +1050,22 @@ export default function ChickenFightResults() {
                   <input
                     type="text"
                     value={editData.meron?.legBand || ''}
-                    onChange={(e) => setEditData({
-                      ...editData,
-                      meron: {
-                        ...editData.meron,
-                        legBand: e.target.value,
-                        legBandDetail: { ...editData.meron.legBandDetail, legBand: e.target.value }
-                      }
-                    })}
+                    onChange={(e) => {
+                      const legBandValue = e.target.value;
+                      const matchedEntry = findEntryByLegBand(legBandValue);
+                      setEditData({
+                        ...editData,
+                        meron: {
+                          ...editData.meron,
+                          legBand: legBandValue,
+                          legBandDetail: { ...editData.meron.legBandDetail, legBand: legBandValue }
+                        }
+                      });
+                      setMatchedEntries({
+                        ...matchedEntries,
+                        meron: matchedEntry
+                      });
+                    }}
                     placeholder="Enter leg band number or '000' for unknown"
                     className={`w-full px-4 py-2 rounded-lg border font-mono ${
                       isDarkMode
@@ -1033,6 +1073,18 @@ export default function ChickenFightResults() {
                         : 'bg-white border-gray-300'
                     }`}
                   />
+                  {editData.meron?.legBand && (
+                    <div className={`mt-2 px-3 py-2 rounded-lg text-sm font-medium ${
+                      matchedEntries.meron
+                        ? isDarkMode ? 'bg-green-900/50 text-green-300 border border-green-700' : 'bg-green-50 text-green-800 border border-green-300'
+                        : isDarkMode ? 'bg-red-900/50 text-red-300 border border-red-700' : 'bg-red-50 text-red-800 border border-red-300'
+                    }`}>
+                      {matchedEntries.meron 
+                        ? `✓ Matched: ${matchedEntries.meron.entryName}` 
+                        : `✗ No entry found for leg band ${editData.meron?.legBand}`
+                      }
+                    </div>
+                  )}
                 </div>
 
                 {/* Meron - Feather Type */}
@@ -1100,14 +1152,22 @@ export default function ChickenFightResults() {
                   <input
                     type="text"
                     value={editData.wala?.legBand || ''}
-                    onChange={(e) => setEditData({
-                      ...editData,
-                      wala: {
-                        ...editData.wala,
-                        legBand: e.target.value,
-                        legBandDetail: { ...editData.wala.legBandDetail, legBand: e.target.value }
-                      }
-                    })}
+                    onChange={(e) => {
+                      const legBandValue = e.target.value;
+                      const matchedEntry = findEntryByLegBand(legBandValue);
+                      setEditData({
+                        ...editData,
+                        wala: {
+                          ...editData.wala,
+                          legBand: legBandValue,
+                          legBandDetail: { ...editData.wala.legBandDetail, legBand: legBandValue }
+                        }
+                      });
+                      setMatchedEntries({
+                        ...matchedEntries,
+                        wala: matchedEntry
+                      });
+                    }}
                     placeholder="Enter leg band number or '000' for unknown"
                     className={`w-full px-4 py-2 rounded-lg border font-mono ${
                       isDarkMode
@@ -1115,6 +1175,18 @@ export default function ChickenFightResults() {
                         : 'bg-white border-gray-300'
                     }`}
                   />
+                  {editData.wala?.legBand && (
+                    <div className={`mt-2 px-3 py-2 rounded-lg text-sm font-medium ${
+                      matchedEntries.wala
+                        ? isDarkMode ? 'bg-green-900/50 text-green-300 border border-green-700' : 'bg-green-50 text-green-800 border border-green-300'
+                        : isDarkMode ? 'bg-red-900/50 text-red-300 border border-red-700' : 'bg-red-50 text-red-800 border border-red-300'
+                    }`}>
+                      {matchedEntries.wala 
+                        ? `✓ Matched: ${matchedEntries.wala.entryName}` 
+                        : `✗ No entry found for leg band ${editData.wala?.legBand}`
+                      }
+                    </div>
+                  )}
                 </div>
 
                 {/* Wala - Feather Type */}
