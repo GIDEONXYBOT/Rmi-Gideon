@@ -203,12 +203,12 @@ export default function ChickenFightResults() {
       meron: {
         ...fights[0],
         legBand: fights[0].legBandNumbers?.[legBandIdx] || '',
-        legBandDetail: fights[0].legBandDetails?.[legBandIdx] || { legBand: '', featherType: '' }
+        legBandDetail: { legBand: fights[0].legBandNumbers?.[legBandIdx] || '' }
       },
       wala: {
         ...fights[1],
         legBand: fights[1].legBandNumbers?.[legBandIdx] || '',
-        legBandDetail: fights[1].legBandDetails?.[legBandIdx] || { legBand: '', featherType: '' }
+        legBandDetail: { legBand: fights[1].legBandNumbers?.[legBandIdx] || '' }
       }
     });
     setShowEditModal(true);
@@ -1081,11 +1081,11 @@ export default function ChickenFightResults() {
               </button>
             </div>
             
-            <div className="space-y-6">
+            <div className="space-y-4">
               {/* Meron */}
               <div className="border-b pb-4">
                 <h3 className={`text-lg font-semibold mb-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                  {editData.meron?.entryName}
+                  Meron
                 </h3>
                 
                 {/* Meron - Leg Band */}
@@ -1112,7 +1112,7 @@ export default function ChickenFightResults() {
                         meron: matchedEntry
                       });
                     }}
-                    placeholder="Enter leg band number or '000' for unknown"
+                    placeholder="Enter leg band number"
                     className={`w-full px-4 py-2 rounded-lg border font-mono ${
                       isDarkMode
                         ? 'bg-gray-700 border-gray-600 text-white'
@@ -1126,68 +1126,18 @@ export default function ChickenFightResults() {
                         : isDarkMode ? 'bg-red-900/50 text-red-300 border border-red-700' : 'bg-red-50 text-red-800 border border-red-300'
                     }`}>
                       {matchedEntries.meron 
-                        ? `✓ Matched: ${matchedEntries.meron.entryName}` 
-                        : `✗ No entry found for leg band ${editData.meron?.legBand}`
+                        ? `✓ ${matchedEntries.meron.entryName}` 
+                        : `✗ No entry found`
                       }
                     </div>
                   )}
-                </div>
-
-                {/* Meron - Feather Type */}
-                <div className="mb-3">
-                  <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                    Feather Type (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={editData.meron?.legBandDetail?.featherType || ''}
-                    onChange={(e) => setEditData({
-                      ...editData,
-                      meron: {
-                        ...editData.meron,
-                        legBandDetail: { ...editData.meron.legBandDetail, featherType: e.target.value }
-                      }
-                    })}
-                    placeholder="e.g., White, Black, Brown"
-                    className={`w-full px-4 py-2 rounded-lg border ${
-                      isDarkMode
-                        ? 'bg-gray-700 border-gray-600 text-white'
-                        : 'bg-white border-gray-300'
-                    }`}
-                  />
-                </div>
-
-                {/* Meron - Result */}
-                <div>
-                  <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                    Fight Result
-                  </label>
-                  <select
-                    value={editData.meron?.legResult?.result || ''}
-                    onChange={(e) => setEditData({
-                      ...editData,
-                      meron: {
-                        ...editData.meron,
-                        legResult: { ...editData.meron.legResult, result: e.target.value }
-                      }
-                    })}
-                    className={`w-full px-4 py-2 rounded-lg border ${
-                      isDarkMode
-                        ? 'bg-gray-700 border-gray-600 text-white'
-                        : 'bg-white border-gray-300'
-                    }`}
-                  >
-                    <option value="win">Win</option>
-                    <option value="loss">Loss</option>
-                    <option value="draw">Draw</option>
-                  </select>
                 </div>
               </div>
               
               {/* Wala */}
               <div>
                 <h3 className={`text-lg font-semibold mb-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                  {editData.wala?.entryName}
+                  Wala
                 </h3>
                 
                 {/* Wala - Leg Band */}
@@ -1214,7 +1164,7 @@ export default function ChickenFightResults() {
                         wala: matchedEntry
                       });
                     }}
-                    placeholder="Enter leg band number or '000' for unknown"
+                    placeholder="Enter leg band number"
                     className={`w-full px-4 py-2 rounded-lg border font-mono ${
                       isDarkMode
                         ? 'bg-gray-700 border-gray-600 text-white'
@@ -1228,61 +1178,11 @@ export default function ChickenFightResults() {
                         : isDarkMode ? 'bg-red-900/50 text-red-300 border border-red-700' : 'bg-red-50 text-red-800 border border-red-300'
                     }`}>
                       {matchedEntries.wala 
-                        ? `✓ Matched: ${matchedEntries.wala.entryName}` 
-                        : `✗ No entry found for leg band ${editData.wala?.legBand}`
+                        ? `✓ ${matchedEntries.wala.entryName}` 
+                        : `✗ No entry found`
                       }
                     </div>
                   )}
-                </div>
-
-                {/* Wala - Feather Type */}
-                <div className="mb-3">
-                  <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                    Feather Type (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={editData.wala?.legBandDetail?.featherType || ''}
-                    onChange={(e) => setEditData({
-                      ...editData,
-                      wala: {
-                        ...editData.wala,
-                        legBandDetail: { ...editData.wala.legBandDetail, featherType: e.target.value }
-                      }
-                    })}
-                    placeholder="e.g., White, Black, Brown"
-                    className={`w-full px-4 py-2 rounded-lg border ${
-                      isDarkMode
-                        ? 'bg-gray-700 border-gray-600 text-white'
-                        : 'bg-white border-gray-300'
-                    }`}
-                  />
-                </div>
-
-                {/* Wala - Result */}
-                <div>
-                  <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                    Fight Result
-                  </label>
-                  <select
-                    value={editData.wala?.legResult?.result || ''}
-                    onChange={(e) => setEditData({
-                      ...editData,
-                      wala: {
-                        ...editData.wala,
-                        legResult: { ...editData.wala.legResult, result: e.target.value }
-                      }
-                    })}
-                    className={`w-full px-4 py-2 rounded-lg border ${
-                      isDarkMode
-                        ? 'bg-gray-700 border-gray-600 text-white'
-                        : 'bg-white border-gray-300'
-                    }`}
-                  >
-                    <option value="win">Win</option>
-                    <option value="loss">Loss</option>
-                    <option value="draw">Draw</option>
-                  </select>
                 </div>
               </div>
             </div>
@@ -1290,10 +1190,16 @@ export default function ChickenFightResults() {
             <div className="flex gap-3 mt-8">
               <button
                 onClick={handleUpdateFight}
+                disabled={
+                  (editData.meron?.legBand && !matchedEntries.meron) ||
+                  (editData.wala?.legBand && !matchedEntries.wala)
+                }
                 className={`flex-1 px-4 py-2 rounded-lg font-medium transition ${
-                  isDarkMode
-                    ? 'bg-green-600 hover:bg-green-700 text-white'
-                    : 'bg-green-500 hover:bg-green-600 text-white'
+                  (editData.meron?.legBand && !matchedEntries.meron) || (editData.wala?.legBand && !matchedEntries.wala)
+                    ? isDarkMode ? 'bg-gray-600 text-gray-400 cursor-not-allowed opacity-50' : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-50'
+                    : isDarkMode
+                    ? 'bg-green-600 hover:bg-green-700 text-white cursor-pointer'
+                    : 'bg-green-500 hover:bg-green-600 text-white cursor-pointer'
                 }`}
               >
                 Save Changes
