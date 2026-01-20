@@ -139,18 +139,18 @@ mongoose
 
     // Initialize leaderboard update scheduler for real-time updates
     try {
-      const { initLeaderboardUpdateScheduler } = await import("./scheduler/leaderboardUpdate.js");
-      initLeaderboardUpdateScheduler(io);
-      console.log("📊 Leaderboard update scheduler initialized");
+      // const { initLeaderboardUpdateScheduler } = await import("./scheduler/leaderboardUpdate.js");
+      // initLeaderboardUpdateScheduler(io);
+      console.log("📊 Leaderboard update scheduler disabled for debugging");
     } catch (schedulerError) {
       console.error("❌ Failed to initialize leaderboard scheduler:", schedulerError);
     }
 
     // Initialize chicken fight update scheduler for real-time updates
     try {
-      const { initChickenFightUpdateScheduler } = await import("./scheduler/chickenFightUpdate.js");
-      initChickenFightUpdateScheduler(io);
-      console.log("🐔 Chicken fight update scheduler initialized");
+      // const { initChickenFightUpdateScheduler } = await import("./scheduler/chickenFightUpdate.js");
+      // initChickenFightUpdateScheduler(io);
+      console.log("🐔 Chicken fight update scheduler disabled for debugging");
     } catch (schedulerError) {
       console.error("❌ Failed to initialize chicken fight scheduler:", schedulerError);
     }
@@ -209,7 +209,7 @@ import mapConfigRoutes from "./routes/mapConfig.js"; // /api/map-config
 import tellerManagementRoutes from "./routes/teller-management.js"; // /api/teller-management
 import deploymentsRoutes from "./routes/deployments.js"; // /api/deployments
 import bettingDataRoutes from "./routes/bettingData.js"; // /api/betting-data
-import externalBettingRoutes from "./routes/externalBetting.js"; // /api/external-betting
+// import externalBettingRoutes from "./routes/externalBetting.js"; // /api/external-betting
 import attendanceRoutes from "./routes/attendance.js"; // /api/attendance
 import tellersRoutes from "./routes/tellers.js"; // /api/tellers
 import schedulerRoutes from "./routes/schedulerRoutes.js"; // /api/scheduler
@@ -255,34 +255,34 @@ app.use("/api/teller-salary-calculation", tellerSalaryCalculationRoutes); // �
 // app.use("/api/scheduler", schedulerRoutes);
 app.use("/api/auth", authRoutes);
 // Mount endpoints that frontend relies on (enable missing ones)
-app.use("/api/reports", reportRoutes);
-app.use("/api/map-config", mapConfigRoutes);
-app.use("/api/teller-management", tellerManagementRoutes);
-app.use("/api/supervisor", supervisorRoutes);
-app.use("/api/deployments", deploymentsRoutes);
-app.use("/api/assets", assetsRoutes);
-app.use("/api/external-betting", externalBettingRoutes);
-app.use("/api/betting-data", bettingDataRoutes);
-app.use("/api/attendance", attendanceRoutes);
-app.use("/api/tellers", tellersRoutes);
-app.use("/api/scheduler", schedulerRoutes);
-app.use("/api/schedule", scheduleRoutes);
-app.use("/api/teller-zones", tellerZonesRoutes);
-app.use("/api/notifications", notificationsRoutes);
-app.use("/api/shift", shiftRoutes);
-app.use("/api/short-payments", shortPaymentsRoutes);
-app.use("/api/transactions", transactionsRoutes);
-app.use("/api/employee", employeeRoutes);
-app.use("/api/report", reportSingleRoutes); // routes under /api/report/ (e.g. /admin)
-app.use("/api/cashflow-archive", cashflowArchiveRoutes);
-app.use("/api/salaries", salariesRoutes);
-app.use("/api/media", mediaRoutes);
-app.use("/api/chicken-fight", chickenFightRoutes); // 🐔 Chicken Fight betting system
-app.use("/api/chicken-fight-registration", chickenFightRegistrationRoutes); // 🐔 Chicken Fight registration
-app.use("/api/draws", drawsRoutes); // 📊 Draw results for regla pattern - updated for public access
-app.use("/api/leaderboard", leaderboardRoutes); // 🎯 GTA Leaderboard proxy
-app.use("/api/gta-tellers", gtaTellersRoutes); // 🏢 GTA Workplace teller management
-app.use("/api/gta-betting-events", gtaBettingEventsRoutes); // 📊 GTA Betting Events proxy
+// app.use("/api/reports", reportRoutes);
+// app.use("/api/map-config", mapConfigRoutes);
+// app.use("/api/teller-management", tellerManagementRoutes);
+// app.use("/api/supervisor", supervisorRoutes);
+// app.use("/api/deployments", deploymentsRoutes);
+// app.use("/api/assets", assetsRoutes);
+// app.use("/api/external-betting", externalBettingRoutes); // Temporarily disabled for debugging
+// app.use("/api/betting-data", bettingDataRoutes);
+// app.use("/api/attendance", attendanceRoutes);
+// app.use("/api/tellers", tellersRoutes);
+// app.use("/api/scheduler", schedulerRoutes);
+// app.use("/api/schedule", scheduleRoutes);
+// app.use("/api/teller-zones", tellerZonesRoutes);
+// app.use("/api/notifications", notificationsRoutes);
+// app.use("/api/shift", shiftRoutes);
+// app.use("/api/short-payments", shortPaymentsRoutes);
+// app.use("/api/transactions", transactionsRoutes);
+// app.use("/api/employee", employeeRoutes);
+// app.use("/api/report", reportSingleRoutes); // routes under /api/report/ (e.g. /admin)
+// app.use("/api/cashflow-archive", cashflowArchiveRoutes);
+// app.use("/api/salaries", salariesRoutes);
+// app.use("/api/media", mediaRoutes);
+// app.use("/api/chicken-fight", chickenFightRoutes); // 🐔 Chicken Fight betting system
+// app.use("/api/chicken-fight-registration", chickenFightRegistrationRoutes); // 🐔 Chicken Fight registration
+// app.use("/api/draws", drawsRoutes); // 📊 Draw results for regla pattern - updated for public access
+// app.use("/api/leaderboard", leaderboardRoutes); // 🎯 GTA Leaderboard proxy
+// app.use("/api/gta-tellers", gtaTellersRoutes); // 🏢 GTA Workplace teller management
+// app.use("/api/gta-betting-events", gtaBettingEventsRoutes); // 📊 GTA Betting Events proxy
 // Deployed: 2025-12-08
 // app.use("/api/chat", chatRoutes);
 // app.use("/api/schedule", scheduleRoutes);
@@ -355,34 +355,34 @@ app.get('/uploads/avatars/*', (req, res) => {
 const server = http.createServer(app);
 
 // ✅ Initialize Socket.IO
-const io = new Server(server, {
-  cors: {
-    origin: [
-      "https://gideon-reports.pages.dev",
-      "https://www.rmi.gideonbot.xyz",
-      "https://rmi.gideonbot.xyz",
-      "http://localhost:3000",
-      "http://localhost:5173",
-      "http://192.168.0.167:5173"
-    ],
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    credentials: true,
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
-  },
-  transports: ['websocket', 'polling'],
-  pingInterval: 25000,
-  pingTimeout: 20000,
-  connectTimeout: 45000,
-  upgradeTimeout: 10000
-});
+// const io = new Server(server, {
+//   cors: {
+//     origin: [
+//       "https://gideon-reports.pages.dev",
+//       "https://www.rmi.gideonbot.xyz",
+//       "https://rmi.gideonbot.xyz",
+//       "http://localhost:3000",
+//       "http://localhost:5173",
+//       "http://192.168.0.167:5173"
+//     ],
+//     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+//     credentials: true,
+//     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
+//   },
+//   transports: ['websocket', 'polling'],
+//   pingInterval: 25000,
+//   pingTimeout: 20000,
+//   connectTimeout: 45000,
+//   upgradeTimeout: 10000
+// });
 
 // Make io available globally for routes
-app.io = io;
-global.io = io;
+// app.io = io;
+// global.io = io;
 
 // ✅ Initialize Socket.IO handlers
-initChickenFightSocket(io);
-initLeaderboardSocket(io);
+// initChickenFightSocket(io);
+// initLeaderboardSocket(io);
 
 // ======================================================
 // ✅ SOCKET EVENT HANDLERS (DISABLED FOR DEBUGGING)
@@ -493,7 +493,7 @@ const LOCAL_IP = getLocalIPAddress();
 // ======================================================
 // START SERVER ON PORT 5000
 // ======================================================
-const PORT = process.env.PORT || 5000;
+const PORT = 5003;
 
 // Global error handlers
 process.on('unhandledRejection', (reason, promise) => {
@@ -520,18 +520,26 @@ process.on('uncaughtException', (err) => {
 });
 
 // Configure server for high concurrency
-server.setMaxListeners(100); // Increase max listeners
-server.maxConnections = 1000; // Allow up to 1000 concurrent connections
-server.keepAliveTimeout = 65000; // 65 seconds
-server.headersTimeout = 66000; // Slightly longer than keepAliveTimeout
+// server.setMaxListeners(100); // Increase max listeners
+// server.maxConnections = 1000; // Allow up to 1000 concurrent connections
+// server.keepAliveTimeout = 65000; // 65 seconds
+// server.headersTimeout = 66000; // Slightly longer than keepAliveTimeout
 
-server.listen(PORT, "0.0.0.0", () => {
-  console.log(`🚀 Backend Server Started (Concurrent-ready)`);
-  console.log(`📡 Local: http://localhost:${PORT}`);
-  console.log(`📡 Network: http://${LOCAL_IP}:${PORT}`);
-  console.log(`🔄 Max concurrent connections: ${server.maxConnections}`);
-  // console.log(`🔌 Socket.IO ready for real-time updates\n`);
-});
+console.log(`🔍 DEBUG: About to call server.listen on port ${PORT}`);
+  server.listen(PORT, "0.0.0.0", () => {
+    console.log(`🔍 DEBUG: server.listen callback called`);
+    try {
+      console.log(`🚀 Backend Server Started (Concurrent-ready)`);
+      console.log(`📡 Local: http://localhost:${PORT}`);
+      console.log(`📡 Network: http://localhost:${PORT}`);
+      console.log(`🔄 Max concurrent connections: ${server.maxConnections}`);
+      console.log(`🔍 DEBUG: Server listen callback reached`);
+      // console.log(`🔌 Socket.IO ready for real-time updates\n`);
+    } catch (error) {
+      console.error('❌ Error in server listen callback:', error);
+    }
+  });
+  console.log(`🔍 DEBUG: server.listen called`);
 
 server.on("error", (err) => {
   if (err.code === "EADDRINUSE") {
@@ -549,4 +557,4 @@ server.on("error", (err) => {
   }
 });
 
-export default app;
+// export default app;

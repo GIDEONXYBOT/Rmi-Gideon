@@ -9,38 +9,133 @@ export default function GTALeaderboard() {
   const [error, setError] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
 
+  // API source toggles
+  const [apiSources, setApiSources] = useState({
+    external: true,
+    internal: true,
+    demo: true
+  });
+
   const fetchLeaderboard = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Use the internal GTArena leaderboard page for player data
-      const url = `${getApiUrl()}/api/external-betting/player-leaderboard`;
+      // Build query params for selected sources
+      const params = new URLSearchParams();
+      Object.entries(apiSources).forEach(([key, enabled]) => {
+        if (enabled) params.append(key, 'true');
+      });
+
+      // Use the production API temporarily for testing
+      const url = `https://rmi-backend-zhdr.onrender.com/api/external-betting/player-leaderboard?${params.toString()}`;
+      console.log('Using production API:', url);
       const response = await axios.get(url);
 
       if (response.data.success && response.data.data) {
-        setData(response.data.data);
-        setLastUpdated(new Date());
+        // Check if we have actual data, not just an empty array
+        if (Array.isArray(response.data.data) && response.data.data.length > 0) {
+          setData(response.data.data);
+          setLastUpdated(new Date());
 
-        // Show a message if using demo data
-        if (response.data.isDemo) {
-          console.warn('⚠️ Using demo leaderboard data:', response.data.message);
+          // Show a message if using demo data
+          if (response.data.isDemo) {
+            console.warn('⚠️ Using demo leaderboard data:', response.data.message);
+          }
+        } else {
+          // API returned success but no data, fall back to demo
+          console.log('🔄 API returned empty data, using demo data as fallback');
+          const demoData = [
+            {
+              rank: 1,
+              name: "Player One",
+              username: "player1",
+              score: 15420,
+              points: 1250,
+              wins: 45,
+              losses: 12,
+              winRate: 78.9,
+              totalBets: 57,
+              totalAmount: 15420
+            },
+            {
+              rank: 2,
+              name: "Player Two",
+              username: "player2",
+              score: 14850,
+              points: 1180,
+              wins: 42,
+              losses: 15,
+              winRate: 73.7,
+              totalBets: 57,
+              totalAmount: 14850
+            },
+            {
+              rank: 3,
+              name: "Player Three",
+              username: "player3",
+              score: 13990,
+              points: 1120,
+              wins: 38,
+              losses: 18,
+              winRate: 67.9,
+              totalBets: 56,
+              totalAmount: 13990
+            },
+            {
+              rank: 4,
+              name: "Player Four",
+              username: "player4",
+              score: 13200,
+              points: 1050,
+              wins: 35,
+              losses: 22,
+              winRate: 61.4,
+              totalBets: 57,
+              totalAmount: 13200
+            },
+            {
+              rank: 5,
+              name: "Player Five",
+              username: "player5",
+              score: 12800,
+              points: 980,
+              wins: 32,
+              losses: 25,
+              winRate: 56.1,
+              totalBets: 57,
+              totalAmount: 12800
+            }
+          ];
+          setData(demoData);
+          setLastUpdated(new Date());
+          console.warn('Leaderboard service returned no data, showing demo data.');
         }
       } else {
         throw new Error(response.data.message || 'Invalid data format from API');
       }
     } catch (err) {
       const errorMsg = err.message || 'Failed to fetch GTA leaderboard data';
-      setError(errorMsg);
       console.error('Leaderboard fetch error:', errorMsg, err);
+
+      // If API completely fails, show error (no demo data in catch anymore)
+      setError(errorMsg);
+      setData(null);
 
       // If API completely fails, show a user-friendly message
       if (err.response?.status >= 500) {
-        setError('Leaderboard service temporarily unavailable. Please try again later.');
+        console.warn('Leaderboard service temporarily unavailable.');
       }
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSourceToggle = (source) => {
+    setApiSources(prev => ({
+      ...prev,
+      [source]: !prev[source]
+    }));
   };
 
   useEffect(() => {
@@ -48,7 +143,7 @@ export default function GTALeaderboard() {
     // Auto-refresh every 60 seconds (reduced from 30 to avoid excessive API calls)
     const interval = setInterval(fetchLeaderboard, 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [apiSources]);
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-PH', {
@@ -122,38 +217,24 @@ export default function GTALeaderboard() {
 
   return (
     <div className="min-h-screen bg-black dark:bg-gray-900 text-white font-sans">
-      {/* Header */}
-      <div className="bg-gray-900 dark:bg-gray-800 border-b border-gray-700 px-6 py-4 sticky top-0 z-10">
+      {/* API Source Toggles */}
+      <div className="bg-gray-900 dark:bg-gray-800 border-b border-gray-700 px-6 py-4">
         <div className="max-w-7xl mx-auto">
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center space-x-4">
-              <BarChart3 size={24} className="text-yellow-400" />
-              <h1 className="text-2xl font-bold text-white">🎮 GTA Leaderboards</h1>
-              {data && data.length > 0 && (
-                <span className="px-2 py-1 text-xs bg-green-600 text-green-200 rounded-full">
-                  Live Data
+          <div className="flex flex-wrap items-center gap-4">
+            <span className="text-sm font-medium text-gray-300">Data Sources:</span>
+            {Object.entries(apiSources).map(([source, enabled]) => (
+              <label key={source} className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={enabled}
+                  onChange={() => handleSourceToggle(source)}
+                  className="rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-300 capitalize">
+                  {source === 'external' ? 'External API' : source === 'internal' ? 'Internal Data' : 'Demo Data'}
                 </span>
-              )}
-            </div>
-            <button
-              onClick={fetchLeaderboard}
-              disabled={loading}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:opacity-50"
-              title="Refresh data"
-            >
-              <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
-              Refresh
-            </button>
-          </div>
-          <div className="flex justify-between items-center text-sm">
-            <div className="text-gray-400">
-              {getCurrentTime()} • {getCurrentDate()}
-            </div>
-            {lastUpdated && (
-              <div className="text-xs text-gray-500">
-                Last updated: {lastUpdated.toLocaleTimeString()}
-              </div>
-            )}
+              </label>
+            ))}
           </div>
         </div>
       </div>

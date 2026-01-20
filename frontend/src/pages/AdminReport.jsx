@@ -40,7 +40,7 @@ export default function AdminReport() {
 
       return () => clearInterval(timer);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [autoRefresh, refreshInterval]);
 
   if (loading)
@@ -153,7 +153,7 @@ function DailyHistory({ theme, darkMode }) {
 
   useEffect(() => {
     loadHistory();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   if (loading)

@@ -36,7 +36,7 @@ export default function SupervisorTellerReports() {
         socket.off("tellerReportVerified");
       };
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   if (loading) return <div className="p-6">Loading...</div>;

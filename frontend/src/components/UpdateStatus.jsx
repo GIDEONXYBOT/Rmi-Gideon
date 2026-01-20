@@ -21,7 +21,7 @@ export default function UpdateStatus() {
     window.electronAPI.onTriggerUpdateCheck(() => {
       checkForUpdate();
     });
-  }, []);
+  }, [isElectron]);
 
   const checkForUpdate = async () => {
     if (!window?.electronAPI?.checkForUpdate) return;
@@ -54,10 +54,6 @@ export default function UpdateStatus() {
     }
   };
 
-  if (!isElectron || !showNotification || !updateStatus) {
-    return null;
-  }
-
   const statusConfig = {
     checking: {
       bg: 'bg-blue-50 dark:bg-blue-900/20',
@@ -71,14 +67,14 @@ export default function UpdateStatus() {
       border: 'border-blue-200 dark:border-blue-800',
       icon: <Download size={20} />,
       color: 'text-blue-700 dark:text-blue-300',
-      title: `Downloading update... ${updateStatus.percent || 0}%`
+      title: `Downloading update... ${updateStatus?.percent || 0}%`
     },
     available: {
       bg: 'bg-amber-50 dark:bg-amber-900/20',
       border: 'border-amber-200 dark:border-amber-800',
       icon: <AlertCircle size={20} />,
       color: 'text-amber-700 dark:text-amber-300',
-      title: `Update available: v${updateStatus.version}`,
+      title: `Update available: v${updateStatus?.version}`,
       subtitle: 'Downloading in background...'
     },
     ready: {
@@ -86,7 +82,7 @@ export default function UpdateStatus() {
       border: 'border-green-200 dark:border-green-800',
       icon: <CheckCircle size={20} />,
       color: 'text-green-700 dark:text-green-300',
-      title: `Update ready: v${updateStatus.version}`,
+      title: `Update ready: v${updateStatus?.version}`,
       subtitle: 'Restart to install',
       action: true
     },
@@ -112,18 +108,22 @@ export default function UpdateStatus() {
       icon: <AlertCircle size={20} />,
       color: 'text-red-700 dark:text-red-300',
       title: 'Update check failed',
-      subtitle: updateStatus.error
+      subtitle: updateStatus?.error
     }
   };
 
-  const config = statusConfig[updateStatus.status] || statusConfig.error;
+  const config = statusConfig[updateStatus?.status] || statusConfig.error;
 
   useEffect(() => {
-    if (config.autoClose) {
+    if (config?.autoClose) {
       const timer = setTimeout(() => setShowNotification(false), 3000);
       return () => clearTimeout(timer);
     }
-  }, [updateStatus.status, config.autoClose]);
+  }, [updateStatus?.status, config?.autoClose]);
+
+  if (!isElectron || !showNotification || !updateStatus) {
+    return null;
+  }
 
   return (
     <div className={`fixed bottom-6 right-6 p-4 rounded-lg border-2 ${config.bg} ${config.border} shadow-lg z-50 max-w-sm`}>

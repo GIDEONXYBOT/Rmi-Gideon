@@ -14,7 +14,86 @@ const PublicLeaderboard = () => {
 
       // Fetch from production API - only returns today's data by default
       const response = await axios.get('https://rmi-backend-zhdr.onrender.com/api/external-betting/leaderboard');
-      const todaysDraws = response.data.data || [];
+      let todaysDraws = response.data.data || [];
+
+      // If no fights found, provide demo data
+      if (todaysDraws.length === 0) {
+        console.log('No fights found, showing demo data');
+        todaysDraws = [
+          {
+            id: "demo-1",
+            fightNumber: 1,
+            status: "completed",
+            result1: "meron",
+            result2: "wala",
+            totalBets: 1250,
+            createdAt: new Date().toISOString(),
+            batch: { fightSequence: 1 },
+            fighters: {
+              meron: { name: "Rooster A", odds: 1.85 },
+              wala: { name: "Rooster B", odds: 1.95 }
+            },
+            winner: { name: "Rooster A", result: "meron" }
+          },
+          {
+            id: "demo-2",
+            fightNumber: 2,
+            status: "completed",
+            result1: "wala",
+            result2: "meron",
+            totalBets: 980,
+            createdAt: new Date().toISOString(),
+            batch: { fightSequence: 2 },
+            fighters: {
+              meron: { name: "Rooster C", odds: 2.10 },
+              wala: { name: "Rooster D", odds: 1.75 }
+            },
+            winner: { name: "Rooster D", result: "wala" }
+          },
+          {
+            id: "demo-3",
+            fightNumber: 3,
+            status: "active",
+            result1: null,
+            result2: null,
+            totalBets: 1540,
+            createdAt: new Date().toISOString(),
+            batch: { fightSequence: 3 },
+            fighters: {
+              meron: { name: "Rooster E", odds: 1.65 },
+              wala: { name: "Rooster F", odds: 2.25 }
+            }
+          },
+          {
+            id: "demo-4",
+            fightNumber: 4,
+            status: "pending",
+            result1: null,
+            result2: null,
+            totalBets: 0,
+            createdAt: new Date().toISOString(),
+            batch: { fightSequence: 4 },
+            fighters: {
+              meron: { name: "Rooster G", odds: 1.90 },
+              wala: { name: "Rooster H", odds: 1.85 }
+            }
+          },
+          {
+            id: "demo-5",
+            fightNumber: 5,
+            status: "pending",
+            result1: null,
+            result2: null,
+            totalBets: 0,
+            createdAt: new Date().toISOString(),
+            batch: { fightSequence: 5 },
+            fighters: {
+              meron: { name: "Rooster I", odds: 2.05 },
+              wala: { name: "Rooster J", odds: 1.80 }
+            }
+          }
+        ];
+      }
 
       console.log(`Loaded ${todaysDraws.length} fights for today from backend`);
       setDraws(todaysDraws);

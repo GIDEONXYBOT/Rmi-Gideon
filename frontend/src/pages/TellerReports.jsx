@@ -108,12 +108,12 @@ export default function TellerReports() {
     message += `✅ Status: ${user.status || 'Unknown'}\n\n`;
     
     message += `📊 REQUIREMENTS CHECK:\n`;
-    message += `✅ Has User ID: ${!!user._id ? 'YES' : 'NO'}\n`;
+    message += `✅ Has User ID: ${user._id ? 'YES' : 'NO'}\n`;
     message += `✅ Teller Role: ${user.role === 'teller' ? 'YES' : 'NO'}\n`;
     message += `✅ User Approved: ${user.approved !== false ? 'YES' : 'NO'}\n`;
     message += `✅ Active Status: ${user.status !== 'inactive' && user.status !== 'disabled' ? 'YES' : 'NO'}\n`;
-    message += `✅ Has Active Capital: ${!!activeCapital ? 'YES' : 'NO'}\n`;
-    message += `✅ Has Supervisor: ${!!(user.supervisorId || user.supervisor?._id) ? 'YES' : 'NO'}\n\n`;
+    message += `✅ Has Active Capital: ${activeCapital ? 'YES' : 'NO'}\n`;
+    message += `✅ Has Supervisor: ${user.supervisorId || user.supervisor?._id ? 'YES' : 'NO'}\n\n`;
     
     if (activeCapital) {
       message += `💰 Active Capital: ₱${activeCapital.amount || 0}`;

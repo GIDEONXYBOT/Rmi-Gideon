@@ -1,11 +1,8 @@
 import React, { useEffect, useState } from "react";
-import io from "socket.io-client";
 import { useToast } from "./context/ToastContext.jsx";
-import { getApiUrl } from "./utils/apiConfig.js";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 
 // Create socket connection lazily when component mounts (in browser, not during build)
-let socket = null;
 function getSocketApp() {
   // Socket.IO disabled on backend - return null
   console.log('🔇 App socket disabled - Socket.IO not available on backend');
@@ -59,7 +56,7 @@ export default function App() {
       appSocket.off("disconnect");
       appSocket.off("systemReset");
     };
-  }, [showToast]);
+  }, [appSocket, showToast]);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-all relative">

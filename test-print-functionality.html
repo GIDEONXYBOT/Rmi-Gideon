@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Print Test</title>
+</head>
+<body>
+    <h1>Print Functionality Test</h1>
+    <button onclick="testPrint()">Test Print Button</button>
+
+    <script>
+        async function testPrint() {
+            console.log('Testing print functionality...');
+
+            // Simulate the receipt data
+            const receiptData = {
+                orgName: "RMI Teller Report",
+                tellerName: "John Doe",
+                tellerId: "T001",
+                weekLabel: "Dec 16-22, 2024",
+                dailyData: [
+                    { day: 'Mon', over: 150.00, base: 200.00 },
+                    { day: 'Tue', over: 200.00, base: 200.00 },
+                    { day: 'Wed', over: 175.00, base: 200.00 }
+                ],
+                totalOver: 525.00,
+                totalBase: 600.00,
+                totalCompensation: 1125.00,
+                dateStr: new Date().toLocaleString()
+            };
+
+            try {
+                // Generate HTML
+                const html = generateSalaryHTML(receiptData);
+                console.log('HTML generated successfully');
+
+                // Open print dialog
+                const win = window.open("", "_blank", "width=320,height=540");
+                if (win) {
+                    win.document.open();
+                    win.document.write(html);
+                    win.document.close();
+
+                    // Wait a bit for the document to load, then trigger print
+                    setTimeout(() => {
+                        win.print();
+                        // Close the window after printing (optional)
+                        setTimeout(() => {
+                            win.close();
+                        }, 1000);
+                    }, 250);
+
+                    console.log('Print dialog should open now');
+                } else {
+                    console.error('Failed to open print window');
+                }
+            } catch (error) {
+                console.error('Print test failed:', error);
+            }
+        }
+
+        function generateSalaryHTML(data) {
+            return `<!DOCTYPE html>
+<html>
+<head>
+  <title>Salary Receipt</title>
+  <style>
+    @media print {
+      @page {
+        size: 58mm auto;
+        margin: 4mm;
+      }
+      body {
+        width: 50mm;
+        margin: 0;
+        padding: 2mm;
+      }
+    }
+    body {
+      font-family: monospace;
+      font-size: 11px;
+      width: 220px;
+      margin: 0;
+      padding: 8px;
+      line-height: 1.2;
+    }
+    .center { text-align: center; }
+    .line {
+      border-top: 1px dashed #000;
+      margin: 4px 0;
+      page-break-inside: avoid;
+    }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      margin: 2px 0;
+      page-break-inside: avoid;
+    }
+    .header-section {
+      page-break-after: avoid;
+      margin-bottom: 4px;
+    }
+    .daily-data {
+      margin: 4px 0;
+    }
+    .daily-row {
+      page-break-inside: avoid;
+      margin: 2px 0;
+    }
+    .summary-section {
+      page-break-inside: avoid;
+      margin-top: 4px;
+    }
+    .footer-section {
+      page-break-inside: avoid;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header-section">
+    <div class="center"><strong>${data.orgName}</strong></div>
+    <div class="center">TELLER SALARY REPORT</div>
+    <div class="line"></div>
+    <div>Teller: ${data.tellerName}</div>
+    <div>ID: ${data.tellerId}</div>
+    <div>Week: ${data.weekLabel}</div>
+    <div>Date: ${data.dateStr}</div>
+  </div>
+  <div class="line"></div>
+  <div class="daily-data">
+    ${data.dailyData?.map(row => `<div class="daily-row row"><span>${row.day}</span><span>₱${row.over?.toFixed(2)}</span><span>₱${row.base?.toFixed(2)}</span></div>`).join('')}
+  </div>
+  <div class="line"></div>
+  <div class="summary-section">
+    <div class="row"><span><strong>TOTAL:</strong></span><span></span><span><strong>₱${data.totalCompensation?.toFixed(2)}</strong></span></div>
+  </div>
+  <div class="line"></div>
+  <div class="footer-section">
+    <div>Prepared by: ___________________</div>
+    <div class="center">Thank you</div>
+  </div>
+</body>
+</html>`;
+        }
+    </script>
+</body>
+</html>

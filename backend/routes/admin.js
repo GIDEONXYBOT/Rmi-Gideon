@@ -94,6 +94,43 @@ router.put("/update-user/:id", requirePermission('employees'), async (req, res) 
   }
 });
 
+// ✅ Change user role - Allow super_admin to change any user's role
+router.put("/change-role/:id", requireAuth, requireRole(['super_admin']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { role } = req.body;
+
+    if (!role) {
+      return res.status(400).json({ message: "Role is required" });
+    }
+
+    const validRoles = ['admin', 'super_admin', 'supervisor', 'supervisor_teller', 'teller', 'declarator', 'head_watcher', 'sub_watcher'];
+    if (!validRoles.includes(role)) {
+      return res.status(400).json({ message: `Invalid role. Must be one of: ${validRoles.join(', ')}` });
+    }
+
+    const user = await User.findById(id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const oldRole = user.role;
+    user.role = role;
+    await user.save();
+
+    console.log(`✅ Changed ${user.username} role from ${oldRole} to ${role}`);
+
+    if (global.io) global.io.emit("userRoleChanged", { userId: user._id, newRole: role, oldRole });
+
+    res.json({
+      success: true,
+      message: `✅ Successfully changed ${user.name || user.username} role from ${oldRole} to ${role}`,
+      user
+    });
+  } catch (err) {
+    console.error("❌ Error changing user role:", err);
+    res.status(500).json({ message: "Failed to change user role" });
+  }
+});
+
 // ✅ Remove penalty (clear skipUntil and lastAbsentReason)
 router.put('/users/:id/remove-penalty', requireAuth, requireRole(['super_admin','admin','supervisor']), async (req, res) => {
   try {

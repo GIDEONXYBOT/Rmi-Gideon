@@ -1181,7 +1181,96 @@ export default function AdminSettings() {
         </div>
       )}
 
-      {/* 💰 Sync Payroll from Reports - ADMIN ONLY */}
+      {/* � Change User Role - SUPER_ADMIN ONLY */}
+      {user?.role === 'super_admin' && (
+        <div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
+          <h2 className="font-semibold text-lg mb-3 flex items-center gap-2">
+            <Key className="w-5 h-5" />
+            Change User Role
+          </h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+            Change the role of any user. This controls their access level and permissions.
+          </p>
+          <div className="grid md:grid-cols-3 gap-3 items-end">
+            <div>
+              <label className="block mb-1 text-sm font-medium">Select User</label>
+              <select
+                id="roleChangeUser"
+                defaultValue=""
+                onChange={(e) => document.getElementById('roleChangeSelect').value = e.target.value}
+                className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+              >
+                <option value="">-- Choose User --</option>
+                {users.map(u => (
+                  <option key={u._id} value={u._id}>
+                    {u.name || u.username} ({u.role})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block mb-1 text-sm font-medium">New Role</label>
+              <select
+                id="newRoleSelect"
+                defaultValue=""
+                className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+              >
+                <option value="">-- Select Role --</option>
+                <option value="super_admin">Super Admin</option>
+                <option value="admin">Admin</option>
+                <option value="supervisor">Supervisor</option>
+                <option value="supervisor_teller">Supervisor/Teller</option>
+                <option value="teller">Teller</option>
+                <option value="declarator">Declarator</option>
+                <option value="head_watcher">Head Watcher</option>
+                <option value="sub_watcher">Sub Watcher</option>
+              </select>
+            </div>
+            <button
+              onClick={async () => {
+                const userId = document.getElementById('roleChangeUser').value;
+                const newRole = document.getElementById('newRoleSelect').value;
+                
+                if (!userId || !newRole) {
+                  alert('⚠️ Please select both a user and a role');
+                  return;
+                }
+                
+                const user = users.find(u => u._id === userId);
+                if (!confirm(`Change ${user?.name || user?.username} role to ${newRole}?`)) return;
+                
+                try {
+                  setChangingPassword(true);
+                  const token = localStorage.getItem('token');
+                  const response = await axios.put(
+                    `${API}/api/admin/change-role/${userId}`,
+                    { role: newRole },
+                    { headers: { Authorization: `Bearer ${token}` } }
+                  );
+                  alert('✅ ' + response.data.message);
+                  document.getElementById('roleChangeUser').value = '';
+                  document.getElementById('newRoleSelect').value = '';
+                  // Reload users list
+                  const usersRes = await axios.get(`${API}/api/admin/users`);
+                  setUsers(usersRes.data);
+                } catch (err) {
+                  console.error('❌ Failed to change role:', err);
+                  alert('Failed to change role: ' + (err.response?.data?.message || err.message));
+                } finally {
+                  setChangingPassword(false);
+                }
+              }}
+              disabled={changingPassword}
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Key className="w-4 h-4" />
+              {changingPassword ? "Updating..." : "Change Role"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* �💰 Sync Payroll from Reports - ADMIN ONLY */}
 
       {isAdmin && isSuperAdmin && (
         <div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow mb-6">

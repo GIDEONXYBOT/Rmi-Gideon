@@ -18,6 +18,12 @@ const LeaderboardPage = () => {
   const [lastTotalBets, setLastTotalBets] = useState(0);
   const { showToast } = useToast();
 
+  // API source toggles
+  const [apiSources, setApiSources] = useState({
+    external: true,
+    database: true
+  });
+
   // Monitor total bets and generate coins when it increases
   useEffect(() => {
     if (currentDraw?.details) {
@@ -57,11 +63,62 @@ const LeaderboardPage = () => {
     setError(null);
 
     try {
-      const [drawsData, statsData, currentDrawData] = await Promise.all([
-        leaderboardService.fetchLeaderboardData(),
-        leaderboardService.getBettingStats(),
-        leaderboardService.getCurrentDraw()
-      ]);
+      let drawsData, statsData, currentDrawData;
+
+      // Handle API source selection
+      if (apiSources.external && apiSources.database) {
+        // Try external first, fallback to database (default behavior)
+        [drawsData, statsData, currentDrawData] = await Promise.all([
+          leaderboardService.fetchLeaderboardData(),
+          leaderboardService.getBettingStats(),
+          leaderboardService.getCurrentDraw()
+        ]);
+      } else if (apiSources.external && !apiSources.database) {
+        // External only - try external, no fallback
+        try {
+          [drawsData, statsData, currentDrawData] = await Promise.all([
+            leaderboardService.fetchLeaderboardData(),
+            leaderboardService.getBettingStats(),
+            leaderboardService.getCurrentDraw()
+          ]);
+        } catch (externalError) {
+          console.log('External API failed and database fallback disabled');
+          throw new Error('External API failed. Database source is disabled.');
+        }
+      } else if (!apiSources.external && apiSources.database) {
+        // Database only - skip external attempt
+        try {
+          // Direct database call
+          const response = await fetch(`${leaderboardService.apiUrl}/api/external-betting/leaderboard`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+          }
+
+          const data = await response.json();
+
+          if (!data.success) {
+            throw new Error(data.error || 'Failed to fetch leaderboard data');
+          }
+
+          drawsData = data.data;
+          statsData = await leaderboardService.getBettingStats();
+          currentDrawData = await leaderboardService.getCurrentDraw();
+
+        } catch (dbError) {
+          console.log('Database fetch failed');
+          throw dbError;
+        }
+      } else {
+        // No sources selected
+        throw new Error('No data sources selected. Please enable at least one source.');
+      }
 
       // Remove duplicates from draws based on fight sequence
       const seenFights = new Set();
@@ -102,6 +159,13 @@ const LeaderboardPage = () => {
         setLoading(false);
       }
     }
+  };
+
+  const handleSourceToggle = (source) => {
+    setApiSources(prev => ({
+      ...prev,
+      [source]: !prev[source]
+    }));
   };
 
   useEffect(() => {
@@ -161,7 +225,7 @@ const LeaderboardPage = () => {
         clearInterval(interval);
       };
     }
-  }, []);
+  }, [apiSources]);
 
   // Live clock that updates every second
   useEffect(() => {

@@ -1,7 +1,6 @@
-// routes/externalBetting.js - Fetch betting data from GTArena
+// routes/externalBetting.js - Fetch betting data from database and external APIs
 import express from 'express';
 import axios from 'axios';
-import * as cheerio from 'cheerio';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { emitLeaderboardUpdate } from '../socket/leaderboardSocket.js';
 
@@ -175,57 +174,120 @@ router.post('/import-historical', requireAuth, requireRole(['admin', 'super_admi
 
 /**
  * GET /api/external-betting/teller-bets
- * Fetch teller betting data from GTArena (admin/super_admin only)
+ * Fetch teller betting data from database (admin/super_admin only)
  */
 router.get('/teller-bets', requireAuth, requireRole(['admin', 'super_admin']), async (req, res) => {
   try {
-    // If no credentials set, return mock/demo data
-    if (!sessionData.username || !sessionData.password) {
-      console.log('⚠️ No GTArena credentials configured, showing demo data');
-      return res.json({ 
-        success: true, 
+    console.log('📡 Fetching teller betting data from database...');
+
+    // Connect to database
+    const mongoose = (await import('mongoose')).default;
+    if (mongoose.connection.readyState !== 1) {
+      await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/rmi-teller-report');
+    }
+
+    const now = new Date();
+    const manilaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+    const todayStart = new Date(manilaTime.getFullYear(), manilaTime.getMonth(), manilaTime.getDate(), 0, 0, 0);
+    const todayEnd = new Date(manilaTime.getFullYear(), manilaTime.getMonth(), manilaTime.getDate(), 23, 59, 59);
+
+    console.log(`📅 Looking for teller reports between ${todayStart.toISOString()} and ${todayEnd.toISOString()}`);
+
+    // Query today's teller reports from database
+    const todaysReports = await mongoose.connection.db.collection('tellerreports').find({
+      createdAt: {
+        $gte: todayStart,
+        $lte: todayEnd
+      }
+    }).toArray();
+
+    console.log(`📊 Found ${todaysReports.length} teller reports for today in database`);
+
+    // Get user information for teller names
+    const tellerIds = todaysReports.map(report => report.tellerId).filter(id => id);
+    const users = await mongoose.connection.db.collection('users').find({
+      _id: { $in: tellerIds.map(id => new mongoose.Types.ObjectId(id)) }
+    }).toArray();
+
+    // Create a map of tellerId to username
+    const userMap = new Map();
+    users.forEach(user => {
+      userMap.set(user._id.toString(), user.username || user.name);
+    });
+
+    // Transform the data to match expected format
+    const bettingData = todaysReports.map(report => {
+      const username = userMap.get(report.tellerId) || `teller_${report.tellerId?.slice(-4) || 'unknown'}`;
+      const totalBet = report.totalBet || 0;
+      const systemBalance = report.systemBalance || 0;
+
+      // Calculate MW bet percentage (mock calculation based on available data)
+      const mwBetPercent = totalBet > 0 ? ((systemBalance / totalBet) * 100) : 0;
+
+      return {
+        username: username,
+        name: username,
+        totalBet: totalBet,
+        mwBetPercent: Math.round(mwBetPercent * 10) / 10, // Round to 1 decimal
+        systemBalance: systemBalance,
+        cashOnHand: report.cashOnHand || 0,
+        short: report.short || 0,
+        over: report.over || 0,
+        fetchedAt: new Date()
+      };
+    });
+
+    // If no data found, return demo data
+    if (bettingData.length === 0) {
+      console.log('⚠️ No teller reports found for today, showing demo data');
+      return res.json({
+        success: true,
         data: [
-          { username: 'teller_1', totalBet: 15000, mwBetPercent: 45.5, fetchedAt: new Date() },
-          { username: 'teller_2', totalBet: 12500, mwBetPercent: 38.2, fetchedAt: new Date() },
-          { username: 'teller_3', totalBet: 8750, mwBetPercent: 52.1, fetchedAt: new Date() },
-          { username: 'teller_4', totalBet: 6200, mwBetPercent: 41.7, fetchedAt: new Date() },
-          { username: 'teller_5', totalBet: 4500, mwBetPercent: 35.9, fetchedAt: new Date() }
+          { username: 'teller_1', name: 'teller_1', totalBet: 15000, mwBetPercent: 45.5, systemBalance: 6750, cashOnHand: 15000, short: 0, over: 0, fetchedAt: new Date() },
+          { username: 'teller_2', name: 'teller_2', totalBet: 12500, mwBetPercent: 38.2, systemBalance: 4775, cashOnHand: 12500, short: 0, over: 0, fetchedAt: new Date() },
+          { username: 'teller_3', name: 'teller_3', totalBet: 8750, mwBetPercent: 52.1, systemBalance: 4560, cashOnHand: 8750, short: 0, over: 0, fetchedAt: new Date() },
+          { username: 'teller_4', name: 'teller_4', totalBet: 6200, mwBetPercent: 41.7, systemBalance: 2585, cashOnHand: 6200, short: 0, over: 0, fetchedAt: new Date() },
+          { username: 'teller_5', name: 'teller_5', totalBet: 4500, mwBetPercent: 35.9, systemBalance: 1616, cashOnHand: 4500, short: 0, over: 0, fetchedAt: new Date() }
         ],
         isDemo: true,
-        message: 'Demo data shown. Set real GTArena credentials to fetch live data.',
-        lastFetch: new Date()
+        message: 'No teller reports found for today. Showing demo data.',
+        lastFetch: new Date(),
+        source: "database",
+        dateRange: {
+          start: todayStart.toISOString(),
+          end: todayEnd.toISOString()
+        }
       });
     }
 
-    // Try to fetch betting data
-    console.log(`📡 Attempting to fetch betting data for user: ${sessionData.username}`);
-    const bettingData = await fetchBettingDataFromGTArena(
-      sessionData.username,
-      sessionData.password
-    );
-
-    sessionData.lastFetch = new Date();
-    console.log(`✅ Successfully fetched ${bettingData.length} tellers from GTArena`);
-    res.json({ 
-      success: true, 
+    console.log(`✅ Successfully processed ${bettingData.length} teller records from database`);
+    res.json({
+      success: true,
       data: bettingData,
       isDemo: false,
-      lastFetch: sessionData.lastFetch 
+      lastFetch: new Date(),
+      source: "database",
+      dateRange: {
+        start: todayStart.toISOString(),
+        end: todayEnd.toISOString()
+      },
+      message: `Returning ${bettingData.length} teller reports from today (${manilaTime.getMonth() + 1}/${manilaTime.getDate()}/${manilaTime.getFullYear()})`
     });
+
   } catch (err) {
-    console.error('❌ Error fetching betting data:', err.message);
+    console.error('❌ Error fetching teller betting data:', err.message);
     // Fall back to demo data on error
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       data: [
-        { username: 'teller_1', totalBet: 15000, mwBetPercent: 45.5, fetchedAt: new Date() },
-        { username: 'teller_2', totalBet: 12500, mwBetPercent: 38.2, fetchedAt: new Date() },
-        { username: 'teller_3', totalBet: 8750, mwBetPercent: 52.1, fetchedAt: new Date() },
-        { username: 'teller_4', totalBet: 6200, mwBetPercent: 41.7, fetchedAt: new Date() },
-        { username: 'teller_5', totalBet: 4500, mwBetPercent: 35.9, fetchedAt: new Date() }
+        { username: 'teller_1', name: 'teller_1', totalBet: 15000, mwBetPercent: 45.5, systemBalance: 6750, cashOnHand: 15000, short: 0, over: 0, fetchedAt: new Date() },
+        { username: 'teller_2', name: 'teller_2', totalBet: 12500, mwBetPercent: 38.2, systemBalance: 4775, cashOnHand: 12500, short: 0, over: 0, fetchedAt: new Date() },
+        { username: 'teller_3', name: 'teller_3', totalBet: 8750, mwBetPercent: 52.1, systemBalance: 4560, cashOnHand: 8750, short: 0, over: 0, fetchedAt: new Date() },
+        { username: 'teller_4', name: 'teller_4', totalBet: 6200, mwBetPercent: 41.7, systemBalance: 2585, cashOnHand: 6200, short: 0, over: 0, fetchedAt: new Date() },
+        { username: 'teller_5', name: 'teller_5', totalBet: 4500, mwBetPercent: 35.9, systemBalance: 1616, cashOnHand: 4500, short: 0, over: 0, fetchedAt: new Date() }
       ],
       isDemo: true,
-      message: `Error fetching real data: ${err.message}. Showing demo data.`,
+      message: `Error fetching data from database: ${err.message}. Showing demo data.`,
       lastFetch: new Date(),
       error: err.message
     });
@@ -243,313 +305,17 @@ router.get('/status', async (req, res) => {
   });
 });
 
-/**
- * Helper function to fetch betting data from GTArena
- */
-async function fetchBettingDataFromGTArena(username, password) {
-  try {
-    // Create axios instance
-    const client = axios.create();
 
-    // Step 1: Login to GTArena API - try different endpoints
-    const loginEndpoints = [
-      'https://rmi-gideon.gtarena.ph/api/auth/login',
-      'https://rmi-gideon.gtarena.ph/api/v1/login',
-      'https://rmi-gideon.gtarena.ph/api/authenticate',
-      'https://rmi-gideon.gtarena.ph/login'  // fallback to original
-    ];
-
-    let loginResponse = null;
-    let loginUrl = '';
-
-    for (const endpoint of loginEndpoints) {
-      console.log(`🔐 Trying login endpoint: ${endpoint}`);
-      try {
-        // Try different account formats for API login
-        let loginPayload;
-        if (endpoint.includes('/api/auth/login')) {
-          const accountFormats = [
-            username,  // admin.jell
-            `${username}@rmi-gideon.gtarena.ph`,  // admin.jell@rmi-gideon.gtarena.ph
-            username.replace('.', ''),  // adminjell
-            `admin@${username.split('.')[1]}`,  // admin@jell
-          ];
-
-          for (const accountFormat of accountFormats) {
-            console.log(`🔐 Trying account format: ${accountFormat}`);
-            try {
-              const testResponse = await client.post(endpoint,
-                { account: accountFormat, password },
-                {
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-                  },
-                  validateStatus: () => true
-                }
-              );
-
-              if (testResponse.status === 200 && (testResponse.data?.data?.success || testResponse.data?.success || testResponse.data?.token)) {
-                loginPayload = { account: accountFormat, password };
-                break;
-              } else {
-                console.log(`❌ Account format ${accountFormat} failed:`, testResponse.data?.data?.error?.message);
-              }
-            } catch (err) {
-              console.log(`❌ Error with account format ${accountFormat}:`, err.message);
-            }
-          }
-
-          if (!loginPayload) {
-            loginPayload = { account: username, password }; // fallback
-          }
-        } else if (endpoint.includes('login') && !endpoint.includes('/api/')) {
-          loginPayload = `username=${username}&password=${password}`;
-        } else {
-          loginPayload = { username, password };
-        }
-
-        const contentType = endpoint.includes('/api/') ? 'application/json' : 'application/x-www-form-urlencoded';
-
-        const response = await client.post(endpoint, loginPayload, {
-          headers: {
-            'Content-Type': contentType,
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-          },
-          validateStatus: () => true
-        });
-
-        if (response.status === 200 && (response.data?.data?.success || response.data?.success || response.data?.token)) {
-          loginResponse = response;
-          loginUrl = endpoint;
-          console.log(`✅ Login successful with endpoint: ${endpoint}`);
-          break;
-        } else {
-          console.log(`❌ Login failed for ${endpoint}:`, JSON.stringify(response.data, null, 2));
-        }
-      } catch (err) {
-        console.log(`❌ Error with ${endpoint}:`, err.message);
-      }
-    }
-
-    if (!loginResponse) {
-      throw new Error('All login endpoints failed');
-    }
-
-    console.log(`📊 Login response status: ${loginResponse.status}`);
-    console.log(`📊 Login response data:`, loginResponse.data);
-
-    // Check if login was successful
-    if (loginResponse.status !== 200 || !loginResponse.data?.data?.success) {
-      throw new Error(`Login failed: ${loginResponse.data?.data?.error?.message || 'Unknown error'}`);
-    }
-
-    // Extract token from response
-    const token = loginResponse.data?.data?.token || loginResponse.data?.token;
-    if (!token) {
-      throw new Error('No authentication token received from login');
-    }
-    console.log(`🔑 Authentication token received`);
-
-    // Step 2: Fetch betting data from API - try different endpoints
-    const bettingEndpoints = [
-      'https://rmi-gideon.gtarena.ph/api/reports/event/data',
-      'https://rmi-gideon.gtarena.ph/api/reports/event',
-      'https://rmi-gideon.gtarena.ph/api/betting/reports',
-      'https://rmi-gideon.gtarena.ph/api/tellers/bets',
-      'https://rmi-gideon.gtarena.ph/reports/event/page'  // fallback to original
-    ];
-
-    let bettingResponse = null;
-    let bettingUrl = '';
-
-    for (const endpoint of bettingEndpoints) {
-      console.log(`📥 Trying betting endpoint: ${endpoint}`);
-      try {
-        const response = await client.get(endpoint, {
-          headers: {
-            'Authorization': token ? `Bearer ${token}` : undefined,
-            'Cookie': loginResponse.headers['set-cookie']?.join('; ') || '',
-            'Content-Type': 'application/json',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-          },
-          validateStatus: () => true
-        });
-
-        if (response.status === 200 && (response.data?.data?.staffReports || response.data?.staffReports || Array.isArray(response.data?.data))) {
-          bettingResponse = response;
-          bettingUrl = endpoint;
-          console.log(`✅ Betting data retrieved from: ${endpoint}`);
-          break;
-        } else {
-          console.log(`❌ No valid data from ${endpoint}:`, response.data);
-        }
-      } catch (err) {
-        console.log(`❌ Error with ${endpoint}:`, err.message);
-      }
-    }
-
-    if (!bettingResponse) {
-      throw new Error('All betting data endpoints failed');
-    }
-
-    console.log(`📄 Betting API response status: ${bettingResponse.status}`);
-    console.log(`📄 Response data type: ${typeof bettingResponse.data}`);
-    console.log(`📄 Response data:`, bettingResponse.data);
-
-    // Check if API response is successful
-    if (bettingResponse.status !== 200 || !bettingResponse.data?.data?.success) {
-      throw new Error(`API request failed: ${bettingResponse.data?.data?.error?.message || bettingResponse.data?.message || 'Unknown API error'}`);
-    }
-
-    // Parse JSON response
-    const apiData = bettingResponse.data?.data || bettingResponse.data;
-    if (!apiData || !Array.isArray(apiData.staffReports)) {
-      console.log(`⚠️ API response structure:`, Object.keys(apiData || {}));
-      throw new Error('Unexpected API response structure');
-    }
-
-    // Transform API data to expected format
-    const bettingData = apiData.staffReports.map(item => ({
-      name: item.name || item.username,
-      username: item.username,
-      betAmount: item.betAmount || item.totalBet || 0,
-      payout: item.payout || 0,
-      canceledBet: item.canceledBet || 0,
-      commission: item.commission || 0,
-      systemBalance: item.systemBalance || 0,
-      startingBalance: item.startingBalance || 0
-    }));
-
-    console.log(`✅ Successfully parsed ${bettingData.length} teller records from API`);
-    return { staffReports: bettingData };
-  } catch (err) {
-    console.error('❌ Error in fetchBettingDataFromGTArena:', err.message);
-    throw err;
-  }
-}
 
 /**
  * GET /api/external-betting/leaderboard
- * Fetch leaderboard data from GTArena (public access for frontend) - redeploy trigger
- * Acts as a proxy to bypass CORS restrictions
+ * Fetch leaderboard data from API (no scraping)
  */
 router.get('/leaderboard', async (req, res) => {
   try {
-    console.log('📡 Fetching leaderboard data (today only)...');
+    console.log('📡 Fetching leaderboard data from API...');
 
-    const client = axios.create();
-
-    // Step 1: Login to get authenticated session
-    const loginUrl = 'https://rmi-gideon.gtarena.ph/login';
-    console.log(`🔐 Attempting login to ${loginUrl}`);
-    const loginResponse = await client.post(loginUrl,
-      `username=${sessionData.username}&password=${sessionData.password}`,
-      {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        },
-        validateStatus: () => true
-      }
-    );
-    console.log(`📊 Login response status: ${loginResponse.status}`);
-
-    // Get cookies from login response
-    const cookies = loginResponse.headers['set-cookie']?.join('; ') || '';
-    console.log(`🍪 Cookies length: ${cookies.length}`);
-
-    // Try to fetch current data from GTArena
-    let html = '';
-    const potentialUrls = [
-      'https://rmi-gideon.gtarena.ph/leaderboard',
-      'https://rmi-gideon.gtarena.ph/reports/event/page'
-    ];
-
-    for (const url of potentialUrls) {
-      try {
-        console.log(`🔍 Trying URL: ${url}`);
-        const response = await client.get(url, {
-          headers: {
-            'Cookie': cookies,
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache'
-          },
-          timeout: 15000,
-          validateStatus: () => true
-        });
-
-        if (response.status === 200 && response.data) {
-          html = response.data;
-          console.log(`✅ Successfully fetched data from: ${url}`);
-          break;
-        }
-      } catch (error) {
-        console.log(`❌ Failed to fetch from ${url}: ${error.message}`);
-        continue;
-      }
-    }
-
-    let newDraws = [];
-    
-    if (html) {
-      // Parse the response
-      if (html.trim().startsWith('{') || html.trim().startsWith('[')) {
-        console.log('📄 Response appears to be JSON');
-        try {
-          const jsonData = JSON.parse(html);
-          newDraws = jsonData.draws || jsonData.data || jsonData;
-          if (!Array.isArray(newDraws)) {
-            newDraws = [newDraws];
-          }
-        } catch (error) {
-          console.error('❌ Failed to parse JSON:', error.message);
-        }
-      } else {
-        // HTML response - parse data-page attribute
-        console.log('📄 Response appears to be HTML');
-        const dataMatch = html.match(/data-page="([^"]*)"/);
-        if (!dataMatch) {
-          const altMatch = html.match(/data-page='([^']*)'/);
-          if (altMatch) {
-            const encodedData = altMatch[1];
-            const decodedData = encodedData
-              .replace(/&quot;/g, '"')
-              .replace(/&amp;/g, '&')
-              .replace(/&lt;/g, '<')
-              .replace(/&gt;/g, '>')
-              .replace(/&#39;/g, "'")
-              .replace(/&apos;/g, "'");
-            try {
-              const pageData = JSON.parse(decodedData);
-              newDraws = pageData?.props?.draws || [];
-            } catch (error) {
-              console.error('❌ Failed to parse data-page:', error.message);
-            }
-          }
-        } else {
-          const encodedData = dataMatch[1];
-          const decodedData = encodedData
-            .replace(/&quot;/g, '"')
-            .replace(/&amp;/g, '&')
-            .replace(/&lt;/g, '<')
-            .replace(/&gt;/g, '>')
-            .replace(/&#39;/g, "'")
-            .replace(/&apos;/g, "'");
-          try {
-            const pageData = JSON.parse(decodedData);
-            newDraws = pageData?.props?.draws || [];
-          } catch (error) {
-            console.error('❌ Failed to parse data-page:', error.message);
-          }
-        }
-      }
-    }
-
-    console.log(`✅ Successfully parsed ${newDraws.length} draws from GTArena`);
-
-    // Update database with new draws - today only
+    // Connect to database
     const mongoose = (await import('mongoose')).default;
     if (mongoose.connection.readyState !== 1) {
       await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/rmi-teller-report');
@@ -562,31 +328,7 @@ router.get('/leaderboard', async (req, res) => {
 
     console.log(`📅 Looking for fights between ${todayStart.toISOString()} and ${todayEnd.toISOString()}`);
 
-    for (const draw of newDraws) {
-      if (draw.id) {
-        // Preserve existing createdAt if available, otherwise use today's date
-        const existingCreatedAt = draw.createdAt || new Date();
-        const drawWithTimestamp = {
-          ...draw,
-          createdAt: existingCreatedAt
-        };
-        
-        try {
-          await mongoose.connection.db.collection('draws').updateOne(
-            { id: draw.id },
-            { $set: drawWithTimestamp },
-            { upsert: true }
-          );
-        } catch (dbError) {
-          console.error(`❌ Error saving draw ${draw.id}:`, dbError);
-        }
-      }
-    }
-
-    console.log(`✅ Successfully saved/updated ${newDraws.length} draws with today's date`);
-
-    // Query TODAY's data ONLY from database - sorted by fightSequence descending (newest first)
-    // Remove duplicates by using unique fight sequence
+    // Query today's data from database
     let todaysDraws = await mongoose.connection.db.collection('draws').find({
       createdAt: {
         $gte: todayStart,
@@ -594,54 +336,121 @@ router.get('/leaderboard', async (req, res) => {
       }
     }).sort({ 'batch.fightSequence': -1 }).toArray();
 
-    console.log(`📊 Found ${todaysDraws.length} fights for today in database BEFORE deduplication`);
+    console.log(`📊 Found ${todaysDraws.length} fights for today in database`);
 
-    // Remove duplicates by fight ID and fight sequence
+    // Remove duplicates by fight ID
     const seenFights = new Set();
-    const uniqueDraws = [];
-    for (const draw of todaysDraws) {
-      const fightKey = draw.batch?.fightSequence || draw.id;
-      if (!seenFights.has(fightKey)) {
-        seenFights.add(fightKey);
-        uniqueDraws.push(draw);
+    todaysDraws = todaysDraws.filter(draw => {
+      const fightId = draw.id || draw.fightId;
+      if (seenFights.has(fightId)) {
+        return false;
       }
-    }
+      seenFights.add(fightId);
+      return true;
+    });
 
-    console.log(`📊 After deduplication: ${uniqueDraws.length} unique fights for today`);
-    todaysDraws = uniqueDraws;
+    console.log(`📊 After deduplication: ${todaysDraws.length} unique fights for today`);
 
-    // If no fights for today in DB, log it but still return what we found (empty or old data)
+    // If no fights found, provide demo data
     if (todaysDraws.length === 0) {
-      console.log('⚠️ No fights found for today - GTArena might not have any data yet');
+      console.log('⚠️ No fights found for today, providing demo data');
+      todaysDraws = [
+        {
+          id: "demo-1",
+          fightNumber: 1,
+          status: "completed",
+          result1: "meron",
+          result2: "wala",
+          totalBets: 1250,
+          createdAt: new Date().toISOString(),
+          batch: { fightSequence: 1 },
+          fighters: {
+            meron: { name: "Rooster A", odds: 1.85 },
+            wala: { name: "Rooster B", odds: 1.95 }
+          },
+          winner: { name: "Rooster A", result: "meron" }
+        },
+        {
+          id: "demo-2",
+          fightNumber: 2,
+          status: "completed",
+          result1: "wala",
+          result2: "meron",
+          totalBets: 980,
+          createdAt: new Date().toISOString(),
+          batch: { fightSequence: 2 },
+          fighters: {
+            meron: { name: "Rooster C", odds: 2.10 },
+            wala: { name: "Rooster D", odds: 1.75 }
+          },
+          winner: { name: "Rooster D", result: "wala" }
+        },
+        {
+          id: "demo-3",
+          fightNumber: 3,
+          status: "active",
+          result1: null,
+          result2: null,
+          totalBets: 1540,
+          createdAt: new Date().toISOString(),
+          batch: { fightSequence: 3 },
+          fighters: {
+            meron: { name: "Rooster E", odds: 1.65 },
+            wala: { name: "Rooster F", odds: 2.25 }
+          }
+        },
+        {
+          id: "demo-4",
+          fightNumber: 4,
+          status: "pending",
+          result1: null,
+          result2: null,
+          totalBets: 0,
+          createdAt: new Date().toISOString(),
+          batch: { fightSequence: 4 },
+          fighters: {
+            meron: { name: "Rooster G", odds: 1.90 },
+            wala: { name: "Rooster H", odds: 1.85 }
+          }
+        },
+        {
+          id: "demo-5",
+          fightNumber: 5,
+          status: "pending",
+          result1: null,
+          result2: null,
+          totalBets: 0,
+          createdAt: new Date().toISOString(),
+          batch: { fightSequence: 5 },
+          fighters: {
+            meron: { name: "Rooster I", odds: 2.05 },
+            wala: { name: "Rooster J", odds: 1.80 }
+          }
+        }
+      ];
     }
 
-    // Emit leaderboard update
-    const io = req.app.io;
-    if (io) {
-      emitLeaderboardUpdate(io, {
-        draws: todaysDraws,
-        currentDraw: todaysDraws[0] || null,
-        totalDraws: todaysDraws.length
-      });
-    }
-
-    // Return TODAY's data only
     res.json({
       success: true,
       data: todaysDraws,
       totalDraws: todaysDraws.length,
       fetchedAt: new Date().toISOString(),
-      message: `Returning ${todaysDraws.length} fights from today (${todayStart.toLocaleDateString()})`,
-      source: 'database',
-      dateRange: { start: todayStart.toISOString(), end: todayEnd.toISOString() }
+      message: todaysDraws.length > 0 && todaysDraws[0].id?.startsWith('demo-')
+        ? `Demo data: ${todaysDraws.length} sample fights`
+        : `Returning ${todaysDraws.length} fights from today (${manilaTime.getMonth() + 1}/${manilaTime.getDate()}/${manilaTime.getFullYear()})`,
+      source: todaysDraws.length > 0 && todaysDraws[0].id?.startsWith('demo-') ? "demo-data" : "database",
+      dateRange: {
+        start: todayStart.toISOString(),
+        end: todayEnd.toISOString()
+      }
     });
 
   } catch (err) {
     console.error('❌ Error fetching leaderboard data:', err.message);
     res.status(500).json({
       success: false,
-      error: err.message,
-      message: 'Failed to fetch leaderboard data'
+      message: 'Failed to fetch leaderboard data',
+      error: err.message
     });
   }
 });
@@ -649,71 +458,325 @@ router.get('/leaderboard', async (req, res) => {
 /**
  * GET /api/external-betting/player-leaderboard
  * Fetch player leaderboard data from GTArena (public access for frontend)
- * Returns demo data since the current URL contains chicken fight data, not player rankings
+ * Query params: external, internal, demo (booleans)
  */
 router.get('/player-leaderboard', async (req, res) => {
   try {
     console.log('🎮 Fetching player leaderboard data...');
 
-    // Return demo data directly since the current URL contains chicken fight data, not player rankings
-    const demoData = [
-      {
-        rank: 1,
-        name: "Player One",
-        username: "player1",
-        score: 15420,
-        points: 1250,
-        wins: 45,
-        losses: 12
-      },
-      {
-        rank: 2,
-        name: "Player Two",
-        username: "player2",
-        score: 14850,
-        points: 1180,
-        wins: 42,
-        losses: 15
-      },
-      {
-        rank: 3,
-        name: "Player Three",
-        username: "player3",
-        score: 13990,
-        points: 1120,
-        wins: 38,
-        losses: 18
-      },
-      {
-        rank: 4,
-        name: "Player Four",
-        username: "player4",
-        score: 13200,
-        points: 1050,
-        wins: 35,
-        losses: 22
-      },
-      {
-        rank: 5,
-        name: "Player Five",
-        username: "player5",
-        score: 12800,
-        points: 980,
-        wins: 32,
-        losses: 25
-      }
-    ];
+    const { external = 'true', internal = 'true', demo = 'true' } = req.query;
+    const sources = {
+      external: external === 'true',
+      internal: internal === 'true',
+      demo: demo === 'true'
+    };
 
-    console.log('✅ Returning demo player leaderboard data');
+    console.log('📊 Requested sources:', sources);
+
+    let combinedData = [];
+    let sourceInfo = [];
+
+    // Try external API if enabled
+    if (sources.external) {
+      try {
+        console.log('🔗 Fetching from external GTA leaderboard page (HTML parsing)...');
+
+        // Fetch the leaderboard HTML page
+        const leaderboardResponse = await axios.get('http://122.3.203.8/leaderboard', {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1'
+          },
+          timeout: 15000,
+          validateStatus: (status) => status < 500
+        });
+
+        if (leaderboardResponse.status === 200 && leaderboardResponse.data) {
+          const html = leaderboardResponse.data;
+          console.log(`📄 Received HTML page (${html.length} characters)`);
+
+          // Extract leaderboard data from data-page attribute
+          const dataPageMatch = html.match(/data-page="([^"]*)"/);
+          if (dataPageMatch) {
+            try {
+              const encodedData = dataPageMatch[1];
+              const decodedData = encodedData.replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+              const pageData = JSON.parse(decodedData);
+
+              console.log('📊 Extracted page data keys:', Object.keys(pageData));
+
+              // Extract leaderboard data from the page props
+              let leaderboardData = [];
+
+              // Check if there's leaderboard data in the props
+              if (pageData.props && pageData.props.leaderboard) {
+                leaderboardData = pageData.props.leaderboard;
+              } else if (pageData.props && pageData.props.players) {
+                leaderboardData = pageData.props.players;
+              } else if (pageData.props && pageData.props.data && Array.isArray(pageData.props.data)) {
+                leaderboardData = pageData.props.data;
+              }
+
+              // If no direct leaderboard data, try to extract from draws or other structures
+              if (leaderboardData.length === 0 && pageData.props && pageData.props.draws) {
+                const draws = pageData.props.draws;
+                if (Array.isArray(draws)) {
+                  // Extract player data from draws
+                  const playerMap = new Map();
+
+                  draws.forEach(draw => {
+                    if (draw.bets && Array.isArray(draw.bets)) {
+                      draw.bets.forEach(bet => {
+                        const playerName = bet.playerName || bet.username || bet.name;
+                        if (playerName) {
+                          if (!playerMap.has(playerName)) {
+                            playerMap.set(playerName, {
+                              name: playerName,
+                              username: playerName,
+                              totalBets: 0,
+                              totalAmount: 0,
+                              wins: 0,
+                              losses: 0
+                            });
+                          }
+                          const player = playerMap.get(playerName);
+                          player.totalBets += 1;
+                          player.totalAmount += bet.amount || bet.betAmount || 0;
+
+                          // Check if bet won
+                          if (checkIfBetWon(bet, draw)) {
+                            player.wins += 1;
+                          } else {
+                            player.losses += 1;
+                          }
+                        }
+                      });
+                    }
+                  });
+
+                  // Convert to leaderboard format
+                  leaderboardData = Array.from(playerMap.values()).map((player, index) => ({
+                    rank: index + 1,
+                    name: player.name,
+                    username: player.username,
+                    score: player.totalAmount,
+                    points: Math.floor(player.totalAmount / 100),
+                    wins: player.wins,
+                    losses: player.losses,
+                    winRate: player.wins + player.losses > 0 ? ((player.wins / (player.wins + player.losses)) * 100).toFixed(1) : 0,
+                    totalBets: player.totalBets,
+                    totalAmount: player.totalAmount
+                  })).sort((a, b) => b.points - a.points);
+                }
+              }
+
+              // Filter and structure the data
+              const validLeaderboardData = leaderboardData
+                .filter(player => player && (player.name || player.username || player.playerName))
+                .map((player, index) => ({
+                  rank: player.rank || index + 1,
+                  name: player.name || player.playerName || player.username,
+                  username: player.username || player.name || player.playerName,
+                  score: player.score || player.points || player.totalAmount || 0,
+                  points: player.points || player.score || Math.floor((player.totalAmount || 0) / 100) || 0,
+                  wins: player.wins || 0,
+                  losses: player.losses || 0,
+                  winRate: player.winRate || (player.wins && player.losses ? (player.wins / (player.wins + player.losses) * 100).toFixed(1) : 0),
+                  totalBets: player.totalBets || 0,
+                  totalAmount: player.totalAmount || 0
+                }))
+                .sort((a, b) => (b.points || 0) - (a.points || 0))
+                .slice(0, 50); // Top 50 players
+
+              if (validLeaderboardData.length > 0) {
+                combinedData.push(...validLeaderboardData);
+                sourceInfo.push('gta-leaderboard-html');
+                console.log(`✅ Extracted ${validLeaderboardData.length} players from GTA leaderboard HTML`);
+              } else {
+                console.log('⚠️ No leaderboard data found in HTML page data');
+              }
+
+            } catch (parseError) {
+              console.error('❌ Error parsing leaderboard HTML data:', parseError.message);
+              sourceInfo.push('external-html-parse-failed');
+            }
+          } else {
+            console.log('⚠️ No data-page attribute found in HTML');
+            sourceInfo.push('external-no-data-page');
+          }
+        }
+
+      } catch (err) {
+        console.log('❌ External GTA leaderboard HTML fetch failed:', err.message);
+        sourceInfo.push('external-html-failed');
+      }
+    }
+
+    // Try internal data if enabled
+    if (sources.internal) {
+      try {
+        console.log('🏠 Fetching internal leaderboard data from database...');
+
+        // Connect to database
+        const mongoose = (await import('mongoose')).default;
+        if (mongoose.connection.readyState !== 1) {
+          await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/rmi-teller-report');
+        }
+
+        // Get today's date range in Manila timezone
+        const now = new Date();
+        const manilaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+        const todayStart = new Date(manilaTime.getFullYear(), manilaTime.getMonth(), manilaTime.getDate(), 0, 0, 0);
+        const todayEnd = new Date(manilaTime.getFullYear(), manilaTime.getMonth(), manilaTime.getDate(), 23, 59, 59);
+
+        // Query draws and bets data for leaderboard calculation
+        const todaysDraws = await mongoose.connection.db.collection('draws').find({
+          createdAt: { $gte: todayStart, $lte: todayEnd }
+        }).toArray();
+
+        const todaysBets = await mongoose.connection.db.collection('bets').find({
+          createdAt: { $gte: todayStart, $lte: todayEnd }
+        }).toArray();
+
+        // Calculate player statistics from bets data
+        const playerStats = new Map();
+
+        todaysBets.forEach(bet => {
+          const playerName = bet.playerName || bet.username || bet.name;
+          if (!playerName) return;
+
+          if (!playerStats.has(playerName)) {
+            playerStats.set(playerName, {
+              name: playerName,
+              username: playerName,
+              totalBets: 0,
+              totalAmount: 0,
+              wins: 0,
+              losses: 0,
+              winAmount: 0,
+              lossAmount: 0
+            });
+          }
+
+          const stats = playerStats.get(playerName);
+          stats.totalBets += 1;
+          stats.totalAmount += bet.amount || bet.betAmount || 0;
+
+          // Check if this bet won based on draw results
+          const relatedDraw = todaysDraws.find(draw => draw.id === bet.drawId || draw.fightId === bet.fightId);
+          if (relatedDraw) {
+            const betWon = checkIfBetWon(bet, relatedDraw);
+            if (betWon) {
+              stats.wins += 1;
+              stats.winAmount += bet.amount || bet.betAmount || 0;
+            } else {
+              stats.losses += 1;
+              stats.lossAmount += bet.amount || bet.betAmount || 0;
+            }
+          }
+        });
+
+        // Convert to leaderboard format
+        const internalLeaderboardData = Array.from(playerStats.values())
+          .map((stats, index) => ({
+            rank: index + 1,
+            name: stats.name,
+            username: stats.username,
+            score: stats.totalAmount,
+            points: Math.floor(stats.totalAmount / 100), // Points based on total bet amount
+            wins: stats.wins,
+            losses: stats.losses,
+            winRate: stats.wins + stats.losses > 0 ? ((stats.wins / (stats.wins + stats.losses)) * 100).toFixed(1) : 0,
+            totalBets: stats.totalBets,
+            totalAmount: stats.totalAmount
+          }))
+          .sort((a, b) => b.points - a.points) // Sort by points descending
+          .slice(0, 50); // Top 50 players
+
+        if (internalLeaderboardData.length > 0) {
+          combinedData.push(...internalLeaderboardData);
+          sourceInfo.push('internal-database');
+          console.log(`✅ Fetched ${internalLeaderboardData.length} players from internal database`);
+        } else {
+          console.log('⚠️ No internal leaderboard data found for today');
+        }
+
+      } catch (err) {
+        console.log('❌ Internal database query failed:', err.message);
+      }
+    }
+
+    // Use demo data if enabled and no other data or if demo is specifically requested
+    if (sources.demo && (combinedData.length === 0 || sources.demo)) {
+      console.log('🎭 Using demo data...');
+      const demoData = [
+        {
+          rank: 1,
+          name: "Player One",
+          username: "player1",
+          score: 15420,
+          points: 1250,
+          wins: 45,
+          losses: 12
+        },
+        {
+          rank: 2,
+          name: "Player Two",
+          username: "player2",
+          score: 14850,
+          points: 1180,
+          wins: 42,
+          losses: 15
+        },
+        {
+          rank: 3,
+          name: "Player Three",
+          username: "player3",
+          score: 13990,
+          points: 1120,
+          wins: 38,
+          losses: 18
+        },
+        {
+          rank: 4,
+          name: "Player Four",
+          username: "player4",
+          score: 13200,
+          points: 1050,
+          wins: 35,
+          losses: 22
+        },
+        {
+          rank: 5,
+          name: "Player Five",
+          username: "player5",
+          score: 12800,
+          points: 980,
+          wins: 32,
+          losses: 25
+        }
+      ];
+      combinedData = demoData;
+      sourceInfo.push('demo-data');
+    }
+
+    const isDemo = sourceInfo.includes('demo-data') && combinedData.length > 0;
+
+    console.log(`✅ Returning leaderboard data from: ${sourceInfo.join(', ')}`);
 
     res.json({
       success: true,
-      data: demoData,
-      count: demoData.length,
+      data: combinedData,
+      count: combinedData.length,
       fetchedAt: new Date().toISOString(),
-      source: 'demo-data',
-      message: 'Player leaderboard data (demo data - real player data source needs to be identified)',
-      isDemo: true
+      source: sourceInfo.join(', '),
+      message: `Data from: ${sourceInfo.join(', ')}`,
+      isDemo: isDemo,
+      sourcesUsed: sourceInfo
     });
 
   } catch (err) {
@@ -748,24 +811,6 @@ router.get('/player-leaderboard', async (req, res) => {
         wins: 38,
         losses: 18
       },
-      {
-        rank: 4,
-        name: "Player Four",
-        username: "player4",
-        score: 13200,
-        points: 1050,
-        wins: 35,
-        losses: 22
-      },
-      {
-        rank: 5,
-        name: "Player Five",
-        username: "player5",
-        score: 12800,
-        points: 980,
-        wins: 32,
-        losses: 25
-      }
     ];
 
     res.json({
@@ -774,7 +819,7 @@ router.get('/player-leaderboard', async (req, res) => {
       count: fallbackData.length,
       fetchedAt: new Date().toISOString(),
       source: 'fallback-demo',
-      message: `Error occurred: ${err.message}. Showing demo data.`,
+      message: 'Using fallback demo data due to error',
       isDemo: true,
       error: err.message
     });
@@ -783,120 +828,62 @@ router.get('/player-leaderboard', async (req, res) => {
 
 /**
  * GET /api/external-betting/chicken-fight-bets
- * Fetch chicken fight betting data from GTArena
+ * Fetch chicken fight betting data from database
  */
 router.get('/chicken-fight-bets', requireAuth, requireRole(['admin', 'super_admin']), async (req, res) => {
   try {
-    console.log('🐔 Fetching chicken fight betting data from GTArena...');
+    console.log('🐔 Fetching chicken fight betting data from database...');
 
-    const client = axios.create();
+    // Connect to database
+    const mongoose = (await import('mongoose')).default;
+    if (mongoose.connection.readyState !== 1) {
+      await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/rmi-teller-report');
+    }
 
-    // Step 1: Login to GTArena
-    const loginUrl = 'https://rmi-gideon.gtarena.ph/login';
-    console.log(`🔐 Attempting login to ${loginUrl}`);
-    const loginResponse = await client.post(loginUrl,
-      `username=${sessionData.username}&password=${sessionData.password}`,
-      {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        },
-        validateStatus: () => true
+    const now = new Date();
+    const manilaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+    const todayStart = new Date(manilaTime.getFullYear(), manilaTime.getMonth(), manilaTime.getDate(), 0, 0, 0);
+    const todayEnd = new Date(manilaTime.getFullYear(), manilaTime.getMonth(), manilaTime.getDate(), 23, 59, 59);
+
+    // Fetch today's bets
+    const todaysBets = await mongoose.connection.db.collection('bets').find({
+      createdAt: {
+        $gte: todayStart,
+        $lte: todayEnd
       }
-    );
+    }).toArray();
 
-    if (loginResponse.status !== 200 && loginResponse.status !== 302) {
-      throw new Error(`Login failed with status ${loginResponse.status}`);
-    }
+    // Fetch today's entries
+    const todaysEntries = await mongoose.connection.db.collection('entries').find({
+      createdAt: {
+        $gte: todayStart,
+        $lte: todayEnd
+      }
+    }).toArray();
 
-    // Get cookies from login response
-    const cookies = loginResponse.headers['set-cookie']?.join('; ') || '';
-    sessionData.cookies = cookies;
+    // Calculate totals
+    const totalAmount = todaysBets.reduce((sum, bet) => sum + (bet.amount || 0), 0);
+    const totalBets = todaysBets.length;
 
-    // Step 2: Fetch chicken fight betting data page
-    const chickenFightUrl = 'https://rmi-gideon.gtarena.ph/chicken-fight/betting';
-    console.log(`🐔 Fetching chicken fight betting from ${chickenFightUrl}`);
-    const bettingResponse = await client.get(chickenFightUrl, {
-      headers: {
-        'Cookie': cookies,
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-      },
-      validateStatus: () => true
-    });
+    // Check if betting is still open (no closed status in recent entries)
+    const recentEntries = await mongoose.connection.db.collection('entries').find({
+      createdAt: {
+        $gte: new Date(Date.now() - 5 * 60 * 1000) // Last 5 minutes
+      }
+    }).toArray();
 
-    if (bettingResponse.status !== 200) {
-      throw new Error(`Failed to fetch chicken fight betting data: HTTP ${bettingResponse.status}`);
-    }
-
-    console.log(`📄 Chicken fight betting response status: ${bettingResponse.status}`);
-
-    // Step 3: Parse the HTML for betting data
-    const $ = cheerio.load(bettingResponse.data);
+    const bettingStatus = recentEntries.some(entry => entry.status === 'closed') ? 'closed' : 'open';
 
     const bettingData = {
-      totalBets: 0,
-      totalAmount: 0,
-      bettingStatus: 'open',
+      totalBets: totalBets,
+      totalAmount: totalAmount,
+      bettingStatus: bettingStatus,
       currentFight: null,
-      fights: [],
+      fights: todaysEntries,
       lastUpdated: new Date().toISOString()
     };
 
-    // Parse betting status
-    const statusText = $('.betting-status, .status, [class*="status"]').first().text().trim().toLowerCase();
-    if (statusText.includes('closed') || statusText.includes('suspend')) {
-      bettingData.bettingStatus = 'closed';
-    } else if (statusText.includes('open')) {
-      bettingData.bettingStatus = 'open';
-    }
-
-    // Parse current fight
-    const currentFightText = $('.current-fight, .fight-number, [class*="fight"]').first().text().trim();
-    const fightMatch = currentFightText.match(/fight\s*#?\s*(\d+)/i);
-    if (fightMatch) {
-      bettingData.currentFight = parseInt(fightMatch[1]);
-    }
-
-    // Parse betting amounts from tables or data elements
-    $('.bet-row, .bet-item, tr, [class*="bet"]').each((index, element) => {
-      try {
-        const $row = $(element);
-        const betText = $row.text();
-
-        // Extract amounts using regex
-        const amountMatches = betText.match(/[\d,]+\.?\d*/g);
-        if (amountMatches && amountMatches.length > 0) {
-          const amount = parseFloat(amountMatches[0].replace(/,/g, ''));
-          if (amount > 0) {
-            bettingData.totalAmount += amount;
-            bettingData.totalBets += 1;
-          }
-        }
-      } catch (parseError) {
-        console.warn(`⚠️ Failed to parse bet row ${index}:`, parseError.message);
-      }
-    });
-
-    // If no data found in structured elements, try alternative parsing
-    if (bettingData.totalBets === 0) {
-      console.log('🔄 Trying alternative chicken fight betting parsing...');
-
-      // Look for any numbers that could be betting amounts
-      const allText = $('body').text();
-      const numberMatches = allText.match(/[\d,]+\.?\d*/g);
-
-      if (numberMatches) {
-        numberMatches.forEach(match => {
-          const amount = parseFloat(match.replace(/,/g, ''));
-          if (amount > 100 && amount < 1000000) { // Reasonable betting amount range
-            bettingData.totalAmount += amount;
-            bettingData.totalBets += 1;
-          }
-        });
-      }
-    }
-
-    console.log(`✅ Successfully parsed chicken fight betting: ${bettingData.totalBets} bets, ₱${bettingData.totalAmount.toLocaleString()}, status: ${bettingData.bettingStatus}`);
+    console.log(`✅ Successfully fetched chicken fight betting: ${bettingData.totalBets} bets, ₱${bettingData.totalAmount.toLocaleString()}, status: ${bettingData.bettingStatus}`);
 
     res.json({
       success: true,
@@ -908,14 +895,48 @@ router.get('/chicken-fight-bets', requireAuth, requireRole(['admin', 'super_admi
     res.status(500).json({
       success: false,
       error: err.message,
-      message: 'Failed to fetch chicken fight betting data from external platform'
+      message: 'Failed to fetch chicken fight betting data'
     });
   }
 });
 
 /**
- * Fetch chicken fight betting data directly from GTArena (for use in scheduler)
+ * Test login credentials to verify they work
  */
+export async function testLoginCredentials() {
+  try {
+    console.log('🔍 Testing login credentials...');
+
+    const client = axios.create();
+    const loginUrl = 'https://rmi-gideon.gtarena.ph/login';
+
+    const loginResponse = await client.post(loginUrl,
+      `username=${sessionData.username}&password=${sessionData.password}`,
+      {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        },
+        validateStatus: () => true,
+        timeout: 10000,
+        maxRedirects: 5
+      }
+    );
+
+    if (loginResponse.status === 200 || loginResponse.status === 302) {
+      console.log('✅ Login credentials are valid');
+      return { success: true, status: loginResponse.status };
+    } else {
+      console.error('❌ Login credentials are invalid');
+      console.error('Status:', loginResponse.status);
+      console.error('Response:', loginResponse.data);
+      return { success: false, status: loginResponse.status, error: loginResponse.data };
+    }
+  } catch (err) {
+    console.error('❌ Error testing login credentials:', err.message);
+    return { success: false, error: err.message };
+  }
+}
 export async function fetchChickenFightBettingData() {
   try {
     console.log('🐔 [SCRAPER] Fetching chicken fight betting from GTArena...');
@@ -924,24 +945,36 @@ export async function fetchChickenFightBettingData() {
 
     // Login
     const loginUrl = 'https://rmi-gideon.gtarena.ph/login';
+    console.log(`🔐 [SCRAPER] Attempting login to ${loginUrl} with user: ${sessionData.username}`);
+
     const loginResponse = await client.post(loginUrl,
       `username=${sessionData.username}&password=${sessionData.password}`,
       {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         },
         validateStatus: () => true,
-        timeout: 15000
+        timeout: 15000,
+        maxRedirects: 5
       }
     );
 
+    console.log(`🔐 [SCRAPER] Login response status: ${loginResponse.status}`);
+
     if (loginResponse.status !== 200 && loginResponse.status !== 302) {
-      throw new Error(`Login failed: ${loginResponse.status}`);
+      console.error(`❌ [SCRAPER] Login failed with status ${loginResponse.status}`);
+      console.error(`❌ [SCRAPER] Response headers:`, loginResponse.headers);
+      console.error(`❌ [SCRAPER] Response data:`, loginResponse.data);
+      throw new Error(`Login failed with status ${loginResponse.status}`);
     }
 
     const cookies = loginResponse.headers['set-cookie']?.join('; ') || '';
-    console.log('✅ [SCRAPER] Login successful');
+    if (!cookies) {
+      console.warn('⚠️ [SCRAPER] No cookies received from login');
+    } else {
+      console.log('✅ [SCRAPER] Login successful, cookies received');
+    }
 
     // Fetch betting page - now using leaderboard for more accurate data
     const chickenFightUrl = 'https://rmi-gideon.gtarena.ph/leaderboard';
@@ -1035,13 +1068,23 @@ export async function fetchChickenFightBettingData() {
 
   } catch (err) {
     console.error('❌ [SCRAPER] Error:', err.message);
+    if (err.response) {
+      console.error('❌ [SCRAPER] Response status:', err.response.status);
+      console.error('❌ [SCRAPER] Response headers:', err.response.headers);
+      console.error('❌ [SCRAPER] Response data:', err.response.data);
+    } else if (err.code) {
+      console.error('❌ [SCRAPER] Network error code:', err.code);
+    }
+
+    // Return fallback data that won't break the system
     return {
       totalBets: 0,
       totalAmount: 0,
       bettingStatus: 'open',
       source: 'gtarena-leaderboard',
       lastUpdated: new Date().toISOString(),
-      error: err.message
+      error: err.message,
+      isDemo: true
     };
   }
 }
@@ -1225,6 +1268,36 @@ router.get('/gta-leaderboard-proxy', async (req, res) => {
     });
   }
 });
+
+/**
+ * Helper function to check if a bet won based on draw result
+ */
+function checkIfBetWon(bet, draw) {
+  try {
+    // Get the bet type and selection
+    const betType = bet.type || bet.betType || 'meron'; // Default to meron if not specified
+    const selection = bet.selection || bet.choice || betType;
+
+    // Get the draw result
+    const result = draw.result1 || draw.result; // result1 is typically 'meron' or 'wala'
+
+    if (!result) return false;
+
+    // Normalize the result and selection for comparison
+    const normalizedResult = result.toLowerCase().trim();
+    const normalizedSelection = selection.toLowerCase().trim();
+
+    // Check if the bet matches the result
+    if (normalizedResult === 'meron' && normalizedSelection === 'meron') return true;
+    if (normalizedResult === 'wala' && normalizedSelection === 'wala') return true;
+    if (normalizedResult === 'draw' && normalizedSelection === 'draw') return true;
+
+    return false;
+  } catch (error) {
+    console.error('Error checking if bet won:', error);
+    return false;
+  }
+}
 
 export default router;
 

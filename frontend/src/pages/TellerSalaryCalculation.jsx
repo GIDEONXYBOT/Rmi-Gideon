@@ -403,23 +403,73 @@ export default function TellerSalaryCalculation() {
 
         return `
           <div class="teller-card">
-            <div class="teller-header">
-              <div class="teller-name">${teller.name}</div>
-              <div class="teller-id">ID: ${teller.id}</div>
+            <div class="card-header">
+              <div class="header-content">
+                <h3 class="teller-name">${teller.name}</h3>
+                <p class="teller-id">Teller ID: ${teller.id}</p>
+              </div>
             </div>
-            <div class="teller-data">
-              ${dailyData.map(row => `
-                <div class="data-row">
-                  <span class="day">${row.day}</span>
-                  <span class="over">${formatCurrency(row.over)}</span>
-                  <span class="base">${formatCurrency(row.base)}</span>
+            <div class="card-content">
+              <div class="base-salary-section">
+                <div class="section-header">
+                  <span class="section-title">Base Salary</span>
+                  <span class="section-amount">₱${baseSalaryAmount.toFixed(2)}</span>
                 </div>
-              `).join('')}
-            </div>
-            <div class="teller-total">
-              <div class="total-row">
-                <span class="label">TOTAL:</span>
-                <span class="amount">${formatCurrency(totalCompensation)}</span>
+              </div>
+              <div class="daily-over-section">
+                <h4 class="section-title-daily">Daily Over (Cash) - Click to toggle base salary per day</h4>
+                <div class="daily-grid-header">
+                  <span>Day</span>
+                  <span>Over</span>
+                  <span>Base Salary</span>
+                  <span class="text-center">Include?</span>
+                </div>
+                <div class="daily-rows">
+                  ${dailyData.map(row => {
+                    const dayKey = dayLabels.find(d => d.label === row.day)?.key;
+                    const noBSalaryKey = `${teller.id}-${dayKey}`;
+                    const isIncluded = noBSalarDays[noBSalaryKey];
+                    return `
+                      <div class="daily-row ${!isIncluded ? 'excluded' : 'included'}">
+                        <span class="day-label">${row.day}</span>
+                        <span class="over-amount ${row.over > 0 ? 'positive' : row.over < 0 ? 'negative' : 'zero'}">₱${row.over.toFixed(2)}</span>
+                        <span class="base-amount ${isIncluded ? 'included' : 'excluded'}">₱${row.base.toFixed(2)}</span>
+                        <span class="include-status">${isIncluded ? 'YES' : 'NO'}</span>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+              <div class="weekly-total-section">
+                <div class="total-row">
+                  <span class="total-label">Weekly Over Total</span>
+                  <span class="total-amount ${totalOver > 0 ? 'positive' : totalOver < 0 ? 'negative' : 'zero'}">₱${totalOver.toFixed(2)}</span>
+                </div>
+              </div>
+              <div class="compensation-section">
+                <div class="compensation-header">Total Compensation</div>
+                <div class="compensation-amount">₱${totalCompensation.toFixed(2)}</div>
+                <p class="compensation-breakdown">
+                  Base (${dailyData.filter(row => {
+                    const dayKey = dayLabels.find(d => d.label === row.day)?.key;
+                    const noBSalaryKey = `${teller.id}-${dayKey}`;
+                    return noBSalarDays[noBSalaryKey];
+                  }).length} days × ₱${baseSalaryAmount}) ₱${dailyData.reduce((sum, row) => {
+                    const dayKey = dayLabels.find(d => d.label === row.day)?.key;
+                    const noBSalaryKey = `${teller.id}-${dayKey}`;
+                    return sum + (noBSalarDays[noBSalaryKey] ? row.base : 0);
+                  }, 0).toFixed(2)} + Over ₱${totalOver.toFixed(2)}
+                </p>
+              </div>
+              <div class="signature-section">
+                <div class="signature-row">
+                  <span>Prepared By</span>
+                  <div class="signature-line"></div>
+                </div>
+                <div class="signature-row">
+                  <span>Supervisor Signature</span>
+                  <div class="signature-line"></div>
+                </div>
               </div>
             </div>
           </div>
@@ -498,85 +548,239 @@ export default function TellerSalaryCalculation() {
     .tellers-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 8mm;
+      gap: 12mm;
       margin-top: 10mm;
     }
 
     .teller-card {
-      border: 1px solid #000;
-      padding: 3mm;
-      background: #f9f9f9;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+      background: white;
+      border: 1px solid #e5e7eb;
     }
 
-    .teller-header {
-      text-align: center;
-      margin-bottom: 3mm;
-      padding-bottom: 2mm;
-      border-bottom: 1px solid #000;
+    .card-header {
+      background: linear-gradient(to right, #4f46e5, #4338ca);
+      padding: 12px;
+    }
+
+    .header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
 
     .teller-name {
-      font-size: 11px;
+      font-size: 14px;
       font-weight: bold;
-      margin-bottom: 1mm;
+      color: white;
+      margin: 0;
     }
 
     .teller-id {
-      font-size: 9px;
-      color: #666;
+      font-size: 10px;
+      color: #e0e7ff;
+      margin: 0;
     }
 
-    .teller-data {
-      margin-bottom: 3mm;
+    .card-content {
+      padding: 12px;
     }
 
-    .data-row {
+    .base-salary-section {
+      background: #f9fafb;
+      padding: 8px;
+      border-radius: 6px;
+      margin-bottom: 12px;
+    }
+
+    .section-header {
       display: flex;
       justify-content: space-between;
-      margin-bottom: 1mm;
+      align-items: center;
+    }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: #374151;
+    }
+
+    .section-amount {
+      font-size: 14px;
+      font-weight: bold;
+      color: #4f46e5;
+    }
+
+    .daily-over-section {
+      margin-bottom: 12px;
+    }
+
+    .section-title-daily {
+      font-size: 10px;
+      font-weight: 600;
+      color: #6b7280;
+      margin-bottom: 6px;
+    }
+
+    .daily-grid-header {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 4px;
+      font-size: 9px;
+      font-weight: 600;
+      color: #6b7280;
+      border-bottom: 1px solid #e5e7eb;
+      padding-bottom: 4px;
+      margin-bottom: 6px;
+    }
+
+    .daily-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .daily-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 4px;
+      align-items: center;
+      padding: 4px;
+      border-radius: 4px;
       font-size: 9px;
     }
 
-    .day {
-      width: 20px;
-      text-align: left;
+    .daily-row.included {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
     }
 
-    .over {
-      flex: 1;
-      text-align: right;
-      padding-right: 3mm;
+    .daily-row.excluded {
+      background: white;
+      border: 1px solid #e5e7eb;
     }
 
-    .base {
-      width: 35px;
-      text-align: right;
+    .day-label {
+      font-weight: 500;
+      color: #374151;
     }
 
-    .teller-total {
-      border-top: 1px solid #000;
-      padding-top: 2mm;
+    .over-amount.positive {
+      color: #16a34a;
+      font-weight: 600;
+    }
+
+    .over-amount.negative {
+      color: #dc2626;
+      font-weight: 600;
+    }
+
+    .over-amount.zero {
+      color: #6b7280;
+    }
+
+    .base-amount.included {
+      color: #16a34a;
+      font-weight: 600;
+    }
+
+    .base-amount.excluded {
+      color: #6b7280;
+      text-decoration: line-through;
+    }
+
+    .include-status {
+      text-align: center;
+      font-weight: 600;
+      color: #374151;
+    }
+
+    .weekly-total-section {
+      border-top: 1px solid #e5e7eb;
+      padding-top: 8px;
+      margin-bottom: 12px;
     }
 
     .total-row {
       display: flex;
       justify-content: space-between;
+      align-items: center;
+    }
+
+    .total-label {
+      font-weight: 600;
+      color: #374151;
+      font-size: 11px;
+    }
+
+    .total-amount.positive {
+      font-size: 16px;
       font-weight: bold;
+      color: #16a34a;
+    }
+
+    .total-amount.negative {
+      font-size: 16px;
+      font-weight: bold;
+      color: #dc2626;
+    }
+
+    .total-amount.zero {
+      font-size: 16px;
+      font-weight: bold;
+      color: #6b7280;
+    }
+
+    .compensation-section {
+      background: #eef2ff;
+      border: 1px solid #c7d2fe;
+      padding: 8px;
+      border-radius: 6px;
+      margin-bottom: 12px;
+    }
+
+    .compensation-header {
       font-size: 10px;
+      font-weight: 600;
+      color: #4338ca;
+      margin-bottom: 4px;
     }
 
-    .label {
+    .compensation-amount {
+      font-size: 18px;
+      font-weight: bold;
+      color: #4f46e5;
+      margin-bottom: 4px;
+    }
+
+    .compensation-breakdown {
+      font-size: 8px;
+      color: #6366f1;
+      margin: 0;
+      line-height: 1.2;
+    }
+
+    .signature-section {
+      border-top: 1px dashed #9ca3af;
+      padding-top: 8px;
+      font-size: 9px;
+      color: #6b7280;
+    }
+
+    .signature-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .signature-line {
+      border-top: 1px dashed #9ca3af;
       flex: 1;
-    }
-
-    .amount {
-      text-align: right;
-    }
-
-    @media print {
-      .teller-card {
-        background: white !important;
-      }
+      margin-left: 8px;
+      height: 16px;
     }
   </style>
 </head>

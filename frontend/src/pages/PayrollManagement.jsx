@@ -43,20 +43,6 @@ export default function PayrollManagement() {
   const { showToast } = useToast();
   const dark = settings?.theme?.mode === "dark";
 
-  // ADMIN-only guard
-  if (!user || (user.role !== "admin" && user.role !== "super_admin")) {
-    return (
-      <div
-        className={`flex flex-col items-center justify-center min-h-screen ${
-          dark ? "bg-gray-900 text-gray-100" : "bg-gray-50 text-gray-900"
-        }`}
-      >
-        <h1 className="text-3xl font-bold mb-2">Access Denied</h1>
-        <p className="text-sm opacity-70">You do not have permission to view this page.</p>
-      </div>
-    );
-  }
-
   // state
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState({
@@ -131,6 +117,53 @@ export default function PayrollManagement() {
     fetchUsers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [payoutFilter, payoutDate]);
+
+  // real-time listener
+  useEffect(() => {
+    const events = ["payrollUpdated", "payrollApproved", "payrollDisapproved", "payrollAdjusted", "payrollLocked", "payrollDeleted"];
+    const socket = getGlobalSocket();
+    if (socket) {
+      events.forEach((ev) =>
+        socket.on(ev, () => {
+          console.log("🔄 Payroll event:", ev);
+          fetchAllData();
+          showToast({ type: "info", message: "Payroll auto-refreshed" });
+        })
+      );
+      return () => events.forEach((ev) => socket.off(ev));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Fetch weekly data when tab changes
+  useEffect(() => {
+    if (activeTab === "weekly-summary") {
+      fetchWeeklyPayrollData(weekOffset);
+    }
+  }, [activeTab, weekOffset]);
+
+  // Fetch daily reports for teller when viewing details
+  useEffect(() => {
+    if (viewPayroll && viewPayroll.role === "teller") {
+      fetchDailyReports(viewPayroll.user._id);
+    } else {
+      setDailyReports([]);
+    }
+  }, [viewPayroll]);
+
+  // ADMIN-only guard
+  if (!user || (user.role !== "admin" && user.role !== "super_admin")) {
+    return (
+      <div
+        className={`flex flex-col items-center justify-center min-h-screen ${
+          dark ? "bg-gray-900 text-gray-100" : "bg-gray-50 text-gray-900"
+        }`}
+      >
+        <h1 className="text-3xl font-bold mb-2">Access Denied</h1>
+        <p className="text-sm opacity-70">You do not have permission to view this page.</p>
+      </div>
+    );
+  }
 
   const fetchUsers = async () => {
     try {
