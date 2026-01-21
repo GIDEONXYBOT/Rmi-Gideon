@@ -268,7 +268,7 @@ app.use("/api/supervisorTeller", supervisorTellerRoutes); // ✅ supervisor-tell
 // app.use("/api/attendance", attendanceRoutes);
 // app.use("/api/tellers", tellersRoutes);
 // app.use("/api/scheduler", schedulerRoutes);
-// app.use("/api/schedule", scheduleRoutes);
+app.use("/api/schedule", scheduleRoutes); // ✅ schedule management endpoints
 // app.use("/api/teller-zones", tellerZonesRoutes);
 // app.use("/api/notifications", notificationsRoutes);
 // app.use("/api/shift", shiftRoutes);
