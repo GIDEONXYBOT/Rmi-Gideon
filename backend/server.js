@@ -278,9 +278,9 @@ app.use("/api/supervisorTeller", supervisorTellerRoutes); // ✅ supervisor-tell
 // app.use("/api/report", reportSingleRoutes); // routes under /api/report/ (e.g. /admin)
 // app.use("/api/cashflow-archive", cashflowArchiveRoutes);
 // app.use("/api/salaries", salariesRoutes);
-// app.use("/api/media", mediaRoutes);
-// app.use("/api/chicken-fight", chickenFightRoutes); // 🐔 Chicken Fight betting system
-// app.use("/api/chicken-fight-registration", chickenFightRegistrationRoutes); // 🐔 Chicken Fight registration
+app.use("/api/media", mediaRoutes);
+app.use("/api/chicken-fight", chickenFightRoutes); // 🐔 Chicken Fight betting system
+app.use("/api/chicken-fight-registration", chickenFightRegistrationRoutes); // 🐔 Chicken Fight registration
 // app.use("/api/draws", drawsRoutes); // 📊 Draw results for regla pattern - updated for public access
 // app.use("/api/leaderboard", leaderboardRoutes); // 🎯 GTA Leaderboard proxy
 // app.use("/api/gta-tellers", gtaTellersRoutes); // 🏢 GTA Workplace teller management
