@@ -190,6 +190,7 @@ import authRoutes from "./routes/auth.js"; // ✅ add this
 // import tellerManagementRoutes from "./routes/teller-management.js";
 // import tellersRoutes from "./routes/tellers.js";
 import supervisorRoutes from "./routes/supervisor.js";
+import supervisorTellerRoutes from "./routes/supervisorTeller.js";
 // import debugRoutes from "./routes/debug.js";
 // import deploymentsRoutes from "./routes/deployments.js";
 // import staffRoutes from "./routes/staff.js"; // ✅ new staff/employee routes
@@ -254,6 +255,7 @@ app.use("/api/teller-salary-calculation", tellerSalaryCalculationRoutes); // �
 // app.use("/api/reports", reportRoutes); // Re-enabled
 // app.use("/api/scheduler", schedulerRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/supervisorTeller", supervisorTellerRoutes); // ✅ supervisor-teller capital assignment
 // Mount endpoints that frontend relies on (enable missing ones)
 // app.use("/api/reports", reportRoutes);
 // app.use("/api/map-config", mapConfigRoutes);
