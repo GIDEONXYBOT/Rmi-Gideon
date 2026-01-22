@@ -260,7 +260,7 @@ app.use("/api/reports", reportRoutes); // ✅ betting event reports
 // Mount endpoints that frontend relies on (enable missing ones)
 // app.use("/api/reports", reportRoutes);
 // app.use("/api/map-config", mapConfigRoutes);
-// app.use("/api/teller-management", tellerManagementRoutes);
+app.use("/api/teller-management", tellerManagementRoutes); // ✅ teller management endpoints
 // app.use("/api/supervisor", supervisorRoutes);
 // app.use("/api/deployments", deploymentsRoutes);
 // app.use("/api/assets", assetsRoutes);
