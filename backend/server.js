@@ -256,6 +256,7 @@ app.use("/api/teller-salary-calculation", tellerSalaryCalculationRoutes); // �
 // app.use("/api/scheduler", schedulerRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/supervisorTeller", supervisorTellerRoutes); // ✅ supervisor-teller capital assignment
+app.use("/api/reports", reportRoutes); // ✅ betting event reports
 // Mount endpoints that frontend relies on (enable missing ones)
 // app.use("/api/reports", reportRoutes);
 // app.use("/api/map-config", mapConfigRoutes);
