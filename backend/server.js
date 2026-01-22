@@ -210,7 +210,7 @@ import mapConfigRoutes from "./routes/mapConfig.js"; // /api/map-config
 import tellerManagementRoutes from "./routes/teller-management.js"; // /api/teller-management
 import deploymentsRoutes from "./routes/deployments.js"; // /api/deployments
 import bettingDataRoutes from "./routes/bettingData.js"; // /api/betting-data
-// import externalBettingRoutes from "./routes/externalBetting.js"; // /api/external-betting
+import externalBettingRoutes from "./routes/externalBetting.js"; // /api/external-betting
 import attendanceRoutes from "./routes/attendance.js"; // /api/attendance
 import tellersRoutes from "./routes/tellers.js"; // /api/tellers
 import schedulerRoutes from "./routes/schedulerRoutes.js"; // /api/scheduler
@@ -264,7 +264,7 @@ app.use("/api/reports", reportRoutes); // ✅ betting event reports
 // app.use("/api/supervisor", supervisorRoutes);
 // app.use("/api/deployments", deploymentsRoutes);
 // app.use("/api/assets", assetsRoutes);
-// app.use("/api/external-betting", externalBettingRoutes); // Temporarily disabled for debugging
+app.use("/api/external-betting", externalBettingRoutes); // ✅ GTA betting event proxy data
 // app.use("/api/betting-data", bettingDataRoutes);
 // app.use("/api/attendance", attendanceRoutes);
 // app.use("/api/tellers", tellersRoutes);
