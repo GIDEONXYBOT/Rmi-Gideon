@@ -157,7 +157,7 @@ export default function AdminSettings() {
       (async () => {
         try {
           const res = await axios.get(`${API}/api/admin/users`);
-          const supervisorList = (res.data || []).filter(u => u.role === 'supervisor');
+          const supervisorList = (res.data || []).filter(u => u.role === 'supervisor' || u.role === 'super_admin');
           if (mounted) setSupervisorsForReport(supervisorList);
         } catch (err) {
           console.warn("⚠️ Failed to load supervisors for report:", err);

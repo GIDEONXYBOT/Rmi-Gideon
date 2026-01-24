@@ -275,7 +275,7 @@ router.get("/tellers", async (req, res) => {
 router.get("/supervisors/list", async (req, res) => {
   try {
     const supervisors = await User.find({ 
-      role: { $in: ["supervisor", "supervisor_teller"] }, 
+      role: { $in: ["supervisor", "supervisor_teller", "super_admin"] }, 
       status: "approved" 
     })
       .select("_id username name")
@@ -615,7 +615,7 @@ router.put("/verify/:id", async (req, res) => {
     const { id } = req.params;
     const { supervisorId } = req.body;
     const supervisor = await User.findById(supervisorId);
-    if (!supervisor || (supervisor.role !== "supervisor" && supervisor.role !== "supervisor_teller")) {
+    if (!supervisor || (supervisor.role !== "supervisor" && supervisor.role !== "supervisor_teller" && supervisor.role !== "super_admin")) {
       return res.status(403).json({ message: "Only supervisors can verify reports." });
     }
 

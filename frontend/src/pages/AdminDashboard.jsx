@@ -55,7 +55,7 @@ export default function AdminDashboard() {
   const fetchActiveSupervisors = async () => {
     try {
       const res = await axios.get(`${API}/api/admin/users`);
-      const supervisors = (res.data || []).filter(u => u.role === 'supervisor');
+      const supervisors = (res.data || []).filter(u => u.role === 'supervisor' || u.role === 'super_admin');
       
       // Get capital data to see which supervisors added capital
       const capitalRes = await axios.get(`${API}/api/teller-management`);

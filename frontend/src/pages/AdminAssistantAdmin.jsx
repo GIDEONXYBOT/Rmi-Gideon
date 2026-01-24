@@ -19,7 +19,7 @@ export default function AdminAssistantAdmin() {
         axios.get(`${API_URL}/admin/assistant`),
       ]);
 
-      const supervisorList = usersRes.data.filter((u) => u.role === "supervisor");
+      const supervisorList = usersRes.data.filter((u) => u.role === "supervisor" || u.role === "super_admin");
       setSupervisors(supervisorList);
       setAssistant(assistantRes.data);
     } catch (err) {
