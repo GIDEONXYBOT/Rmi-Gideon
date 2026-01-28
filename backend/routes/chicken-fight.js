@@ -520,7 +520,73 @@ router.get('/fights/today', async (req, res) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const game = await ChickenFightGame.findOne({ gameDate: today });
+    let game = await ChickenFightGame.findOne({ gameDate: today });
+
+    // If game exists but has fights without entryResults, auto-sync them
+    if (game && game.fights && game.fights.length > 0 && (!game.entryResults || game.entryResults.length === 0)) {
+      console.log(`🔄 Auto-syncing ${game.fights.length} fights to entryResults...`);
+
+      const entryMap = new Map();
+      for (const fight of game.fights) {
+        if (fight.meron?.entryId && !entryMap.has(fight.meron.entryId)) {
+          entryMap.set(fight.meron.entryId, {
+            entryId: fight.meron.entryId,
+            entryName: fight.meron.entryName,
+            gameType: fight.meron.gameType,
+            legBandNumbers: fight.meron.legBandNumbers || [],
+            legResults: [],
+            status: 'none',
+            prize: 0
+          });
+        }
+        if (fight.wala?.entryId && !entryMap.has(fight.wala.entryId)) {
+          entryMap.set(fight.wala.entryId, {
+            entryId: fight.wala.entryId,
+            entryName: fight.wala.entryName,
+            gameType: fight.wala.gameType,
+            legBandNumbers: fight.wala.legBandNumbers || [],
+            legResults: [],
+            status: 'none',
+            prize: 0
+          });
+        }
+      }
+
+      for (const fight of game.fights) {
+        const fightNum = game.fights.indexOf(fight) + 1;
+        
+        if (fight.meron?.entryId) {
+          const entry = entryMap.get(fight.meron.entryId);
+          if (entry) {
+            const existingLeg = entry.legResults.find(lr => lr.legNumber === fightNum);
+            if (!existingLeg) {
+              entry.legResults.push({
+                legNumber: fightNum,
+                result: fight.meron.result || 'noRecord'
+              });
+            }
+          }
+        }
+
+        if (fight.wala?.entryId) {
+          const entry = entryMap.get(fight.wala.entryId);
+          if (entry) {
+            const existingLeg = entry.legResults.find(lr => lr.legNumber === fightNum);
+            if (!existingLeg) {
+              entry.legResults.push({
+                legNumber: fightNum,
+                result: fight.wala.result || 'noRecord'
+              });
+            }
+          }
+        }
+      }
+
+      game.entryResults = Array.from(entryMap.values());
+      game.isFinalized = true;
+      await game.save();
+      console.log(`✅ Auto-synced ${game.entryResults.length} entries`);
+    }
 
     res.json({
       success: true,
@@ -553,6 +619,109 @@ router.get('/fights/:date', async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching fights for date:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// 🔄 SYNC FIGHTS TO ENTRY RESULTS
+// Ensures all fight records are converted to entryResults format
+router.post('/sync-fights', async (req, res) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    let game = await ChickenFightGame.findOne({ gameDate: today });
+
+    if (!game) {
+      return res.json({
+        success: true,
+        message: 'No game found for today',
+        synced: 0
+      });
+    }
+
+    // Convert fights array to entryResults if needed
+    if (game.fights && game.fights.length > 0 && (!game.entryResults || game.entryResults.length === 0)) {
+      console.log(`🔄 Syncing ${game.fights.length} fights to entryResults format...`);
+
+      // Get all unique entries from fights
+      const entryMap = new Map();
+      for (const fight of game.fights) {
+        if (fight.meron?.entryId && !entryMap.has(fight.meron.entryId)) {
+          entryMap.set(fight.meron.entryId, {
+            entryId: fight.meron.entryId,
+            entryName: fight.meron.entryName,
+            gameType: fight.meron.gameType,
+            legBandNumbers: fight.meron.legBandNumbers || [],
+            legResults: [],
+            status: 'none',
+            prize: 0
+          });
+        }
+        if (fight.wala?.entryId && !entryMap.has(fight.wala.entryId)) {
+          entryMap.set(fight.wala.entryId, {
+            entryId: fight.wala.entryId,
+            entryName: fight.wala.entryName,
+            gameType: fight.wala.gameType,
+            legBandNumbers: fight.wala.legBandNumbers || [],
+            legResults: [],
+            status: 'none',
+            prize: 0
+          });
+        }
+      }
+
+      // Add fight results to entries
+      for (const fight of game.fights) {
+        const fightNum = game.fights.indexOf(fight) + 1;
+        
+        if (fight.meron?.entryId) {
+          const entry = entryMap.get(fight.meron.entryId);
+          if (entry) {
+            const existingLeg = entry.legResults.find(lr => lr.legNumber === fightNum);
+            if (!existingLeg) {
+              entry.legResults.push({
+                legNumber: fightNum,
+                result: fight.meron.result || 'noRecord'
+              });
+            }
+          }
+        }
+
+        if (fight.wala?.entryId) {
+          const entry = entryMap.get(fight.wala.entryId);
+          if (entry) {
+            const existingLeg = entry.legResults.find(lr => lr.legNumber === fightNum);
+            if (!existingLeg) {
+              entry.legResults.push({
+                legNumber: fightNum,
+                result: fight.wala.result || 'noRecord'
+              });
+            }
+          }
+        }
+      }
+
+      // Convert map to array
+      game.entryResults = Array.from(entryMap.values());
+      game.isFinalized = true;
+      await game.save();
+
+      console.log(`✅ Synced ${game.entryResults.length} entries with fight results`);
+      return res.json({
+        success: true,
+        message: 'Fights synced to entryResults',
+        synced: game.entryResults.length
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Entry results already up to date',
+      synced: 0
+    });
+  } catch (error) {
+    console.error('Error syncing fights:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
