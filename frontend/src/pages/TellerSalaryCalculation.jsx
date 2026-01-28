@@ -91,6 +91,7 @@ export default function TellerSalaryCalculation() {
     const printableRows = dayLabels
       .map(({ key, label }) => {
         const overAmount = dailyOver[key] || 0;
+        const shortAmount = (teller.short && teller.short[key]) || 0;
         const noBSalaryKey = `${teller.id}-${key}`;
         const isIncluded = noBSalarDays[noBSalaryKey];
         const baseSalaryForDay = isIncluded ? baseSalaryAmount : 0;
@@ -98,6 +99,7 @@ export default function TellerSalaryCalculation() {
         return `<div class="row">
   <span class="col-day">${label}</span>
   <span class="col-over">${formatCurrency(overAmount)}</span>
+  <span class="col-short">${formatCurrency(shortAmount)}</span>
   <span class="col-base">${formatCurrency(baseSalaryForDay)}</span>
 </div>`;
       })
@@ -154,6 +156,7 @@ export default function TellerSalaryCalculation() {
     }
     .col-day { flex: 0 0 30px; }
     .col-over { flex: 1; text-align: right; padding-right: 8px; }
+    .col-short { flex: 1; text-align: right; padding-right: 8px; }
     .col-base { flex: 0 0 60px; text-align: right; }
     .divider { 
       border-top: 1px solid #000; 
@@ -206,6 +209,7 @@ export default function TellerSalaryCalculation() {
   <div style="font-size: 10px; display: flex; justify-content: space-between; margin-bottom: 2px; page-break-after: avoid;">
     <span style="flex: 0 0 30px;">Day</span>
     <span style="flex: 1; text-align: right; padding-right: 8px;">Over</span>
+    <span style="flex: 1; text-align: right; padding-right: 8px;">Short</span>
     <span style="flex: 0 0 60px; text-align: right;">Base</span>
   </div>
   <div class="daily-section">
@@ -269,18 +273,19 @@ export default function TellerSalaryCalculation() {
       `ID: ${teller.id}`,
       `Period: ${weekLabel}`,
       ``,
-      `Day         Over Amount      Base Salary`,
-      `---         -----------      -----------`
+      `Day         Over Amount      Short         Base Salary`,
+      `---         -----------      -----         -----------`
     ];
     
     dayLabels.forEach(({ key, label }) => {
       const overAmount = dailyOver[key] || 0;
+      const shortAmount = (teller.short && teller.short[key]) || 0;
       const noBSalaryKey = `${teller.id}-${key}`;
       const isIncluded = noBSalarDays[noBSalaryKey];
       const baseSalaryForDay = isIncluded ? baseSalaryAmount : 0;
       totalBaseSalary += baseSalaryForDay;
       
-      const dayLine = `${label.padEnd(11)}${formatCurrency(overAmount).padStart(15)}${formatCurrency(baseSalaryForDay).padStart(16)}`;
+      const dayLine = `${label.padEnd(11)}${formatCurrency(overAmount).padStart(15)}${formatCurrency(shortAmount).padStart(15)}${formatCurrency(baseSalaryForDay).padStart(16)}`;
       reportLines.push(dayLine);
     });
     
@@ -1305,22 +1310,24 @@ export default function TellerSalaryCalculation() {
                       <h4 className={`text-sm font-semibold mb-3 ${dark ? 'text-gray-300' : 'text-gray-700'}`}>
                         Daily Over (Cash) - Click to toggle base salary per day
                       </h4>
-                      <div className="grid grid-cols-4 gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400 border-b pb-2">
+                      <div className="grid grid-cols-5 gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400 border-b pb-2">
                         <span>Day</span>
                         <span>Over</span>
+                        <span>Short</span>
                         <span>Base Salary</span>
                         <span className="text-center">Include?</span>
                       </div>
                       <div className="space-y-2 mt-3">
                         {dayLabels.map(({ key, label }) => {
                           const overAmount = dailyOver[key] || 0;
+                          const shortAmount = (teller.short && teller.short[key]) || 0;
                           const tellerId = teller.id;
                           const noBSalaryKey = `${tellerId}-${key}`;
                           const isIncluded = noBSalarDays[noBSalaryKey];
                           const baseSalaryForDay = isIncluded ? baseSalaryAmount : 0;
                           
                           return (
-                            <div key={key} className={`grid grid-cols-4 gap-2 items-center p-2 rounded ${
+                            <div key={key} className={`grid grid-cols-5 gap-2 items-center p-2 rounded ${
                               !isIncluded 
                                 ? dark ? 'bg-gray-800' : 'bg-white' 
                                 : dark ? 'bg-green-900/20' : 'bg-green-50'
@@ -1329,6 +1336,9 @@ export default function TellerSalaryCalculation() {
                               <div className={`text-sm font-semibold ${
                                 overAmount > 0 ? 'text-green-600' : overAmount < 0 ? 'text-red-600' : dark ? 'text-gray-500' : 'text-gray-400'
                               }`}>₱{overAmount.toFixed(2)}</div>
+                              <div className={`text-sm font-semibold ${
+                                shortAmount > 0 ? 'text-orange-600' : dark ? 'text-gray-500' : 'text-gray-400'
+                              }`}>₱{shortAmount.toFixed(2)}</div>
                               <div className={`text-sm font-semibold ${isIncluded ? 'text-green-600' : dark ? 'text-gray-500' : 'text-gray-400 line-through'}`}>
                                 ₱{baseSalaryForDay.toFixed(2)}
                               </div>

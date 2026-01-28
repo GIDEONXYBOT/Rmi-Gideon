@@ -95,6 +95,15 @@ router.get('/', requireAuth, async (req, res) => {
           sat: 0,
           sun: 0
         },
+        short: {
+          mon: 0,
+          tue: 0,
+          wed: 0,
+          thu: 0,
+          fri: 0,
+          sat: 0,
+          sun: 0
+        },
         overAmounts: [], // Track actual over amounts per day
         hasExcessiveOver: false // Flag if any day exceeds threshold
       };
@@ -124,8 +133,10 @@ router.get('/', requireAuth, async (req, res) => {
 
         if (dayKey) {
           const overAmount = report.over || 0;
-          // Add over amount from teller report
+          const shortAmount = report.short || 0;
+          // Add over and short amounts from teller report
           tellerMap[tellerIdStr].over[dayKey] += overAmount;
+          tellerMap[tellerIdStr].short[dayKey] += shortAmount;
           
           // Track all over amounts for detection
           if (overAmount > 0) {
