@@ -1132,6 +1132,36 @@ export default function ChickenFightResults() {
                     </div>
                   )}
                 </div>
+
+                {/* Meron - Result */}
+                <div className="mb-3">
+                  <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Result
+                  </label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {['win', 'loss', 'draw', 'noRecord'].map(result => (
+                      <button
+                        key={result}
+                        onClick={() => {
+                          setEditData({
+                            ...editData,
+                            meron: {
+                              ...editData.meron,
+                              legResult: { ...editData.meron.legResult, result }
+                            }
+                          });
+                        }}
+                        className={`px-3 py-2 rounded-lg font-semibold transition ${
+                          editData.meron?.legResult?.result === result
+                            ? result === 'win' ? 'bg-green-600 text-white' : result === 'loss' ? 'bg-red-600 text-white' : result === 'draw' ? 'bg-yellow-600 text-white' : 'bg-gray-600 text-white'
+                            : isDarkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`}
+                      >
+                        {result === 'noRecord' ? 'No Rec' : result.charAt(0).toUpperCase() + result.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
               
               {/* Wala */}
@@ -1183,6 +1213,36 @@ export default function ChickenFightResults() {
                       }
                     </div>
                   )}
+                </div>
+
+                {/* Wala - Result */}
+                <div className="mb-3">
+                  <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Result
+                  </label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {['win', 'loss', 'draw', 'noRecord'].map(result => (
+                      <button
+                        key={result}
+                        onClick={() => {
+                          setEditData({
+                            ...editData,
+                            wala: {
+                              ...editData.wala,
+                              legResult: { ...editData.wala.legResult, result }
+                            }
+                          });
+                        }}
+                        className={`px-3 py-2 rounded-lg font-semibold transition ${
+                          editData.wala?.legResult?.result === result
+                            ? result === 'win' ? 'bg-green-600 text-white' : result === 'loss' ? 'bg-red-600 text-white' : result === 'draw' ? 'bg-yellow-600 text-white' : 'bg-gray-600 text-white'
+                            : isDarkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`}
+                      >
+                        {result === 'noRecord' ? 'No Rec' : result.charAt(0).toUpperCase() + result.slice(1)}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
