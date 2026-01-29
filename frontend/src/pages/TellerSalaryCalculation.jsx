@@ -1234,16 +1234,21 @@ export default function TellerSalaryCalculation() {
           ) : (
             tellers.map((teller) => {
               const dailyOver = teller.over || {};
+              const dailyShort = teller.short || {};
               const totalOver = sumOver(dailyOver);
+              const totalShort = sumOver(dailyShort);
               const baseSalary = baseSalaryAmount;
               
-              // Calculate actual base salary based on included days
+              // Auto-select base salary for days with over or short
               const includedDaysCount = dayLabels.filter(({ key }) => {
                 const noBSalaryKey = `${teller.id}-${key}`;
-                return noBSalarDays[noBSalaryKey];
+                const hasOverOrShort = (dailyOver[key] || 0) > 0 || (dailyShort[key] || 0) > 0;
+                // If day has over/short, it should be included; otherwise use the saved preference
+                return hasOverOrShort || noBSalarDays[noBSalaryKey];
               }).length;
               const adjustedBaseWeeklySum = baseSalaryAmount * includedDaysCount;
-              const totalCompensation = adjustedBaseWeeklySum + totalOver;
+              // Total compensation = Base + Over - Short
+              const totalCompensation = adjustedBaseWeeklySum + totalOver - totalShort;
 
               return (
                 <div
@@ -1323,7 +1328,9 @@ export default function TellerSalaryCalculation() {
                           const shortAmount = (teller.short && teller.short[key]) || 0;
                           const tellerId = teller.id;
                           const noBSalaryKey = `${tellerId}-${key}`;
-                          const isIncluded = noBSalarDays[noBSalaryKey];
+                          const hasOverOrShort = overAmount > 0 || shortAmount > 0;
+                          // If there's over or short, auto-include base salary; otherwise use saved preference
+                          const isIncluded = hasOverOrShort || noBSalarDays[noBSalaryKey];
                           const baseSalaryForDay = isIncluded ? baseSalaryAmount : 0;
                           
                           return (
@@ -1352,6 +1359,7 @@ export default function TellerSalaryCalculation() {
                                     : 'bg-gray-300 text-gray-600 hover:bg-gray-400'
                                 }`}
                                 title={isIncluded ? 'Click to exclude base salary' : 'Click to include base salary'}
+                                disabled={hasOverOrShort}
                               >
                                 {isIncluded ? 'YES' : 'NO'}
                               </button>
@@ -1361,14 +1369,30 @@ export default function TellerSalaryCalculation() {
                       </div>
                     </div>
 
-                    {/* Weekly Total Over */}
+                    {/* Weekly Total Over and Short */}
                     <div className={`pt-3 border-t ${dark ? 'border-gray-700' : 'border-gray-200'}`}>
-                      <div className="flex justify-between items-center">
+                      <div className="flex justify-between items-center mb-2">
                         <span className={`font-semibold ${dark ? 'text-gray-300' : 'text-gray-700'}`}>
                           Weekly Over Total
                         </span>
-                        <span className={`text-xl font-bold ${totalOver > 0 ? 'text-green-600' : totalOver < 0 ? 'text-red-600' : 'text-gray-400'}`}>
+                        <span className={`text-lg font-bold ${totalOver > 0 ? 'text-green-600' : totalOver < 0 ? 'text-red-600' : 'text-gray-400'}`}>
                           ₱{totalOver.toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className={`font-semibold ${dark ? 'text-gray-300' : 'text-gray-700'}`}>
+                          Weekly Short Total
+                        </span>
+                        <span className={`text-lg font-bold ${totalShort > 0 ? 'text-orange-600' : 'text-gray-400'}`}>
+                          ₱{totalShort.toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center border-t pt-2">
+                        <span className={`font-semibold ${dark ? 'text-gray-300' : 'text-gray-700'}`}>
+                          Net (Over - Short)
+                        </span>
+                        <span className={`text-lg font-bold ${(totalOver - totalShort) > 0 ? 'text-green-600' : (totalOver - totalShort) < 0 ? 'text-red-600' : 'text-gray-400'}`}>
+                          ₱{(totalOver - totalShort).toFixed(2)}
                         </span>
                       </div>
                     </div>
@@ -1382,7 +1406,7 @@ export default function TellerSalaryCalculation() {
                           ₱{totalCompensation.toFixed(2)}
                         </div>
                         <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-1">
-                          Base ({includedDaysCount} days × ₱{baseSalaryAmount}) ₱{adjustedBaseWeeklySum.toFixed(2)} + Over ₱{totalOver.toFixed(2)}
+                          Base ({includedDaysCount} days × ₱{baseSalaryAmount}) ₱{adjustedBaseWeeklySum.toFixed(2)} + Over ₱{totalOver.toFixed(2)} - Short ₱{totalShort.toFixed(2)}
                         </p>
                     </div>
                     <div className="mt-4 border-t border-dashed border-gray-400 pt-3 text-xs text-gray-500 dark:text-gray-400">
