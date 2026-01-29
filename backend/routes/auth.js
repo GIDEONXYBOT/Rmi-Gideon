@@ -1,6 +1,7 @@
 import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 import User from "../models/User.js";
 
 const router = express.Router();
@@ -18,8 +19,8 @@ router.post("/login", async (req, res) => {
       return res.status(400).json({ message: "Username and password required" });
 
     // Check if database is connected
-    if (require('mongoose').connection.readyState !== 1) {
-      console.warn(`⚠️ Database not ready for login attempt (state: ${require('mongoose').connection.readyState})`);
+    if (mongoose.connection.readyState !== 1) {
+      console.warn(`⚠️ Database not ready for login attempt (state: ${mongoose.connection.readyState})`);
       return res.status(503).json({ message: "Server temporarily unavailable. Please try again in a moment." });
     }
 
