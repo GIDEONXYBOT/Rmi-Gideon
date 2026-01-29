@@ -17,6 +17,12 @@ router.post("/login", async (req, res) => {
     if (!username || !password)
       return res.status(400).json({ message: "Username and password required" });
 
+    // Check if database is connected
+    if (require('mongoose').connection.readyState !== 1) {
+      console.warn(`⚠️ Database not ready for login attempt (state: ${require('mongoose').connection.readyState})`);
+      return res.status(503).json({ message: "Server temporarily unavailable. Please try again in a moment." });
+    }
+
     // Set timeout for the request (30 seconds max)
     timeoutId = setTimeout(() => {
       console.log(`⏰ Login timeout for ${username}`);
@@ -91,9 +97,15 @@ router.post("/login", async (req, res) => {
     });
   } catch (err) {
     clearTimeout(timeoutId);
-    console.error("❌ Login Error:", err);
+    console.error("❌ Login Error:", err.message);
     if (!res.headersSent) {
-      res.status(500).json({ message: "Server error during login. Please try again." });
+      // Return 503 for connection errors, 500 for other errors
+      const statusCode = err.message.includes('connect') || err.name === 'MongoNetworkError' ? 503 : 500;
+      res.status(statusCode).json({ 
+        message: statusCode === 503 
+          ? "Database connection error. Please try again in a moment."
+          : "Server error during login. Please try again." 
+      });
     }
   }
 });

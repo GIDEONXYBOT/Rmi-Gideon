@@ -119,48 +119,68 @@ const MONGO_URI =
   process.env.MONGO_URI || "mongodb://localhost:27017/rmi_teller_report";
 
 console.log("🔄 Connecting to MongoDB...");
-mongoose
-  .connect(MONGO_URI, {
-    serverSelectionTimeoutMS: 10000, // 10 second timeout
-    socketTimeoutMS: 45000
-  })
-  .then(async () => {
-    console.log("✅ MongoDB connected successfully");
 
-    // Initialize supervisor assignment reset scheduler after DB connection
+// Connection retry logic
+const connectToMongo = async (retries = 5) => {
+  for (let attempt = 1; attempt <= retries; attempt++) {
     try {
-      // const { initSupervisorResetScheduler } = await import("./scheduler/supervisorReset.js");
-      // await initSupervisorResetScheduler();
-      console.log("⏸️ Supervisor reset scheduler disabled for debugging");
-    } catch (schedulerError) {
-      console.error("❌ Failed to initialize scheduler:", schedulerError);
-      // Don't exit, just log the error
-    }
+      console.log(`📌 MongoDB connection attempt ${attempt}/${retries}...`);
+      await mongoose.connect(MONGO_URI, {
+        serverSelectionTimeoutMS: 10000, // 10 second timeout
+        socketTimeoutMS: 45000,
+        retryWrites: true,
+        maxPoolSize: 10,
+        minPoolSize: 2
+      });
+      
+      console.log("✅ MongoDB connected successfully");
 
-    // Initialize leaderboard update scheduler for real-time updates
-    try {
-      // const { initLeaderboardUpdateScheduler } = await import("./scheduler/leaderboardUpdate.js");
-      // initLeaderboardUpdateScheduler(io);
-      console.log("📊 Leaderboard update scheduler disabled for debugging");
-    } catch (schedulerError) {
-      console.error("❌ Failed to initialize leaderboard scheduler:", schedulerError);
-    }
+      // Initialize supervisor assignment reset scheduler after DB connection
+      try {
+        // const { initSupervisorResetScheduler } = await import("./scheduler/supervisorReset.js");
+        // await initSupervisorResetScheduler();
+        console.log("⏸️ Supervisor reset scheduler disabled for debugging");
+      } catch (schedulerError) {
+        console.error("❌ Failed to initialize scheduler:", schedulerError);
+        // Don't exit, just log the error
+      }
 
-    // Initialize chicken fight update scheduler for real-time updates
-    try {
-      // const { initChickenFightUpdateScheduler } = await import("./scheduler/chickenFightUpdate.js");
-      // initChickenFightUpdateScheduler(io);
-      console.log("🐔 Chicken fight update scheduler disabled for debugging");
-    } catch (schedulerError) {
-      console.error("❌ Failed to initialize chicken fight scheduler:", schedulerError);
+      // Initialize leaderboard update scheduler for real-time updates
+      try {
+        // const { initLeaderboardUpdateScheduler } = await import("./scheduler/leaderboardUpdate.js");
+        // initLeaderboardUpdateScheduler(io);
+        console.log("📊 Leaderboard update scheduler disabled for debugging");
+      } catch (schedulerError) {
+        console.error("❌ Failed to initialize leaderboard scheduler:", schedulerError);
+      }
+
+      // Initialize chicken fight update scheduler for real-time updates
+      try {
+        // const { initChickenFightUpdateScheduler } = await import("./scheduler/chickenFightUpdate.js");
+        // initChickenFightUpdateScheduler(io);
+        console.log("🐔 Chicken fight update scheduler disabled for debugging");
+      } catch (schedulerError) {
+        console.error("❌ Failed to initialize chicken fight scheduler:", schedulerError);
+      }
+      
+      // Connection successful, exit retry loop
+      break;
+    } catch (err) {
+      console.error(`❌ MongoDB connection attempt ${attempt} failed:`, err.message);
+      
+      if (attempt === retries) {
+        console.warn("⚠️ Failed to connect after " + retries + " attempts. Starting server anyway.");
+      } else {
+        const waitTime = Math.min(1000 * attempt, 5000);
+        console.log(`⏳ Waiting ${waitTime}ms before retry...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
     }
-  })
-  .catch((err) => {
-    console.error("❌ MongoDB connection error:", err);
-    console.warn("⚠️ Starting server without database connection for debugging");
-    // Don't exit, try to start server anyway
-    // process.exit(1); // Exit if database connection fails
-  });
+  }
+};
+
+// Start connection process
+connectToMongo();
 
 // ======================================================
 // ROUTES
