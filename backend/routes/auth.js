@@ -24,16 +24,19 @@ router.post("/login", async (req, res) => {
       return res.status(503).json({ message: "Server temporarily unavailable. Please try again in a moment." });
     }
 
-    // Set timeout for the request (30 seconds max)
+    // Set timeout for the request (10 seconds max - faster failover)
     timeoutId = setTimeout(() => {
       console.log(`⏰ Login timeout for ${username}`);
       if (!res.headersSent) {
         res.status(408).json({ message: "Login request timed out. Please try again." });
       }
-    }, 30000);
+    }, 10000);
 
-    // Optimized: Single query with only needed fields
-    const user = await User.findOne({ username }).select('_id username name role status password').lean();
+    // Optimized: Single query with only needed fields, with timeout
+    const user = await User.findOne({ username })
+      .select('_id username name role status password')
+      .lean()
+      .maxTimeMS(5000);
 
     if (!user) {
       console.log(`❌ User not found: ${username}`);
@@ -43,20 +46,18 @@ router.post("/login", async (req, res) => {
 
     console.log(`👤 Found user: ${username}, role: ${user.role}, status: ${user.status}`);
 
-    // Password validation - ONLY use bcrypt (secure)
-    let isMatch = false;
-
     if (!user.password) {
       console.log(`❌ User has no password hash: ${username}`);
       clearTimeout(timeoutId);
       return res.status(401).json({ message: "Invalid username or password" });
     }
 
-    // Always use bcrypt for password comparison
+    // Password comparison with timeout
+    let isMatch = false;
     try {
       isMatch = await bcrypt.compare(password, user.password);
     } catch (bcryptErr) {
-      console.error(`❌ Bcrypt error for ${username}:`, bcryptErr);
+      console.error(`❌ Bcrypt error for ${username}:`, bcryptErr.message);
       clearTimeout(timeoutId);
       return res.status(401).json({ message: "Invalid username or password" });
     }
@@ -101,7 +102,7 @@ router.post("/login", async (req, res) => {
     console.error("❌ Login Error:", err.message);
     if (!res.headersSent) {
       // Return 503 for connection errors, 500 for other errors
-      const statusCode = err.message.includes('connect') || err.name === 'MongoNetworkError' ? 503 : 500;
+      const statusCode = err.message.includes('connect') || err.message.includes('timeout') || err.name === 'MongoNetworkError' ? 503 : 500;
       res.status(statusCode).json({ 
         message: statusCode === 503 
           ? "Database connection error. Please try again in a moment."
