@@ -185,7 +185,45 @@ export class BluetoothPrinterManager {
     try {
       console.log("🔗 Connecting to Bluetooth printer:", printer.name);
 
-      const device = printer.device;
+      // If printer object doesn't have device (from paired printers list), try to get it
+      let device = printer.device;
+      
+      if (!device) {
+        // Device not in memory - need to re-request it
+        console.log("📱 Device not in memory, requesting Bluetooth device again...");
+        
+        // Try to get device by ID if available
+        if (printer.id) {
+          try {
+            const devices = await navigator.bluetooth.getAvailability();
+            if (!devices) {
+              throw new Error("Bluetooth not available");
+            }
+            
+            // Request the device again - this will show user selection
+            device = await navigator.bluetooth.requestDevice({
+              acceptAllDevices: true,
+              optionalServices: [
+                '000018f0-0000-1000-8000-00805f9b34fb',
+                '49535343-fe7d-4ae5-8fa9-9fafd205e455',
+                'e7810a71-73ae-499d-8c15-faa9aef0c3f2'
+              ]
+            });
+            
+            if (!device) {
+              throw new Error("Device selection cancelled");
+            }
+          } catch (err) {
+            throw new Error(`Failed to get device: ${err.message}`);
+          }
+        } else {
+          throw new Error("Cannot reconnect: no device reference or ID available. Please scan again.");
+        }
+      }
+
+      if (!device || !device.gatt) {
+        throw new Error("Invalid device object - missing GATT");
+      }
 
       if (!device.gatt.connected) {
         await device.gatt.connect();
