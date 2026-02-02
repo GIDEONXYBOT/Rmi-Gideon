@@ -18,6 +18,62 @@ export default function ThermalPrinterSettings() {
     return saved ? JSON.parse(saved) : [];
   });
 
+  // Check Web Bluetooth API support
+  const [bluetoothSupported] = useState(() => {
+    return !!navigator.bluetooth;
+  });
+
+  // Detect device and browser
+  const [deviceInfo] = useState(() => {
+    const ua = navigator.userAgent;
+    return {
+      isAndroid: /Android/.test(ua),
+      isIOS: /iPhone|iPad|iPod/.test(ua),
+      isChrome: /Chrome/.test(ua),
+      isEdge: /Edg/.test(ua),
+      isFirefox: /Firefox/.test(ua),
+      isSafari: /Safari/.test(ua) && !/Chrome/.test(ua),
+      isWindows: /Windows/.test(ua),
+      isMac: /Macintosh/.test(ua),
+    };
+  });
+
+  // Helper function to get browser support status
+  const getSupportedBrowsers = () => {
+    const browsers = [];
+    if (deviceInfo.isAndroid) {
+      browsers.push({ name: 'Chrome 56+', supported: true });
+      browsers.push({ name: 'Firefox 55+', supported: true });
+      browsers.push({ name: 'Edge', supported: true });
+      browsers.push({ name: 'Samsung Internet', supported: true });
+    } else if (deviceInfo.isIOS) {
+      browsers.push({ name: 'Safari 13+ (pairing required)', supported: true });
+      browsers.push({ name: 'Chrome', supported: false });
+      browsers.push({ name: 'Firefox', supported: false });
+    } else if (deviceInfo.isWindows || deviceInfo.isMac) {
+      browsers.push({ name: 'Chrome 56+', supported: true });
+      browsers.push({ name: 'Edge 79+', supported: true });
+      browsers.push({ name: 'Firefox', supported: false });
+    }
+    return browsers;
+  };
+
+  const getDeviceType = () => {
+    if (deviceInfo.isAndroid) return 'Android Device';
+    if (deviceInfo.isIOS) return 'iOS Device';
+    if (deviceInfo.isWindows) return 'Windows PC';
+    if (deviceInfo.isMac) return 'Mac';
+    return 'Unknown Device';
+  };
+
+  const getCurrentBrowser = () => {
+    if (deviceInfo.isChrome) return 'Chrome';
+    if (deviceInfo.isEdge) return 'Edge';
+    if (deviceInfo.isFirefox) return 'Firefox';
+    if (deviceInfo.isSafari) return 'Safari';
+    return 'Unknown Browser';
+  };
+
   // Update status periodically
   useEffect(() => {
     const interval = setInterval(() => {
@@ -32,6 +88,14 @@ export default function ThermalPrinterSettings() {
   }, [pairedPrinters]);
 
   const scanForPrinters = async () => {
+    if (!bluetoothSupported) {
+      showToast({ 
+        type: 'error', 
+        message: 'Web Bluetooth API not supported on this browser/device' 
+      });
+      return;
+    }
+
     setIsScanning(true);
     setAvailablePrinters([]);
     showToast({ type: 'info', message: 'Scanning for Bluetooth printers...' });
@@ -154,6 +218,112 @@ export default function ThermalPrinterSettings() {
 
   return (
     <div className={`min-h-screen p-4 md:p-8 ${dark ? 'bg-gray-900' : 'bg-gray-50'}`}>
+      {/* Show unsupported browser UI if Web Bluetooth API not available */}
+      {!bluetoothSupported && (
+        <div className={`max-w-4xl mx-auto rounded-lg shadow-lg ${dark ? 'bg-gray-800' : 'bg-white'} p-6`}>
+          {/* Header */}
+          <div className="flex items-center gap-3 mb-6">
+            <AlertCircle size={32} className="text-red-600" />
+            <div>
+              <h1 className={`text-3xl font-bold ${dark ? 'text-white' : 'text-gray-900'}`}>
+                Bluetooth Not Supported
+              </h1>
+              <p className={`text-sm ${dark ? 'text-gray-400' : 'text-gray-600'}`}>
+                Your current browser/device doesn't support Web Bluetooth API
+              </p>
+            </div>
+          </div>
+
+          {/* Device & Browser Info */}
+          <div className={`mb-6 p-4 rounded-lg ${dark ? 'bg-gray-700' : 'bg-gray-100'}`}>
+            <h2 className={`font-semibold mb-3 ${dark ? 'text-white' : 'text-gray-900'}`}>
+              Your Setup
+            </h2>
+            <p className={`text-sm mb-2 ${dark ? 'text-gray-300' : 'text-gray-700'}`}>
+              <span className="font-semibold">Device:</span> {getDeviceType()}
+            </p>
+            <p className={`text-sm ${dark ? 'text-gray-300' : 'text-gray-700'}`}>
+              <span className="font-semibold">Browser:</span> {getCurrentBrowser()}
+            </p>
+          </div>
+
+          {/* Supported Browsers */}
+          <div className={`mb-6 p-4 rounded-lg border-2 ${
+            dark ? 'border-blue-700 bg-blue-900/20' : 'border-blue-300 bg-blue-50'
+          }`}>
+            <h2 className={`font-semibold mb-3 ${dark ? 'text-blue-300' : 'text-blue-800'}`}>
+              ✓ Supported Browsers on {getDeviceType()}
+            </h2>
+            <ul className={`space-y-2 text-sm ${dark ? 'text-blue-200' : 'text-blue-700'}`}>
+              {getSupportedBrowsers().map((browser, idx) => (
+                <li key={idx} className="flex items-center gap-2">
+                  {browser.supported ? (
+                    <>
+                      <CheckCircle size={16} className="text-green-500 flex-shrink-0" />
+                      <span>{browser.name}</span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle size={16} className="text-gray-400 flex-shrink-0" />
+                      <span className="line-through opacity-60">{browser.name}</span>
+                    </>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Recommendations */}
+          <div className={`mb-6 p-4 rounded-lg border-2 ${
+            dark ? 'border-green-700 bg-green-900/20' : 'border-green-300 bg-green-50'
+          }`}>
+            <h2 className={`font-semibold mb-3 ${dark ? 'text-green-300' : 'text-green-800'}`}>
+              📱 How to Fix This
+            </h2>
+            <ul className={`space-y-2 text-sm ${dark ? 'text-green-200' : 'text-green-700'}`}>
+              {deviceInfo.isAndroid && (
+                <>
+                  <li>✓ Use Chrome, Firefox, Edge, or Samsung Internet</li>
+                  <li>✓ Enable Bluetooth on your Android device</li>
+                  <li>✓ Grant location and Bluetooth permissions to the app</li>
+                  <li>✓ Ensure your printer is in pairing mode</li>
+                </>
+              )}
+              {deviceInfo.isIOS && (
+                <>
+                  <li>✓ Use Safari 13+ (pairing via iOS Settings required)</li>
+                  <li>✓ Go to Settings → Bluetooth to pair printer first</li>
+                  <li>✓ Then use this app to connect</li>
+                  <li>✓ Note: Chrome and Firefox don't support Bluetooth on iOS</li>
+                </>
+              )}
+              {(deviceInfo.isWindows || deviceInfo.isMac) && (
+                <>
+                  <li>✓ Use Chrome 56+ or Edge 79+</li>
+                  <li>✓ Enable Bluetooth on your computer</li>
+                  <li>✓ Ensure printer is paired in system settings first</li>
+                  <li>✓ Firefox doesn't support Web Bluetooth API</li>
+                </>
+              )}
+            </ul>
+          </div>
+
+          {/* Additional Info */}
+          <div className={`p-4 rounded-lg border ${
+            dark ? 'bg-gray-700 border-gray-600' : 'bg-gray-100 border-gray-300'
+          }`}>
+            <p className={`text-xs ${dark ? 'text-gray-400' : 'text-gray-600'}`}>
+              <span className="font-semibold">What is Web Bluetooth API?</span> It's a web standard that allows 
+              websites to communicate directly with Bluetooth devices. Not all browsers support it yet. 
+              For more info: <a href="https://web.dev/bluetooth/" target="_blank" rel="noopener noreferrer" 
+              className="text-blue-600 hover:underline">web.dev/bluetooth</a>
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Main content shown only when Bluetooth is supported */}
+      {bluetoothSupported && (
       <div className={`max-w-4xl mx-auto rounded-lg shadow-lg ${dark ? 'bg-gray-800' : 'bg-white'} p-6`}>
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
@@ -385,6 +555,7 @@ export default function ThermalPrinterSettings() {
           </ul>
         </div>
       </div>
+      )}
     </div>
   );
 }
