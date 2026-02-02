@@ -86,8 +86,9 @@ export default function TellerSalaryCalculation() {
   const buildPrintHtml = (teller, dailyOver) => {
     const weekLabel = getWeekRangeLabel();
     
-    // Calculate base salary considering excluded days
+    // Calculate base salary and short amounts considering excluded days
     let totalBaseSalary = 0;
+    let totalShort = 0;
     const printableRows = dayLabels
       .map(({ key, label }) => {
         const overAmount = dailyOver[key] || 0;
@@ -96,6 +97,7 @@ export default function TellerSalaryCalculation() {
         const isIncluded = noBSalarDays[noBSalaryKey];
         const baseSalaryForDay = isIncluded ? baseSalaryAmount : 0;
         totalBaseSalary += baseSalaryForDay;
+        totalShort += shortAmount;
         return `<div class="row">
   <span class="col-day">${label}</span>
   <span class="col-over">${formatCurrency(overAmount)}</span>
@@ -106,7 +108,7 @@ export default function TellerSalaryCalculation() {
       .join('');
 
     const totalOver = sumOver(dailyOver);
-    const totalCompensationPrint = totalBaseSalary + totalOver;
+    const totalCompensationPrint = totalBaseSalary + totalOver - totalShort;
 
     const html = `<!doctype html>
 <html>
@@ -154,10 +156,10 @@ export default function TellerSalaryCalculation() {
       font-family: 'Courier New', monospace;
       page-break-inside: avoid;
     }
-    .col-day { flex: 0 0 30px; }
-    .col-over { flex: 1; text-align: right; padding-right: 8px; }
-    .col-short { flex: 1; text-align: right; padding-right: 8px; }
-    .col-base { flex: 0 0 60px; text-align: right; }
+    .col-day { flex: 0 0 25px; font-weight: 600; }
+    .col-over { flex: 0.8; text-align: right; padding-right: 4px; }
+    .col-short { flex: 0.8; text-align: right; padding-right: 4px; }
+    .col-base { flex: 0.9; text-align: right; }
     .divider { 
       border-top: 1px solid #000; 
       margin: 4px 0;
@@ -165,30 +167,30 @@ export default function TellerSalaryCalculation() {
     }
     .section-divider {
       border-top: 1px dashed #000;
-      margin: 6px 0;
+      margin: 4px 0;
       page-break-inside: avoid;
     }
     .header-section {
       page-break-after: avoid;
-      margin-bottom: 4px;
+      margin-bottom: 3px;
     }
     .daily-section {
-      margin: 4px 0;
+      margin: 2px 0;
     }
     .summary-section {
       page-break-inside: avoid;
-      margin-top: 4px;
+      margin-top: 2px;
     }
     .signature { 
-      margin-top: 12px; 
+      margin-top: 8px; 
       font-size: 9px;
       page-break-inside: avoid;
     }
     .signature-line { 
       border-top: 1px solid #000; 
-      margin-top: 8px; 
+      margin-top: 4px; 
       padding-top: 2px;
-      height: 20px;
+      height: 12px;
     }
     .total-row {
       font-weight: bold;
@@ -206,11 +208,11 @@ export default function TellerSalaryCalculation() {
     <p>${weekLabel}</p>
   </div>
   <div class="section-divider"></div>
-  <div style="font-size: 10px; display: flex; justify-content: space-between; margin-bottom: 2px; page-break-after: avoid;">
-    <span style="flex: 0 0 30px;">Day</span>
-    <span style="flex: 1; text-align: right; padding-right: 8px;">Over</span>
-    <span style="flex: 1; text-align: right; padding-right: 8px;">Short</span>
-    <span style="flex: 0 0 60px; text-align: right;">Base</span>
+  <div style="font-size: 9px; display: flex; justify-content: space-between; margin-bottom: 2px; page-break-after: avoid; font-weight: bold;">
+    <span style="flex: 0 0 25px;">Day</span>
+    <span style="flex: 0.8; text-align: right; padding-right: 4px;">Over</span>
+    <span style="flex: 0.8; text-align: right; padding-right: 4px;">Short</span>
+    <span style="flex: 0.9; text-align: right;">Base</span>
   </div>
   <div class="daily-section">
     ${printableRows}
@@ -219,23 +221,26 @@ export default function TellerSalaryCalculation() {
   <div class="summary-section">
     <div class="row">
       <span class="col-day" style="font-weight: bold;">OVER:</span>
-      <span class="col-over"></span>
-      <span class="col-base" style="font-weight: bold;">${formatCurrency(totalOver)}</span>
+      <span class="col-over" style="font-weight: bold;">${formatCurrency(totalOver)}</span>
+      <span class="col-short"></span>
+      <span class="col-base"></span>
     </div>
     <div class="row">
-      <span class="col-day" style="font-weight: bold;">BASE:</span>
+      <span class="col-day" style="font-weight: bold;">SHORT:</span>
       <span class="col-over"></span>
-      <span class="col-base" style="font-weight: bold;">${formatCurrency(totalBaseSalary)}</span>
+      <span class="col-short" style="font-weight: bold;">${formatCurrency(totalShort)}</span>
+      <span class="col-base"></span>
     </div>
     <div class="row total-row">
       <span class="col-day" style="font-weight: bold;">TOTAL:</span>
       <span class="col-over"></span>
+      <span class="col-short"></span>
       <span class="col-base" style="font-weight: bold;">${formatCurrency(totalCompensationPrint)}</span>
     </div>
   </div>
   <div class="signature">
-    <p>Prepared by: _________________________</p>
-    <div class="signature-line"></div>
+    <p style="font-size: 9px;">Prepared by: _________________</p>
+    <p style="font-size: 9px;">Date: _________________</p>
   </div>
   <script>
     window.onload = () => {
