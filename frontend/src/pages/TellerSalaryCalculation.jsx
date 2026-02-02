@@ -1468,8 +1468,8 @@ export default function TellerSalaryCalculation() {
                           const tellerId = teller.id;
                           const noBSalaryKey = `${tellerId}-${key}`;
                           const hasOverOrShort = overAmount > 0 || shortAmount > 0;
-                          // If there's over or short, auto-include base salary; otherwise use saved preference
-                          const isIncluded = hasOverOrShort || noBSalarDays[noBSalaryKey];
+                          // Only include base salary if: 1) day has data AND 2) day is not explicitly excluded
+                          const isIncluded = hasOverOrShort && !noBSalarDays[noBSalaryKey];
                           const baseSalaryForDay = isIncluded ? baseSalaryAmount : 0;
                           
                           return (
@@ -1491,14 +1491,18 @@ export default function TellerSalaryCalculation() {
                               <button
                                 onClick={() => toggleBaseSalaryDay(tellerId, key)}
                                 className={`px-2 py-1 rounded text-xs font-semibold transition ${
-                                  isIncluded
-                                    ? 'bg-green-600 text-white hover:bg-green-700'
+                                  hasOverOrShort
+                                    ? isIncluded
+                                      ? 'bg-green-600 text-white hover:bg-green-700 cursor-pointer'
+                                      : dark
+                                      ? 'bg-gray-700 text-gray-300 hover:bg-gray-600 cursor-pointer'
+                                      : 'bg-gray-300 text-gray-600 hover:bg-gray-400 cursor-pointer'
                                     : dark
-                                    ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                                    : 'bg-gray-300 text-gray-600 hover:bg-gray-400'
+                                    ? 'bg-gray-800 text-gray-600 cursor-not-allowed'
+                                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                                 }`}
-                                title={isIncluded ? 'Click to exclude base salary' : 'Click to include base salary'}
-                                disabled={hasOverOrShort}
+                                title={hasOverOrShort ? (isIncluded ? 'Click to exclude base salary' : 'Click to include base salary') : 'No data for this day'}
+                                disabled={!hasOverOrShort}
                               >
                                 {isIncluded ? 'YES' : 'NO'}
                               </button>
