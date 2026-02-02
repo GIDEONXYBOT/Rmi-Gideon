@@ -286,8 +286,8 @@ export default function TellerSalaryCalculation() {
       const overAmount = dailyOver[key] || 0;
       const shortAmount = (teller.short && teller.short[key]) || 0;
       const noBSalaryKey = `${teller.id}-${key}`;
-      const isIncluded = noBSalarDays[noBSalaryKey];
-      const baseSalaryForDay = isIncluded ? baseSalaryAmount : 0;
+      const isExcluded = noBSalarDays[noBSalaryKey];  // true = excluded, false/undefined = included
+      const baseSalaryForDay = !isExcluded ? baseSalaryAmount : 0;  // Include if NOT excluded
       totalBaseSalary += baseSalaryForDay;
       
       const dayLine = `${label.padEnd(11)}${formatCurrency(overAmount).padStart(15)}${formatCurrency(shortAmount).padStart(15)}${formatCurrency(baseSalaryForDay).padStart(16)}`;
@@ -326,8 +326,8 @@ export default function TellerSalaryCalculation() {
       const overAmount = dailyOver[key] || 0;
       const shortAmount = (teller.short && teller.short[key]) || 0;
       const noBSalaryKey = `${teller.id}-${key}`;
-      const isIncluded = noBSalarDays[noBSalaryKey];
-      const baseSalaryForDay = isIncluded ? baseSalaryAmount : 0;
+      const isExcluded = noBSalarDays[noBSalaryKey];  // true = excluded, false/undefined = included
+      const baseSalaryForDay = !isExcluded ? baseSalaryAmount : 0;  // Include if NOT excluded
       totalBaseSalary += baseSalaryForDay;
       totalShort += shortAmount;
       return {
