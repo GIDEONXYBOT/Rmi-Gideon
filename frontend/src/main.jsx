@@ -178,6 +178,7 @@ import WorkplaceSchedule from "./pages/WorkplaceSchedule.jsx";
 import GTATellerManagement from "./pages/GTATellerManagement.jsx";
 import GTABettingEventReport from "./pages/GTABettingEventReport.jsx";
 import TellerSalaryCalculation from "./pages/TellerSalaryCalculation.jsx";
+import ThermalPrinterSettings from "./pages/ThermalPrinterSettings.jsx";
 
 // Supervisor Pages
 import SupervisorHistory from "./pages/SupervisorHistory.jsx";
@@ -339,6 +340,7 @@ function App() {
                       <Route path="teller-reports/viewer" element={<TellerReportsViewer userRole="admin" />} />
                       <Route path="teller-management" element={<TellerManagement userRole="admin" />} />
                       <Route path="teller-salary-calculation" element={<TellerSalaryCalculation />} />
+                      <Route path="thermal-printer-settings" element={<ThermalPrinterSettings />} />
                       <Route path="teller-overview" element={<AdminTellerOverview />} />
                       <Route path="report" element={<AdminReport />} />
                       <Route path="cashflow" element={<AdminCashflow />} />
@@ -413,6 +415,7 @@ function App() {
                       <Route path="teller-reports/viewer" element={<TellerReportsViewer userRole="supervisor" />} />
                       <Route path="teller-management" element={<TellerManagement userRole="supervisor" />} />
                       <Route path="teller-salary-calculation" element={<TellerSalaryCalculation />} />
+                      <Route path="thermal-printer-settings" element={<ThermalPrinterSettings />} />
                       <Route path="staff-performance" element={<SupervisorStaffPerformance />} />
                       <Route path="payroll" element={<Payroll />} />
                       <Route path="my-shift" element={<MyShift />} />
@@ -525,6 +528,7 @@ function App() {
                       <Route path="teller-reports/viewer" element={<TellerReportsViewer userRole="super_admin" />} />
                       <Route path="teller-management" element={<TellerManagement userRole="super_admin" />} />
                       <Route path="teller-salary-calculation" element={<TellerSalaryCalculation />} />
+                      <Route path="thermal-printer-settings" element={<ThermalPrinterSettings />} />
                       <Route path="teller-overview" element={<AdminTellerOverview />} />
                       <Route path="report" element={<AdminReport />} />
                       <Route path="cashflow" element={<AdminCashflow />} />

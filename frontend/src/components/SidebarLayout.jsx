@@ -31,6 +31,7 @@ import {
   ChevronRight,
   Wifi,
   Activity,
+  Bluetooth,
 } from "lucide-react";
 
 import FloatingChat from "../pages/ChatRoom.jsx"; // ✅ floating chat import
@@ -372,6 +373,7 @@ export default function SidebarLayout({ role, children }) {
     'betting-event-report': { to: r => `/${r}/betting-event-report`, icon: <TrendingUp size={18} />, text: 'Betting Event Report', roles: ['super_admin','admin','supervisor','teller'] },
     'key-performance-indicator': { to: r => `/${r}/key-performance-indicator`, icon: <BarChart3 size={18} />, text: 'Key Performance Indicator', roles: ['admin','super_admin','supervisor'] },
     'teller-salary-calculation': { to: r => `/${r}/teller-salary-calculation`, icon: <Wallet size={18} />, text: 'Teller Salary Calculation', roles: ['admin','super_admin','supervisor'] },
+    'thermal-printer-settings': { to: r => `/${r}/thermal-printer-settings`, icon: <Bluetooth size={18} />, text: 'Thermal Printer Settings', roles: ['admin','super_admin','supervisor'] },
     'chicken-fight': { to: r => `/${r}/chicken-fight`, icon: <TrendingUp size={18} />, text: 'Chicken Fight', roles: ['admin','super_admin','supervisor','declarator'] },
     'chicken-fight-entries': { to: r => `/${r}/chicken-fight-entries`, icon: <Settings size={18} />, text: 'Manage Entries', roles: ['admin','super_admin','supervisor','declarator'] },
     'chicken-fight-results': { to: r => `/${r}/chicken-fight-results`, icon: <Edit2 size={18} />, text: 'Edit/Delete Results', roles: ['admin','super_admin','supervisor','declarator'] },
