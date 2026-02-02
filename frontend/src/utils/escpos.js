@@ -493,8 +493,9 @@ export function buildSalaryReceipt58({
   tellerName = "",
   tellerId = "",
   weekLabel = "",
-  dailyData = [], // Array of {day: string, over: number, base: number}
+  dailyData = [], // Array of {day: string, over: number, short: number, base: number}
   totalOver = 0,
+  totalShort = 0,
   totalBase = 0,
   totalCompensation = 0,
   dateStr = new Date().toLocaleString(),
@@ -511,11 +512,12 @@ export function buildSalaryReceipt58({
     write(...textToBytes("--------------------------------")); lf();
   };
   const print = (s = "") => { write(...textToBytes(s)); lf(); };
-  const padSalaryRow = (day = "", over = "", base = "") => {
-    const d = String(day).padEnd(5);
+  const padSalaryRow = (day = "", over = "", short = "", base = "") => {
+    const d = String(day).padEnd(4);
     const o = String(over).padStart(8);
-    const b = String(base).padStart(10);
-    return d + o + b;
+    const s = String(short).padStart(7);
+    const b = String(base).padStart(9);
+    return d + o + s + b;
   };
 
   init();
@@ -533,31 +535,35 @@ export function buildSalaryReceipt58({
   lf();
 
   // Table header
-  setAlign(1); boldOn();
-  print("SALARY BREAKDOWN");
-  boldOff(); setAlign(0);
-  print(padSalaryRow("DAY", "OVER", "BASE"));
+  setAlign(0);
+  print(padSalaryRow("DAY", "OVER", "SHORT", "BASE"));
   line();
 
   // Daily rows
   dailyData.forEach(row => {
-    const overStr = row.over ? `PHP ${Number(row.over).toFixed(2)}` : "PHP 0.00";
-    const baseStr = row.base ? `PHP ${Number(row.base).toFixed(2)}` : "PHP 0.00";
-    print(padSalaryRow(row.day, overStr, baseStr));
+    const overStr = row.over ? `PHP${Number(row.over).toFixed(0)}` : "PHP0";
+    const shortStr = row.short ? `PHP${Number(row.short).toFixed(0)}` : "PHP0";
+    const baseStr = row.base ? `PHP${Number(row.base).toFixed(0)}` : "PHP0";
+    print(padSalaryRow(row.day, overStr, shortStr, baseStr));
   });
 
   line();
 
   // Totals
   boldOn();
-  print(padSalaryRow("OVER:", "", `PHP ${Number(totalOver).toFixed(2)}`));
-  print(padSalaryRow("BASE:", "", `PHP ${Number(totalBase).toFixed(2)}`));
-  print(padSalaryRow("TOTAL:", "", `PHP ${Number(totalCompensation).toFixed(2)}`));
+  const totalOverStr = `PHP${Number(totalOver).toFixed(0)}`;
+  const totalShortStr = `PHP${Number(totalShort).toFixed(0)}`;
+  const totalBaseStr = `PHP${Number(totalBase).toFixed(0)}`;
+  const totalCompStr = `PHP${Number(totalCompensation).toFixed(0)}`;
+  
+  print(padSalaryRow("OVER", totalOverStr, "", ""));
+  print(padSalaryRow("SHORT", "", totalShortStr, ""));
+  print(padSalaryRow("TOTAL", "", "", totalCompStr));
   boldOff();
 
   lf();
   setAlign(1);
-  print("Prepared by: ___________________");
+  print("Prepared by: __________________");
   lf();
   print("Thank you");
 

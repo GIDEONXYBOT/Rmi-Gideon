@@ -312,13 +312,88 @@ export default function TellerSalaryCalculation() {
 
   const handlePrint = async (teller) => {
     const dailyOver = teller.over || {};
-    
-    // Build and open print HTML in new window
+    const weekLabel = getWeekRangeLabel();
+
+    // Calculate salary data
+    let totalBaseSalary = 0;
+    let totalShort = 0;
+    const dailyData = dayLabels.map(({ key, label }) => {
+      const overAmount = dailyOver[key] || 0;
+      const shortAmount = (teller.short && teller.short[key]) || 0;
+      const noBSalaryKey = `${teller.id}-${key}`;
+      const isIncluded = noBSalarDays[noBSalaryKey];
+      const baseSalaryForDay = isIncluded ? baseSalaryAmount : 0;
+      totalBaseSalary += baseSalaryForDay;
+      totalShort += shortAmount;
+      return {
+        day: label,
+        over: overAmount,
+        short: shortAmount,
+        base: baseSalaryForDay
+      };
+    });
+
+    const totalOver = sumOver(dailyOver);
+    const totalCompensation = totalBaseSalary + totalOver - totalShort;
+
+    // Prepare receipt data
+    const receiptData = {
+      orgName: settings?.systemName || "RMI Teller Report",
+      tellerName: teller.name || "",
+      tellerId: teller.id?.toString() || "",
+      weekLabel,
+      dailyData,
+      totalOver,
+      totalShort,
+      totalBase: totalBaseSalary,
+      totalCompensation,
+      dateStr: new Date().toLocaleString(),
+    };
+
+    try {
+      // First, try to print to thermal printer
+      const thermalPrinters = await bluetoothPrinterManager.getPairedPrinters();
+      const isConnected = bluetoothPrinterManager.getStatus().isConnected;
+
+      if (isConnected && thermalPrinters.length > 0) {
+        // Use thermal printer
+        console.log('📟 Printing to thermal printer...');
+        const receiptBytes = buildSalaryReceipt58(receiptData);
+        const result = await bluetoothPrinterManager.print(receiptBytes);
+        
+        if (result.success) {
+          showToast({ type: 'success', message: 'Sent to thermal printer' });
+        } else {
+          console.warn('⚠️ Thermal print failed, falling back to browser print');
+          openBrowserPrint(teller, dailyOver);
+        }
+      } else if (autoPrintEnabled && selectedPrinter) {
+        // Use USB printer via Electron if available
+        console.log('🖨️ Printing to USB printer...');
+        try {
+          await window.electronAPI?.printSalaryReceipt(receiptData, selectedPrinter.name);
+          showToast({ type: 'success', message: 'Sent to printer: ' + selectedPrinter.name });
+        } catch (err) {
+          console.warn('⚠️ USB print failed, falling back to browser print');
+          openBrowserPrint(teller, dailyOver);
+        }
+      } else {
+        // Fall back to browser print dialog
+        openBrowserPrint(teller, dailyOver);
+      }
+    } catch (error) {
+      console.error('Print error:', error);
+      // Always fall back to browser print if anything fails
+      openBrowserPrint(teller, dailyOver);
+    }
+  };
+
+  const openBrowserPrint = (teller, dailyOver) => {
     const html = buildPrintHtml(teller, dailyOver);
     const printWindow = window.open('', '_blank', 'width=400,height=800');
     
     if (!printWindow) {
-      showToast({ type: 'error', message: 'Failed to open print window. Please check your popup blocker.' });
+      showToast({ type: 'error', message: 'Failed to open print window. Check popup blocker.' });
       return;
     }
     
@@ -327,14 +402,13 @@ export default function TellerSalaryCalculation() {
       printWindow.document.close();
       printWindow.focus();
       
-      // Trigger print dialog after content loads
       setTimeout(() => {
         printWindow.print();
       }, 500);
       
-      showToast({ type: 'success', message: 'Print dialog opened. Select your printer (A4 or Thermal).' });
+      showToast({ type: 'success', message: 'Print dialog opened. Select A4 or Thermal printer.' });
     } catch (error) {
-      console.error('Print error:', error);
+      console.error('Browser print error:', error);
       showToast({ type: 'error', message: 'Print failed: ' + error.message });
       printWindow.close();
     }
