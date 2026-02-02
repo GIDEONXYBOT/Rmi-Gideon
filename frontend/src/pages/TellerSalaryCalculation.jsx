@@ -95,7 +95,9 @@ export default function TellerSalaryCalculation() {
         const shortAmount = (teller.short && teller.short[key]) || 0;
         const noBSalaryKey = `${teller.id}-${key}`;
         const isExcluded = noBSalarDays[noBSalaryKey];  // true = excluded, false/undefined = included
-        const baseSalaryForDay = !isExcluded ? baseSalaryAmount : 0;  // Include if NOT excluded
+        // Only include base salary if day has over/short data (teller worked)
+        const hasData = overAmount !== 0 || shortAmount !== 0;
+        const baseSalaryForDay = (hasData && !isExcluded) ? baseSalaryAmount : 0;  // Include if HAS DATA and NOT excluded
         totalBaseSalary += baseSalaryForDay;
         totalShort += shortAmount;
         return `<div class="row">
@@ -287,7 +289,9 @@ export default function TellerSalaryCalculation() {
       const shortAmount = (teller.short && teller.short[key]) || 0;
       const noBSalaryKey = `${teller.id}-${key}`;
       const isExcluded = noBSalarDays[noBSalaryKey];  // true = excluded, false/undefined = included
-      const baseSalaryForDay = !isExcluded ? baseSalaryAmount : 0;  // Include if NOT excluded
+      // Only include base salary if day has over/short data (teller worked)
+      const hasData = overAmount !== 0 || shortAmount !== 0;
+      const baseSalaryForDay = (hasData && !isExcluded) ? baseSalaryAmount : 0;  // Include if HAS DATA and NOT excluded
       totalBaseSalary += baseSalaryForDay;
       
       const dayLine = `${label.padEnd(11)}${formatCurrency(overAmount).padStart(15)}${formatCurrency(shortAmount).padStart(15)}${formatCurrency(baseSalaryForDay).padStart(16)}`;
@@ -327,7 +331,9 @@ export default function TellerSalaryCalculation() {
       const shortAmount = (teller.short && teller.short[key]) || 0;
       const noBSalaryKey = `${teller.id}-${key}`;
       const isExcluded = noBSalarDays[noBSalaryKey];  // true = excluded, false/undefined = included
-      const baseSalaryForDay = !isExcluded ? baseSalaryAmount : 0;  // Include if NOT excluded
+      // Only include base salary if day has over/short data (teller worked)
+      const hasData = overAmount !== 0 || shortAmount !== 0;
+      const baseSalaryForDay = (hasData && !isExcluded) ? baseSalaryAmount : 0;  // Include if HAS DATA and NOT excluded
       totalBaseSalary += baseSalaryForDay;
       totalShort += shortAmount;
       return {
@@ -516,9 +522,12 @@ export default function TellerSalaryCalculation() {
         let totalBaseSalary = 0;
         const dailyData = dayLabels.map(({ key, label }) => {
           const overAmount = dailyOver[key] || 0;
+          const shortAmount = (teller.short && teller.short[key]) || 0;
           const noBSalaryKey = `${teller.id}-${key}`;
-          const isIncluded = noBSalarDays[noBSalaryKey];
-          const baseSalaryForDay = isIncluded ? baseSalaryAmount : 0;
+          const isExcluded = noBSalarDays[noBSalaryKey];
+          // Only include base salary if day has over/short data (teller worked)
+          const hasData = overAmount !== 0 || shortAmount !== 0;
+          const baseSalaryForDay = (hasData && !isExcluded) ? baseSalaryAmount : 0;
           totalBaseSalary += baseSalaryForDay;
           return { day: label, over: overAmount, base: baseSalaryForDay };
         });
@@ -1352,7 +1361,14 @@ export default function TellerSalaryCalculation() {
               <p>No tellers found for this week</p>
             </div>
           ) : (
-            tellers.map((teller) => {
+            tellers
+              // Filter to only show tellers with actual data (at least one day with over/short > 0)
+              .filter(teller => {
+                const dailyOver = teller.over || {};
+                const dailyShort = teller.short || {};
+                return dayLabels.some(({ key }) => (dailyOver[key] || 0) !== 0 || (dailyShort[key] || 0) !== 0);
+              })
+              .map((teller) => {
               const dailyOver = teller.over || {};
               const dailyShort = teller.short || {};
               const totalOver = sumOver(dailyOver);
@@ -1362,9 +1378,12 @@ export default function TellerSalaryCalculation() {
               // Auto-select base salary for days with over or short
               const includedDaysCount = dayLabels.filter(({ key }) => {
                 const noBSalaryKey = `${teller.id}-${key}`;
-                // By default, include base salary unless explicitly excluded (noBSalarDays[key] = true)
                 const isExcluded = noBSalarDays[noBSalaryKey];
-                return !isExcluded;  // Return true if NOT excluded
+                // Only include base salary if:
+                // 1. Day has over/short data (teller worked that day), AND
+                // 2. Day is not explicitly excluded
+                const hasData = (dailyOver[key] || 0) !== 0 || (dailyShort[key] || 0) !== 0;
+                return hasData && !isExcluded;  // Include if HAS DATA and NOT excluded
               }).length;
               const adjustedBaseWeeklySum = baseSalaryAmount * includedDaysCount;
               // Total compensation = Base + Over - Short
