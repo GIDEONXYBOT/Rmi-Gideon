@@ -52,12 +52,12 @@ export default function TellerSalaryCalculation() {
     return 'Week overview';
   };
 
-  // Toggle base salary for a specific teller/day
+  // Toggle base salary for a specific teller/day - DEFAULT is TO INCLUDE, toggle to exclude
   const toggleBaseSalaryDay = (tellerId, dayKey) => {
     const key = `${tellerId}-${dayKey}`;
     setNoBSalaryDays(prev => ({
       ...prev,
-      [key]: !prev[key]
+      [key]: !prev[key]  // true = excluded, false/undefined = included
     }));
   };
 
@@ -94,8 +94,8 @@ export default function TellerSalaryCalculation() {
         const overAmount = dailyOver[key] || 0;
         const shortAmount = (teller.short && teller.short[key]) || 0;
         const noBSalaryKey = `${teller.id}-${key}`;
-        const isIncluded = noBSalarDays[noBSalaryKey];
-        const baseSalaryForDay = isIncluded ? baseSalaryAmount : 0;
+        const isExcluded = noBSalarDays[noBSalaryKey];  // true = excluded, false/undefined = included
+        const baseSalaryForDay = !isExcluded ? baseSalaryAmount : 0;  // Include if NOT excluded
         totalBaseSalary += baseSalaryForDay;
         totalShort += shortAmount;
         return `<div class="row">
@@ -553,13 +553,13 @@ export default function TellerSalaryCalculation() {
                   ${dailyData.map(row => {
                     const dayKey = dayLabels.find(d => d.label === row.day)?.key;
                     const noBSalaryKey = `${teller.id}-${dayKey}`;
-                    const isIncluded = noBSalarDays[noBSalaryKey];
+                    const isExcluded = noBSalarDays[noBSalaryKey];  // true = excluded
                     return `
-                      <div class="daily-row ${!isIncluded ? 'excluded' : 'included'}">
+                      <div class="daily-row ${isExcluded ? 'excluded' : 'included'}">
                         <span class="day-label">${row.day}</span>
                         <span class="over-amount ${row.over > 0 ? 'positive' : row.over < 0 ? 'negative' : 'zero'}">₱${row.over.toFixed(2)}</span>
-                        <span class="base-amount ${isIncluded ? 'included' : 'excluded'}">₱${row.base.toFixed(2)}</span>
-                        <span class="include-status">${isIncluded ? 'YES' : 'NO'}</span>
+                        <span class="base-amount ${!isExcluded ? 'included' : 'excluded'}">₱${!isExcluded ? row.base.toFixed(2) : '0.00'}</span>
+                        <span class="include-status">${!isExcluded ? 'YES' : 'NO'}</span>
                       </div>
                     `;
                   }).join('')}
@@ -578,11 +578,11 @@ export default function TellerSalaryCalculation() {
                   Base (${dailyData.filter(row => {
                     const dayKey = dayLabels.find(d => d.label === row.day)?.key;
                     const noBSalaryKey = `${teller.id}-${dayKey}`;
-                    return noBSalarDays[noBSalaryKey];
+                    return !noBSalarDays[noBSalaryKey];  // Count if NOT excluded
                   }).length} days × ₱${baseSalaryAmount}) ₱${dailyData.reduce((sum, row) => {
                     const dayKey = dayLabels.find(d => d.label === row.day)?.key;
                     const noBSalaryKey = `${teller.id}-${dayKey}`;
-                    return sum + (noBSalarDays[noBSalaryKey] ? row.base : 0);
+                    return sum + (!noBSalarDays[noBSalaryKey] ? row.base : 0);  // Add if NOT excluded
                   }, 0).toFixed(2)} + Over ₱${totalOver.toFixed(2)}
                 </p>
               </div>
@@ -1362,9 +1362,9 @@ export default function TellerSalaryCalculation() {
               // Auto-select base salary for days with over or short
               const includedDaysCount = dayLabels.filter(({ key }) => {
                 const noBSalaryKey = `${teller.id}-${key}`;
-                const hasOverOrShort = (dailyOver[key] || 0) > 0 || (dailyShort[key] || 0) > 0;
-                // If day has over/short, it should be included; otherwise use the saved preference
-                return hasOverOrShort || noBSalarDays[noBSalaryKey];
+                // By default, include base salary unless explicitly excluded (noBSalarDays[key] = true)
+                const isExcluded = noBSalarDays[noBSalaryKey];
+                return !isExcluded;  // Return true if NOT excluded
               }).length;
               const adjustedBaseWeeklySum = baseSalaryAmount * includedDaysCount;
               // Total compensation = Base + Over - Short

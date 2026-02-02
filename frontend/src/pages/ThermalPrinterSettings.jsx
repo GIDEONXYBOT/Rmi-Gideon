@@ -82,6 +82,41 @@ export default function ThermalPrinterSettings() {
     return () => clearInterval(interval);
   }, []);
 
+  // Auto-connect to last connected printer on page load
+  useEffect(() => {
+    const autoConnect = async () => {
+      if (!bluetoothSupported || pairedPrinters.length === 0) return;
+
+      // Try to get the last connected printer from status
+      const currentStatus = bluetoothPrinterManager.getStatus();
+      if (currentStatus.isConnected) {
+        // Already connected
+        return;
+      }
+
+      // Try to connect to the first paired printer
+      const lastPrinter = pairedPrinters[0];
+      if (lastPrinter) {
+        try {
+          console.log(`Auto-connecting to paired printer: ${lastPrinter.name}`);
+          await bluetoothPrinterManager.connectToPrinter(lastPrinter);
+          setBluetoothStatus(bluetoothPrinterManager.getStatus());
+          showToast({ 
+            type: 'success', 
+            message: `Auto-connected to ${lastPrinter.name}` 
+          });
+        } catch (error) {
+          console.log(`Auto-connect failed (device may be out of range): ${error.message}`);
+          // Don't show error toast - device might be offline
+        }
+      }
+    };
+
+    // Small delay to allow component to fully mount
+    const timer = setTimeout(autoConnect, 500);
+    return () => clearTimeout(timer);
+  }, [bluetoothSupported, pairedPrinters, showToast]);
+
   // Save paired printers to localStorage
   useEffect(() => {
     localStorage.setItem('pairedBluetoothPrinters', JSON.stringify(pairedPrinters));
@@ -485,36 +520,66 @@ export default function ThermalPrinterSettings() {
                 return (
                   <div
                     key={printer.id}
-                    className={`p-4 rounded-lg border-2 flex items-center justify-between ${
+                    className={`p-4 rounded-lg border-2 flex items-center justify-between gap-3 ${
                       isConnected
                         ? dark ? 'bg-green-900/20 border-green-700' : 'bg-green-50 border-green-300'
                         : dark ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'
                     }`}
                   >
-                    <div className="flex items-center gap-3 flex-1">
-                      {isConnected && <CheckCircle size={20} className="text-green-600" />}
-                      <div>
-                        <p className={`font-semibold ${dark ? 'text-white' : 'text-gray-900'}`}>
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      {isConnected && <CheckCircle size={20} className="text-green-600 flex-shrink-0" />}
+                      <div className="min-w-0 flex-1">
+                        <p className={`font-semibold truncate ${dark ? 'text-white' : 'text-gray-900'}`}>
                           {printer.name}
                         </p>
                         <p className={`text-xs ${dark ? 'text-gray-400' : 'text-gray-600'}`}>
                           {isConnected
-                            ? 'Currently connected'
+                            ? 'Currently connected ✓'
                             : `Paired on ${new Date(printer.connectedAt).toLocaleDateString()}`}
                         </p>
                       </div>
                     </div>
-                    <button
-                      onClick={() => removePairedPrinter(printer.id)}
-                      className={`p-2 rounded-lg transition ${
-                        dark
-                          ? 'hover:bg-red-900/20 text-red-400'
-                          : 'hover:bg-red-100 text-red-600'
-                      }`}
-                      title="Remove from paired list"
-                    >
-                      <Trash2 size={18} />
-                    </button>
+                    <div className="flex gap-2 flex-shrink-0">
+                      {isConnected ? (
+                        <button
+                          onClick={disconnectPrinter}
+                          className={`px-3 py-1 rounded-lg transition text-sm font-semibold ${
+                            dark
+                              ? 'bg-red-700 hover:bg-red-600 text-white'
+                              : 'bg-red-600 hover:bg-red-700 text-white'
+                          }`}
+                          title="Disconnect from this printer"
+                        >
+                          Disconnect
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => connectToPrinter(printer)}
+                          disabled={connecting}
+                          className={`px-3 py-1 rounded-lg transition text-sm font-semibold ${
+                            connecting
+                              ? 'bg-gray-500 text-white cursor-not-allowed'
+                              : dark
+                              ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                              : 'bg-blue-600 hover:bg-blue-700 text-white'
+                          }`}
+                          title="Reconnect to this printer"
+                        >
+                          {connecting ? 'Connecting...' : 'Connect'}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => removePairedPrinter(printer.id)}
+                        className={`p-2 rounded-lg transition ${
+                          dark
+                            ? 'hover:bg-red-900/20 text-red-400 hover:text-red-300'
+                            : 'hover:bg-red-100 text-red-600 hover:text-red-700'
+                        }`}
+                        title="Remove from paired list"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
                   </div>
                 );
               })}
