@@ -241,10 +241,26 @@ export class BluetoothPrinterManager {
       } catch (err) {
         if (err.message.includes("GATT Server is disconnected")) {
           console.warn("⚠️ GATT server disconnected, reconnecting...");
-          // Try to reconnect
-          device.gatt.disconnect();
-          await device.gatt.connect();
-          services = await device.gatt.getPrimaryServices();
+          try {
+            // Ensure proper disconnect
+            if (device.gatt.connected) {
+              device.gatt.disconnect();
+              // Wait a bit for disconnect to complete
+              await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            
+            // Now reconnect
+            console.log("🔄 Attempting to reconnect to GATT...");
+            await device.gatt.connect();
+            console.log("✅ GATT reconnected");
+            
+            // Retry getting services
+            services = await device.gatt.getPrimaryServices();
+            console.log("✅ Services retrieved after reconnection");
+          } catch (reconnectErr) {
+            console.error("❌ Failed to recover GATT connection:", reconnectErr);
+            throw new Error(`GATT reconnection failed: ${reconnectErr.message}`);
+          }
         } else {
           throw err;
         }
@@ -310,14 +326,28 @@ export class BluetoothPrinterManager {
             // Try to reconnect and resume
             if (this.connectedDevice) {
               try {
+                // Disconnect first if still connected
+                if (this.connectedDevice.gatt.connected) {
+                  this.connectedDevice.gatt.disconnect();
+                  // Wait for disconnect
+                  await new Promise(resolve => setTimeout(resolve, 500));
+                }
+                
+                // Reconnect
+                console.log("🔄 Attempting to reconnect during print...");
                 await this.connectedDevice.gatt.connect();
+                console.log("✅ Reconnected, retrying chunk...");
+                
                 // Retry this chunk
                 await this.connectedCharacteristic.writeValue(chunk);
+                console.log("✅ Chunk sent successfully after reconnection");
               } catch (err) {
                 console.error("❌ Failed to recover connection during print:", err);
                 this.isConnected = false;
-                throw new Error("Printer connection lost during printing");
+                throw new Error("Printer connection lost during printing - cannot recover");
               }
+            } else {
+              throw new Error("No device reference available for reconnection");
             }
           } else {
             throw writeErr;
