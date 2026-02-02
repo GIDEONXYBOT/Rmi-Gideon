@@ -225,15 +225,30 @@ export class BluetoothPrinterManager {
         throw new Error("Invalid device object - missing GATT");
       }
 
+      // Ensure GATT connection is established
       if (!device.gatt.connected) {
+        console.log("📡 GATT not connected, establishing connection...");
         await device.gatt.connect();
       }
 
       this.connectedDevice = device;
       console.log("✅ Connected to Bluetooth device");
 
-      // Discover services and characteristics
-      const services = await device.gatt.getPrimaryServices();
+      // Discover services and characteristics with retry logic
+      let services;
+      try {
+        services = await device.gatt.getPrimaryServices();
+      } catch (err) {
+        if (err.message.includes("GATT Server is disconnected")) {
+          console.warn("⚠️ GATT server disconnected, reconnecting...");
+          // Try to reconnect
+          device.gatt.disconnect();
+          await device.gatt.connect();
+          services = await device.gatt.getPrimaryServices();
+        } else {
+          throw err;
+        }
+      }
 
       for (let service of services) {
         try {
@@ -269,11 +284,46 @@ export class BluetoothPrinterManager {
     try {
       console.log("🖨️ Sending data to Bluetooth printer...");
 
+      // Check if GATT connection is still alive
+      if (this.connectedDevice && !this.connectedDevice.gatt.connected) {
+        console.warn("⚠️ GATT connection lost, attempting to reconnect...");
+        try {
+          await this.connectedDevice.gatt.connect();
+          console.log("✅ Reconnected to GATT server");
+        } catch (reconnectErr) {
+          console.error("❌ Failed to reconnect:", reconnectErr);
+          this.isConnected = false;
+          throw new Error("Printer disconnected and cannot reconnect");
+        }
+      }
+
       // Send data in chunks
       const chunkSize = 20;
       for (let i = 0; i < bytes.length; i += chunkSize) {
         const chunk = bytes.slice(i, i + chunkSize);
-        await this.connectedCharacteristic.writeValue(chunk);
+        
+        try {
+          await this.connectedCharacteristic.writeValue(chunk);
+        } catch (writeErr) {
+          if (writeErr.message.includes("GATT Server is disconnected")) {
+            console.warn("⚠️ GATT disconnected during write, attempting reconnection...");
+            // Try to reconnect and resume
+            if (this.connectedDevice) {
+              try {
+                await this.connectedDevice.gatt.connect();
+                // Retry this chunk
+                await this.connectedCharacteristic.writeValue(chunk);
+              } catch (err) {
+                console.error("❌ Failed to recover connection during print:", err);
+                this.isConnected = false;
+                throw new Error("Printer connection lost during printing");
+              }
+            }
+          } else {
+            throw writeErr;
+          }
+        }
+        
         await new Promise(resolve => setTimeout(resolve, 50));
       }
 
@@ -281,6 +331,7 @@ export class BluetoothPrinterManager {
       return true;
     } catch (error) {
       console.error("❌ Bluetooth print failed:", error);
+      this.isConnected = false;
       throw error;
     }
   }
