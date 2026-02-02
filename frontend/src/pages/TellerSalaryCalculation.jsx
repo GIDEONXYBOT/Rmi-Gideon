@@ -312,51 +312,31 @@ export default function TellerSalaryCalculation() {
 
   const handlePrint = async (teller) => {
     const dailyOver = teller.over || {};
-    const weekLabel = getWeekRangeLabel();
-
-    // Calculate salary data
-    let totalBaseSalary = 0;
-    const dailyData = dayLabels.map(({ key, label }) => {
-      const overAmount = dailyOver[key] || 0;
-      const noBSalaryKey = `${teller.id}-${key}`;
-      const isIncluded = noBSalarDays[noBSalaryKey];
-      const baseSalaryForDay = isIncluded ? baseSalaryAmount : 0;
-      totalBaseSalary += baseSalaryForDay;
-      return {
-        day: label,
-        over: overAmount,
-        base: baseSalaryForDay
-      };
-    });
-
-    const totalOver = sumOver(dailyOver);
-    const totalCompensation = totalBaseSalary + totalOver;
-
-    // Prepare receipt data
-    const receiptData = {
-      orgName: settings?.systemName || "RMI Teller Report",
-      tellerName: teller.name || "",
-      tellerId: teller.id || "",
-      weekLabel,
-      dailyData,
-      totalOver,
-      totalBase: totalBaseSalary,
-      totalCompensation,
-      dateStr: new Date().toLocaleString(),
-    };
-
+    
+    // Build and open print HTML in new window
+    const html = buildPrintHtml(teller, dailyOver);
+    const printWindow = window.open('', '_blank', 'width=400,height=800');
+    
+    if (!printWindow) {
+      showToast({ type: 'error', message: 'Failed to open print window. Please check your popup blocker.' });
+      return;
+    }
+    
     try {
-      // Use enhanced smart printing with all available methods
-      const result = await smartPrintWithAllOptions(receiptData, 'salary');
-
-      if (result.success) {
-        showToast({ type: 'success', message: result.message });
-      } else {
-        showToast({ type: 'error', message: 'Printing failed: ' + result.message });
-      }
+      printWindow.document.write(html);
+      printWindow.document.close();
+      printWindow.focus();
+      
+      // Trigger print dialog after content loads
+      setTimeout(() => {
+        printWindow.print();
+      }, 500);
+      
+      showToast({ type: 'success', message: 'Print dialog opened. Select your printer (A4 or Thermal).' });
     } catch (error) {
       console.error('Print error:', error);
       showToast({ type: 'error', message: 'Print failed: ' + error.message });
+      printWindow.close();
     }
   };
 
@@ -364,14 +344,27 @@ export default function TellerSalaryCalculation() {
     const html = buildA4BatchPrintHtml();
     if (!html) return;
 
-    const printWindow = window.open('', '_blank');
+    const printWindow = window.open('', '_blank', 'width=960,height=1280');
     if (!printWindow) {
-      showToast({ type: 'error', message: 'Failed to open print window' });
+      showToast({ type: 'error', message: 'Failed to open print window. Please check your popup blocker.' });
       return;
     }
-    printWindow.document.write(html);
-    printWindow.document.close();
-    printWindow.focus();
+    
+    try {
+      printWindow.document.write(html);
+      printWindow.document.close();
+      printWindow.focus();
+      
+      // Trigger print dialog after content loads
+      setTimeout(() => {
+        printWindow.print();
+        showToast({ type: 'success', message: 'Print dialog opened for A4 batch printing.' });
+      }, 500);
+    } catch (error) {
+      console.error('Print error:', error);
+      showToast({ type: 'error', message: 'Print failed: ' + error.message });
+      printWindow.close();
+    }
   };
 
   const buildA4BatchPrintHtml = () => {
