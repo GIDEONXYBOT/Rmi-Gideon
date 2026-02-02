@@ -310,9 +310,14 @@ export default function TellerSalaryCalculation() {
     });
   };
 
+  const isMobileDevice = () => {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  };
+
   const handlePrint = async (teller) => {
     const dailyOver = teller.over || {};
     const weekLabel = getWeekRangeLabel();
+    const isMobile = isMobileDevice();
 
     // Calculate salary data
     let totalBaseSalary = 0;
@@ -351,39 +356,82 @@ export default function TellerSalaryCalculation() {
     };
 
     try {
-      // First, try to print to thermal printer
-      const thermalPrinters = await bluetoothPrinterManager.getPairedPrinters();
-      const isConnected = bluetoothPrinterManager.getStatus().isConnected;
-
-      if (isConnected && thermalPrinters.length > 0) {
-        // Use thermal printer
-        console.log('📟 Printing to thermal printer...');
-        const receiptBytes = buildSalaryReceipt58(receiptData);
-        const result = await bluetoothPrinterManager.print(receiptBytes);
+      // Mobile: Prioritize Bluetooth thermal printer
+      if (isMobile) {
+        console.log('📱 Mobile device detected - attempting Bluetooth thermal print');
+        const bluetoothStatus = bluetoothPrinterManager.getStatus();
         
-        if (result.success) {
-          showToast({ type: 'success', message: 'Sent to thermal printer' });
+        if (bluetoothStatus.isConnected && bluetoothStatus.connectedPrinter) {
+          // Connected Bluetooth printer - print directly
+          console.log('📟 Sending to connected Bluetooth printer:', bluetoothStatus.connectedPrinter.name);
+          const receiptBytes = buildSalaryReceipt58(receiptData);
+          
+          try {
+            await bluetoothPrinterManager.printToConnectedPrinter(receiptBytes);
+            showToast({ type: 'success', message: `✅ Printed to ${bluetoothStatus.connectedPrinter.name}` });
+            return;
+          } catch (err) {
+            console.error('❌ Bluetooth print failed:', err);
+            showToast({ type: 'warning', message: 'Bluetooth printer connection lost. Opening dialog...' });
+          }
         } else {
-          console.warn('⚠️ Thermal print failed, falling back to browser print');
-          openBrowserPrint(teller, dailyOver);
+          // No connected printer - offer to scan
+          console.log('🔍 No Bluetooth printer connected. Prompting to scan...');
+          showToast({ type: 'info', message: 'No Bluetooth printer connected. Opening printer selection...' });
+          
+          try {
+            const printers = await bluetoothPrinterManager.scanPrinters();
+            if (printers.length > 0) {
+              const printer = printers[0];
+              console.log('🔗 Connecting to scanned printer:', printer.name);
+              await bluetoothPrinterManager.connectToPrinter(printer);
+              
+              // Now print
+              const receiptBytes = buildSalaryReceipt58(receiptData);
+              await bluetoothPrinterManager.printToConnectedPrinter(receiptBytes);
+              showToast({ type: 'success', message: `✅ Printed to ${printer.name}` });
+              return;
+            }
+          } catch (scanErr) {
+            console.warn('⚠️ Bluetooth scan cancelled or failed:', scanErr.message);
+          }
         }
-      } else if (autoPrintEnabled && selectedPrinter) {
-        // Use USB printer via Electron if available
-        console.log('🖨️ Printing to USB printer...');
-        try {
-          await window.electronAPI?.printSalaryReceipt(receiptData, selectedPrinter.name);
-          showToast({ type: 'success', message: 'Sent to printer: ' + selectedPrinter.name });
-        } catch (err) {
-          console.warn('⚠️ USB print failed, falling back to browser print');
-          openBrowserPrint(teller, dailyOver);
-        }
+        
+        // If Bluetooth fails on mobile, fall back to browser print
+        console.log('⚠️ Bluetooth unavailable, opening browser print dialog');
+        showToast({ type: 'info', message: 'Using browser print. Select a Bluetooth printer from the print dialog.' });
+        openBrowserPrint(teller, dailyOver);
       } else {
-        // Fall back to browser print dialog
+        // Desktop: Check for USB printer first
+        console.log('🖥️ Desktop device detected');
+        const bluetoothStatus = bluetoothPrinterManager.getStatus();
+        
+        if (bluetoothStatus.isConnected) {
+          // Bluetooth connected on desktop
+          const receiptBytes = buildSalaryReceipt58(receiptData);
+          await bluetoothPrinterManager.printToConnectedPrinter(receiptBytes);
+          showToast({ type: 'success', message: `✅ Printed to ${bluetoothStatus.connectedPrinter.name}` });
+          return;
+        }
+        
+        if (autoPrintEnabled && selectedPrinter) {
+          // Use USB printer via Electron if available
+          console.log('🖨️ Printing to USB printer:', selectedPrinter.name);
+          try {
+            await window.electronAPI?.printSalaryReceipt(receiptData, selectedPrinter.name);
+            showToast({ type: 'success', message: 'Sent to printer: ' + selectedPrinter.name });
+            return;
+          } catch (err) {
+            console.warn('⚠️ USB print failed:', err);
+          }
+        }
+        
+        // Fall back to browser print
         openBrowserPrint(teller, dailyOver);
       }
     } catch (error) {
       console.error('Print error:', error);
-      // Always fall back to browser print if anything fails
+      showToast({ type: 'error', message: 'Print error: ' + error.message });
       openBrowserPrint(teller, dailyOver);
     }
   };
