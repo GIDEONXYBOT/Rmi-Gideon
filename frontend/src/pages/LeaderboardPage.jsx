@@ -479,9 +479,9 @@ const LeaderboardPage = () => {
       </div>
 
       {/* Main Content - Current Fight */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="bg-gray-900 border-b border-gray-700 px-6 py-4">
+        <div className="bg-gray-900 border-b border-gray-700 px-6 py-4 flex-shrink-0">
           <div className="flex justify-between items-center max-w-6xl mx-auto">
             <div className="flex items-center space-x-6">
               <div className="text-xl font-bold text-white">
@@ -503,7 +503,7 @@ const LeaderboardPage = () => {
         </div>
 
         {/* Current Fight Betting - Top Section */}
-        <div className="p-8">
+        <div className="p-8 flex-1 overflow-y-auto">
           <div className="max-w-4xl mx-auto">
             {currentDraw ? (
               <div className="bg-gray-900 rounded-lg p-8 border border-gray-700 mb-8 relative overflow-hidden">
@@ -936,7 +936,7 @@ const LeaderboardPage = () => {
         </div>
 
         {/* Footer Message */}
-        <div className="text-center py-4 text-sm text-gray-500 border-t border-gray-800">
+        <div className="text-center py-4 text-sm text-gray-500 border-t border-gray-800 flex-shrink-0 bg-black">
           Payout less than 1.40 shall be canceled • Live updates every few seconds
         </div>
       </div>
