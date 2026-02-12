@@ -328,7 +328,8 @@ router.get('/leaderboard', async (req, res) => {
 
     console.log(`📅 Looking for fights between ${todayStart.toISOString()} and ${todayEnd.toISOString()}`);
 
-    // Query today's data from database
+    // Query from database - try both date ranges
+    // First try with Manila time
     let todaysDraws = await mongoose.connection.db.collection('draws').find({
       createdAt: {
         $gte: todayStart,
@@ -336,7 +337,17 @@ router.get('/leaderboard', async (req, res) => {
       }
     }).sort({ 'batch.fightSequence': -1 }).toArray();
 
-    console.log(`📊 Found ${todaysDraws.length} fights for today in database`);
+    console.log(`📊 Found ${todaysDraws.length} fights for today (Manila time) in database`);
+
+    // If no fights found, try searching without date filter (last 50 fights)
+    if (todaysDraws.length === 0) {
+      console.log('⚠️ No fights found for today, searching for recent fights...');
+      todaysDraws = await mongoose.connection.db.collection('draws').find({})
+        .sort({ createdAt: -1 })
+        .limit(50)
+        .toArray();
+      console.log(`📊 Found ${todaysDraws.length} recent fights (last 50)`);
+    }
 
     // Remove duplicates by fight ID
     const seenFights = new Set();
@@ -349,11 +360,11 @@ router.get('/leaderboard', async (req, res) => {
       return true;
     });
 
-    console.log(`📊 After deduplication: ${todaysDraws.length} unique fights for today`);
+    console.log(`📊 After deduplication: ${todaysDraws.length} unique fights`);
 
-    // If no fights found, provide demo data
+    // If still no fights found, provide demo data
     if (todaysDraws.length === 0) {
-      console.log('⚠️ No fights found for today, providing demo data');
+      console.log('⚠️ No fights found in database, providing demo data');
       todaysDraws = [
         {
           id: "demo-1",
