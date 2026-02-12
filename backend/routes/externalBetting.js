@@ -313,45 +313,87 @@ router.get('/status', async (req, res) => {
  */
 router.get('/leaderboard', async (req, res) => {
   try {
-    console.log('📡 Fetching leaderboard data from API...');
+    console.log('📡 Fetching leaderboard data from CMS endpoint...');
 
-    // Connect to database
-    const mongoose = (await import('mongoose')).default;
-    if (mongoose.connection.readyState !== 1) {
-      await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/rmi-teller-report');
+    // First, try to fetch from the external CMS endpoint
+    let leaderboardData = null;
+    let dataSource = 'unknown';
+    
+    try {
+      console.log('🌐 Attempting to fetch from https://cms.lan/leaderboard');
+      const cmsResponse = await axios.get('https://cms.lan/leaderboard', {
+        timeout: 10000, // 10 second timeout
+        headers: {
+          'User-Agent': 'RMI-Teller-Report/1.0',
+        },
+        validateStatus: () => true // Don't throw on any status code
+      });
+
+      if (cmsResponse.status === 200) {
+        console.log('✅ Successfully fetched from CMS endpoint');
+        leaderboardData = cmsResponse.data;
+        dataSource = 'cms';
+        
+        // Ensure it's an array
+        if (!Array.isArray(leaderboardData)) {
+          console.warn('⚠️ CMS response is not an array, converting...');
+          leaderboardData = leaderboardData.data || leaderboardData.draws || [];
+        }
+        
+        console.log(`📊 CMS returned ${leaderboardData.length} fights`);
+      } else {
+        console.warn(`⚠️ CMS endpoint returned status ${cmsResponse.status}`);
+        leaderboardData = null;
+      }
+    } catch (cmsError) {
+      console.warn('⚠️ Failed to fetch from CMS endpoint:', cmsError.message);
+      leaderboardData = null;
     }
 
-    const now = new Date();
-    const manilaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
-    const todayStart = new Date(manilaTime.getFullYear(), manilaTime.getMonth(), manilaTime.getDate(), 0, 0, 0);
-    const todayEnd = new Date(manilaTime.getFullYear(), manilaTime.getMonth(), manilaTime.getDate(), 23, 59, 59);
+    // If CMS failed or returned no data, fallback to database
+    if (!leaderboardData || leaderboardData.length === 0) {
+      console.log('📚 Falling back to database...');
+      dataSource = 'database';
 
-    console.log(`📅 Looking for fights between ${todayStart.toISOString()} and ${todayEnd.toISOString()}`);
-
-    // Query from database - try both date ranges
-    // First try with Manila time
-    let todaysDraws = await mongoose.connection.db.collection('draws').find({
-      createdAt: {
-        $gte: todayStart,
-        $lte: todayEnd
+      // Connect to database
+      const mongoose = (await import('mongoose')).default;
+      if (mongoose.connection.readyState !== 1) {
+        await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/rmi-teller-report');
       }
-    }).sort({ 'batch.fightSequence': -1 }).toArray();
 
-    console.log(`📊 Found ${todaysDraws.length} fights for today (Manila time) in database`);
+      const now = new Date();
+      const manilaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+      const todayStart = new Date(manilaTime.getFullYear(), manilaTime.getMonth(), manilaTime.getDate(), 0, 0, 0);
+      const todayEnd = new Date(manilaTime.getFullYear(), manilaTime.getMonth(), manilaTime.getDate(), 23, 59, 59);
 
-    // If no fights found, try searching without date filter (last 50 fights)
-    if (todaysDraws.length === 0) {
-      console.log('⚠️ No fights found for today, searching for recent fights...');
-      todaysDraws = await mongoose.connection.db.collection('draws').find({})
-        .sort({ createdAt: -1 })
-        .limit(50)
-        .toArray();
-      console.log(`📊 Found ${todaysDraws.length} recent fights (last 50)`);
+      console.log(`📅 Looking for fights between ${todayStart.toISOString()} and ${todayEnd.toISOString()}`);
+
+      // Query from database - try today's fights first
+      let todaysDraws = await mongoose.connection.db.collection('draws').find({
+        createdAt: {
+          $gte: todayStart,
+          $lte: todayEnd
+        }
+      }).sort({ 'batch.fightSequence': -1 }).toArray();
+
+      console.log(`📊 Found ${todaysDraws.length} fights for today (Manila time) in database`);
+
+      // If no fights found, try searching without date filter (last 50 fights)
+      if (todaysDraws.length === 0) {
+        console.log('⚠️ No fights found for today, searching for recent fights...');
+        todaysDraws = await mongoose.connection.db.collection('draws').find({})
+          .sort({ createdAt: -1 })
+          .limit(50)
+          .toArray();
+        console.log(`📊 Found ${todaysDraws.length} recent fights (last 50)`);
+      }
+
+      leaderboardData = todaysDraws;
     }
 
     // Remove duplicates by fight ID
     const seenFights = new Set();
-    todaysDraws = todaysDraws.filter(draw => {
+    leaderboardData = leaderboardData.filter(draw => {
       const fightId = draw.id || draw.fightId;
       if (seenFights.has(fightId)) {
         return false;
@@ -360,12 +402,13 @@ router.get('/leaderboard', async (req, res) => {
       return true;
     });
 
-    console.log(`📊 After deduplication: ${todaysDraws.length} unique fights`);
+    console.log(`📊 After deduplication: ${leaderboardData.length} unique fights (source: ${dataSource})`);
 
     // If still no fights found, provide demo data
-    if (todaysDraws.length === 0) {
-      console.log('⚠️ No fights found in database, providing demo data');
-      todaysDraws = [
+    if (leaderboardData.length === 0) {
+      console.log('⚠️ No fights found from any source, providing demo data');
+      dataSource = 'demo';
+      leaderboardData = [
         {
           id: "demo-1",
           fightNumber: 1,
@@ -443,17 +486,14 @@ router.get('/leaderboard', async (req, res) => {
 
     res.json({
       success: true,
-      data: todaysDraws,
-      totalDraws: todaysDraws.length,
+      data: leaderboardData,
+      totalDraws: leaderboardData.length,
       fetchedAt: new Date().toISOString(),
-      message: todaysDraws.length > 0 && todaysDraws[0].id?.startsWith('demo-')
-        ? `Demo data: ${todaysDraws.length} sample fights`
-        : `Returning ${todaysDraws.length} fights from today (${manilaTime.getMonth() + 1}/${manilaTime.getDate()}/${manilaTime.getFullYear()})`,
-      source: todaysDraws.length > 0 && todaysDraws[0].id?.startsWith('demo-') ? "demo-data" : "database",
-      dateRange: {
-        start: todayStart.toISOString(),
-        end: todayEnd.toISOString()
-      }
+      message: leaderboardData.length > 0 && leaderboardData[0].id?.startsWith('demo-')
+        ? `Demo data: ${leaderboardData.length} sample fights`
+        : `Returning ${leaderboardData.length} fights (source: ${dataSource})`,
+      source: dataSource,
+      apiEndpointUsed: 'https://cms.lan/leaderboard'
     });
 
   } catch (err) {
