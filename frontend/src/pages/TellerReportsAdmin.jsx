@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useContext, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { SettingsContext } from "../context/SettingsContext";
 import { useToast } from "../context/ToastContext";
@@ -12,6 +13,7 @@ import {
   Eye,
   Save,
   Trash2,
+  Plus,
 } from "lucide-react";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
@@ -19,6 +21,7 @@ const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
 export default function TellerReportsAdmin({ userRole }) {
   const { user, settings } = useContext(SettingsContext);
   const { showToast } = useToast();
+  const navigate = useNavigate();
   const dark = settings?.theme?.mode === "dark";
 
   const [tellers, setTellers] = useState([]);
@@ -188,12 +191,23 @@ export default function TellerReportsAdmin({ userRole }) {
           <h2 className="text-lg font-semibold flex items-center gap-2">
             <ClipboardList size={18} /> Teller Reports
           </h2>
-          <button
-            onClick={fetchReports}
-            className="p-1 rounded hover:bg-indigo-600 hover:text-white"
-          >
-            <RefreshCcw size={18} />
-          </button>
+          <div className="flex gap-2">
+            {(userRole === "admin" || userRole === "super_admin") && (
+              <button
+                onClick={() => navigate("/admin/teller-reports/create")}
+                className="flex items-center gap-1 px-3 py-1 rounded bg-green-600 hover:bg-green-700 text-white text-sm"
+                title="Create a new teller report"
+              >
+                <Plus size={16} /> Create
+              </button>
+            )}
+            <button
+              onClick={fetchReports}
+              className="p-1 rounded hover:bg-indigo-600 hover:text-white"
+            >
+              <RefreshCcw size={18} />
+            </button>
+          </div>
         </div>
 
         {/* Search */}
