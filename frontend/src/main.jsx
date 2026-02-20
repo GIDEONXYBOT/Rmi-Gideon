@@ -203,6 +203,7 @@ import DeclaratorDashboard from "./pages/DeclaratorDashboardFixed.jsx";
 import TellerDeployments from "./pages/TellerDeployments.jsx";
 import SuperAdminSidebarControl from './pages/SuperAdminSidebarControl.jsx';
 import SuperAdminMenuConfig from './pages/SuperAdminMenuConfig.jsx';
+import SuperAdminTellerReportCreate from './pages/SuperAdminTellerReportCreate.jsx';
 // MapEditor import removed (using unified AdminMapEditor for map editing)
 // import MapEditor from './pages/MapEditor.jsx';
 
@@ -338,6 +339,7 @@ function App() {
                       <Route path="supervisor-report" element={<SupervisorReports userRole="admin" />} />
                       <Route path="teller-reports" element={<TellerReports userRole="admin" />} />
                       <Route path="teller-reports/viewer" element={<TellerReportsViewer userRole="admin" />} />
+                      <Route path="teller-reports/create" element={<SuperAdminTellerReportCreate />} />
                       <Route path="teller-management" element={<TellerManagement userRole="admin" />} />
                       <Route path="teller-salary-calculation" element={<TellerSalaryCalculation />} />
                       <Route path="thermal-printer-settings" element={<ThermalPrinterSettings />} />

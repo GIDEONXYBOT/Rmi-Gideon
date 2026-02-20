@@ -253,6 +253,76 @@ router.post("/create", async (req, res) => {
 });
 
 /* ======================================================
+   CREATE TELLER REPORT BY ADMIN/SUPER_ADMIN
+   ====================================================== */
+router.post("/create-by-admin", async (req, res) => {
+  try {
+    const { tellerId, reportDate, createdBy } = req.body;
+
+    if (!tellerId) return res.status(400).json({ error: "Missing teller ID" });
+    if (!reportDate) return res.status(400).json({ error: "Missing report date" });
+
+    // Fetch teller details
+    const teller = await User.findById(tellerId);
+    if (!teller) {
+      return res.status(404).json({ error: "Teller not found" });
+    }
+
+    // Get supervisor info
+    let supervisorId = teller.supervisorId;
+    let supervisorName = "";
+    if (supervisorId) {
+      const supervisor = await User.findById(supervisorId).lean();
+      supervisorName = supervisor?.name || supervisor?.username || "";
+    }
+
+    // Ensure date is in YYYY-MM-DD format for salary calculation
+    const dateStr = reportDate instanceof Date 
+      ? reportDate.toISOString().split('T')[0]
+      : String(reportDate);
+
+    // Create new report with initial values (empty)
+    const newReport = {
+      tellerId,
+      tellerName: teller.name || teller.username,
+      supervisorId,
+      supervisorName,
+      systemBalance: 0,
+      cashOnHand: 0,
+      short: 0,
+      over: 0,
+      d1000: 0,
+      d500: 0,
+      d200: 0,
+      d100: 0,
+      d50: 0,
+      d20: 0,
+      coins: 0,
+      date: dateStr, // String format for salary calculation
+      createdAt: new Date(), // Current time
+    };
+
+    const created = await TellerReport.create(newReport);
+
+    console.log(`✅ Admin created report for teller ${teller.username} on ${dateStr}`);
+
+    // ✅ Auto-sync payroll with the new report (so it shows on salary calculation page)
+    await syncPayrollFromReports(tellerId);
+
+    res.json({
+      success: true,
+      message: "Teller report created successfully",
+      reportId: created._id,
+      tellerName: teller.name || teller.username,
+      report: created,
+    });
+  } catch (err) {
+    console.error("❌ Error creating teller report by admin:", err);
+    res.status(500).json({ error: "Failed to create report" });
+  }
+});
+
+/* ======================================================
    FETCH REPORTS PER TELLER
    ====================================================== */
 router.get("/teller/:tellerId", async (req, res) => {
