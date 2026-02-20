@@ -135,6 +135,7 @@ import ConnectivityTest from "./pages/ConnectivityTest.jsx";
 // Shared Pages
 import Dashboard from "./pages/Dashboard.jsx";
 import TellerReports from "./pages/TellerReports.jsx";
+import TellerReportsAdmin from "./pages/TellerReportsAdmin.jsx";
 import TellerReportsViewer from "./pages/TellerReportsViewer.jsx";
 import TellerReportsHistory from "./pages/TellerReportsHistory.jsx";
 import TellerOfMonth from "./pages/TellerOfMonth.jsx";
@@ -337,7 +338,7 @@ function App() {
                       <Route index element={<Navigate to="dashboard" />} />
                       <Route path="dashboard" element={<Dashboard overrideRole="admin" />} />
                       <Route path="supervisor-report" element={<SupervisorReports userRole="admin" />} />
-                      <Route path="teller-reports" element={<TellerReports userRole="admin" />} />
+                      <Route path="teller-reports" element={<TellerReportsAdmin userRole="admin" />} />
                       <Route path="teller-reports/viewer" element={<TellerReportsViewer userRole="admin" />} />
                       <Route path="teller-reports/create" element={<SuperAdminTellerReportCreate />} />
                       <Route path="teller-management" element={<TellerManagement userRole="admin" />} />
@@ -526,7 +527,7 @@ function App() {
                       <Route index element={<Navigate to="dashboard" />} />
                       <Route path="dashboard" element={<Dashboard overrideRole="super_admin" />} />
                       <Route path="supervisor-report" element={<SupervisorReports userRole="super_admin" />} />
-                      <Route path="teller-reports" element={<TellerReports userRole="super_admin" />} />
+                      <Route path="teller-reports" element={<TellerReportsAdmin userRole="super_admin" />} />
                       <Route path="teller-reports/viewer" element={<TellerReportsViewer userRole="super_admin" />} />
                       <Route path="teller-reports/create" element={<SuperAdminTellerReportCreate />} />
                       <Route path="teller-management" element={<TellerManagement userRole="super_admin" />} />
