@@ -192,7 +192,7 @@ export default function TellerReportsAdmin({ userRole }) {
             <ClipboardList size={18} /> Teller Reports
           </h2>
           <div className="flex gap-2">
-            {(userRole === "admin" || userRole === "super_admin") && (
+            {userRole === "super_admin" && (
               <button
                 onClick={() => navigate("/admin/teller-reports/create")}
                 className="flex items-center gap-1 px-3 py-1 rounded bg-green-600 hover:bg-green-700 text-white text-sm"
