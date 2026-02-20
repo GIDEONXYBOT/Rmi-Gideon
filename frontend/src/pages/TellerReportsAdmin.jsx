@@ -194,7 +194,7 @@ export default function TellerReportsAdmin({ userRole }) {
           <div className="flex gap-2">
             {userRole === "super_admin" && (
               <button
-                onClick={() => navigate("/admin/teller-reports/create")}
+                onClick={() => navigate("/super_admin/teller-reports/create")}
                 className="flex items-center gap-1 px-3 py-1 rounded bg-green-600 hover:bg-green-700 text-white text-sm"
                 title="Create a new teller report"
               >

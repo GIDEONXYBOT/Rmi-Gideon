@@ -528,6 +528,7 @@ function App() {
                       <Route path="supervisor-report" element={<SupervisorReports userRole="super_admin" />} />
                       <Route path="teller-reports" element={<TellerReports userRole="super_admin" />} />
                       <Route path="teller-reports/viewer" element={<TellerReportsViewer userRole="super_admin" />} />
+                      <Route path="teller-reports/create" element={<SuperAdminTellerReportCreate />} />
                       <Route path="teller-management" element={<TellerManagement userRole="super_admin" />} />
                       <Route path="teller-salary-calculation" element={<TellerSalaryCalculation />} />
                       <Route path="thermal-printer-settings" element={<ThermalPrinterSettings />} />
